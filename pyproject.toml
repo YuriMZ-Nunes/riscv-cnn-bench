@@ -1,0 +1,126 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "riscv-cnn-bench"
+version = "0.1.0"
+description = "Framework reprodutível para benchmark de CNNs quantizadas em RISC-V com gem5"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Yuri Nunes" }
+]
+keywords = [
+  "risc-v",
+  "gem5",
+  "benchmark",
+  "cnn",
+  "quantization",
+  "computer-architecture",
+  "reproducibility"
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+  "Topic :: System :: Benchmark"
+]
+
+dependencies = [
+  "typer>=0.12,<1.0",
+  "PyYAML>=6.0,<7.0",
+  "pydantic>=2.7,<3.0",
+  "pandas>=2.2,<3.0",
+  "matplotlib>=3.8,<4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2,<9.0",
+  "pytest-cov>=5.0,<7.0",
+  "ruff>=0.6,<1.0",
+  "mypy>=1.11,<2.0",
+  "types-PyYAML>=6.0.12.20240808",
+]
+
+docs = [
+  "mkdocs-material>=9.5,<10.0",
+  "mkdocstrings[python]>=0.26,<1.0",
+]
+
+[project.scripts]
+riscvcnnbench = "riscvcnnbench.cli:app"
+
+[project.urls]
+Repository = "https://github.com/SEU-USUARIO/riscv-cnn-bench"
+Issues = "https://github.com/SEU-USUARIO/riscv-cnn-bench/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+branch = true
+source = ["riscvcnnbench"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 70
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "UP",
+  "B",
+  "SIM",
+]
+ignore = [
+  "E501",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["riscvcnnbench"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+packages = ["riscvcnnbench"]
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+no_implicit_optional = true
