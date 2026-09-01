@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# Build e resultados
+build/
+results/
+m5out/
+*.elf
+*.bin
+*.o
+*.a
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
