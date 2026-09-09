@@ -22,5 +22,8 @@ m5out/
 .vscode/
 .idea/
 
+# TCC Workspace Notes
+TCC.md
+
 # Sistema
 .DS_Store
