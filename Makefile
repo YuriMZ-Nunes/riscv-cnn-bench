@@ -14,7 +14,8 @@ PODMAN_RUN = podman run --rm -it --userns=keep-id \
 	$(IMAGE)
 
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
-	gem5-status gem5-build gem5-clean benchmark-build smoke-test clean clean-results status
+	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
+	clean clean-results status hello-build hello-run
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -77,3 +78,19 @@ status: ## Exibe estado do repositório principal e do submódulo gem5.
 	@echo
 	@echo "--- gem5 ---"
 	@git -C $(GEM5_DIR) status --short
+
+toolchain-check: ## Mostra versões e caminhos da toolchain RISC-V Linux.
+	$(PODMAN_RUN) bash -lc '\
+		which riscv64-linux-gnu-gcc && \
+		riscv64-linux-gnu-gcc --version && \
+		which riscv64-linux-gnu-g++ && \
+		riscv64-linux-gnu-g++ --version && \
+		which riscv64-linux-gnu-objdump && \
+		riscv64-linux-gnu-objdump --version | head -n 1 \
+	'
+
+hello-build: ## Compila o benchmark RISC-V hello_riscv.
+	$(PODMAN_RUN) bash -lc '$(MAKE) -C benchmarks/hello_riscv'
+
+hello-run: ## Executa o benchmark RISC-V hello_riscv com o QEMU.
+	$(PODMAN_RUN) bash -lc 'qemu-riscv64 build/benchmarks/hello_riscv'

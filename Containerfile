@@ -31,6 +31,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pandas \
     python3-matplotlib \
     python3-pytest \
+    gcc-riscv64-linux-gnu \
+    g++-riscv64-linux-gnu \
+    binutils-riscv64-linux-gnu \
+    libc6-dev-riscv64-cross \
+    qemu-user \
     file \
     gdb \
     jq \
@@ -38,7 +43,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --no-cache-dir --break-system-packages uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv \
+    && mv /root/.local/bin/uvx /usr/local/bin/uvx \
+    && uv --version
 
 WORKDIR /workspace
 
