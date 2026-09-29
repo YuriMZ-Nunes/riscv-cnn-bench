@@ -11,14 +11,6 @@ theme:
   language: pt-BR
 
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: indigo
-      accent: cyan
-      toggle:
-        icon: material/weather-night
-        name: Alternar para modo escuro
-
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: indigo
