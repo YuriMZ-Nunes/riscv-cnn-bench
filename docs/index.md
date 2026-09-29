@@ -13,6 +13,10 @@ O projeto reúne ferramentas, configurações e experimentos para executar, medi
 3. Consulte a [toolchain](toolchain.md).
 4. Execute e reproduza os [experimentos](experiments.md).
 
+## Baseline atual
+
+O [guia do baseline `hello_riscv`](baseline/hello-riscv.md) mostra como validar o ambiente compilando um binário RISC-V e executando-o com QEMU.
+
 ## Documentação
 
 - [Arquitetura](architecture.md)

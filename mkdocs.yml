@@ -34,6 +34,8 @@ nav:
   - Comece aqui:
       - Instalação: installation.md
       - Ambiente: environment.md
+  - Baseline:
+      - Hello RISC-V: baseline/hello-riscv.md
   - Referência técnica:
       - Arquitetura: architecture.md
       - Toolchain: toolchain.md
