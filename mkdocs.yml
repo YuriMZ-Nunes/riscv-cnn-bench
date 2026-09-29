@@ -18,13 +18,6 @@ theme:
         icon: material/weather-night
         name: Alternar para modo escuro
 
-    - scheme: slate
-      primary: indigo
-      accent: cyan
-      toggle:
-        icon: material/weather-sunny
-        name: Alternar para modo claro
-
   features:
     - navigation.tabs
     - navigation.sections
@@ -32,16 +25,6 @@ theme:
     - content.code.copy
     - search.suggest
     - search.highlight
-extra:
-  palette:
-    - scheme: default
-      toggle:
-        icon: material/weather-night
-        name: Alternar para modo escuro
-    - scheme: slate
-      toggle:
-        icon: material/weather-sunny
-        name: Alternar para modo claro
 
 markdown_extensions:
   - admonition
