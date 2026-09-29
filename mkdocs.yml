@@ -1,0 +1,43 @@
+site_name: RISC-V CNN Bench
+site_description: Benchmarking framework for CNN inference on RISC-V platforms
+site_url: https://yurimz-nunes.github.io/riscv-cnn-bench/
+
+repo_name: YuriMZ-Nunes/riscv-cnn-bench
+repo_url: https://github.com/YuriMZ-Nunes/riscv-cnn-bench
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: pt-BR
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Início: index.md
+  - Comece aqui:
+      - Instalação: installation.md
+      - Ambiente: environment.md
+  - Referência técnica:
+      - Arquitetura: architecture.md
+      - Toolchain: toolchain.md
+      - Experimentos: experiments.md
+      - Reprodutibilidade: reproducibility.md
+  - Desenvolvimento:
+      - Instruções para contribuidores: custom_instructions.md
