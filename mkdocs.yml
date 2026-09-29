@@ -32,6 +32,16 @@ theme:
     - content.code.copy
     - search.suggest
     - search.highlight
+extra:
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Alternar para modo escuro
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Alternar para modo claro
 
 markdown_extensions:
   - admonition
