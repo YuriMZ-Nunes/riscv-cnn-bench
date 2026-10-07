@@ -103,19 +103,29 @@ Este comando executa a sincronização do ambiente, testes com Pytest, checagem 
 |:---|:---|
 | `make help` | Exibe a lista de comandos disponíveis. |
 | `make image` | Constrói a imagem local do container de desenvolvimento. |
-| `make image-clean` | Remove a imagem local do projeto. |
-| `make shell` | Abre um terminal interativo Bash dentro do container. |
-| `make check` | Exibe a versão das ferramentas internas instaladas no container. |
-| `make lock` | Atualiza o arquivo de dependências `uv.lock`. |
-| `make sync` | Cria ou sincroniza o diretório `.venv` com dependências de desenvolvimento. |
-| `make test` | Executa os testes unitários do framework Python. |
-| `make lint` | Executa a análise estática de código com o Ruff. |
-| `make format` | Formata automaticamente o código em `src/` e `tests/`. |
-| `make gem5-build` | Compila o simulador gem5 para RISC-V (`build/RISCV/gem5.opt`). |
-| `make gem5-status` | Exibe o status git do submódulo `gem5`. |
-| `make smoke-test` | Executa sincronização, CLI, testes e linters sequencialmente. |
-| `make clean-results`| Remove os arquivos salvos em `results/`. |
-| `make clean` | Limpa ambientes virtuais, caches e builds locais do framework. |
+| `make image-clean` | Remove a imagem local do projeto, preservando código e resultados. |
+| `make shell` | Abre um terminal Bash dentro do container, na raiz do projeto. |
+| `make check` | Exibe a arquitetura e as versões de Python, uv, SCons e Git no container. |
+| `make toolchain-check` | Exibe os caminhos e as versões do GCC, G++ e objdump da toolchain RISC-V Linux. |
+| `make lock` | Resolve as dependências Python e atualiza o `uv.lock`. |
+| `make sync` | Cria ou sincroniza o diretório `.venv` com as dependências de desenvolvimento. |
+| `make test` | Executa os testes Python com Pytest. |
+| `make lint` | Executa a análise estática com Ruff em `src/` e `tests/`. |
+| `make format-check` | Verifica a formatação de `src/` e `tests/` sem alterar arquivos. |
+| `make format` | Formata `src/` e `tests/` e aplica as correções automáticas do Ruff. |
+| `make gem5-status` | Exibe as alterações locais no submódulo gem5. |
+| `make gem5-build` | Compila o gem5 para RISC-V em `third_party/gem5/build/RISCV/gem5.opt`. Aceita `JOBS=N` para ajustar o paralelismo. |
+| `make gem5-clean` | Remove os artefatos de compilação do gem5, preservando seu código-fonte. |
+| `make benchmark-build` | Placeholder para futura compilação de benchmarks; atualmente apenas exibe uma mensagem. |
+| `make hello-build` | Compila o exemplo RISC-V `hello_riscv` em `build/benchmarks/hello_riscv`. |
+| `make hello-run` | Executa o `hello_riscv` com QEMU. Requer compilação prévia com `make hello-build`. |
+| `make hello-run-gem5` | Compila o `hello_riscv` e o executa no gem5 em modo SE. Requer o simulador previamente compilado. |
+| `make smoke-test` | Sincroniza as dependências e executa a CLI, os testes, o lint e a verificação de formatação. |
+| `make clean-results` | Remove o conteúdo de `results/`. |
+| `make clean` | Remove ambientes virtuais, caches, artefatos do framework e resultados, preservando as fontes do gem5. |
+| `make status` | Exibe as alterações locais no repositório principal e no submódulo gem5. |
+
+Para compilar e executar o exemplo teste com QEMU ou gem5, consulte o [guia do hello_riscv](docs/hello_riscv.md).
 
 ---
 
