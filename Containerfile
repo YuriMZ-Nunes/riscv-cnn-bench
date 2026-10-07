@@ -31,11 +31,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pandas \
     python3-matplotlib \
     python3-pytest \
-    gcc-riscv64-linux-gnu \
-    g++-riscv64-linux-gnu \
-    binutils-riscv64-linux-gnu \
-    libc6-dev-riscv64-cross \
-    qemu-user \
+    gcc-riscv64-linux-gnu=4:13.2.0-7ubuntu1 \
+    g++-riscv64-linux-gnu=4:13.2.0-7ubuntu1 \
+    binutils-riscv64-linux-gnu=2.42-4ubuntu2.10 \
+    libc6-dev-riscv64-cross=2.39-0ubuntu8cross1 \
+    qemu-user=1:8.2.2+ds-0ubuntu1.18 \
     file \
     gdb \
     jq \
