@@ -95,5 +95,9 @@ hello-build: ## Compila o benchmark RISC-V hello_riscv.
 hello-run: ## Executa o benchmark RISC-V hello_riscv com o QEMU.
 	$(PODMAN_RUN) bash -lc 'qemu-riscv64 build/benchmarks/hello_riscv'
 
-hello-run-gem5: hello-build ## Executa hello_riscv no gem5 em modo SE.
-	$(PODMAN_RUN) bash -lc '$(GEM5_BIN) --outdir=results/hello_riscv configs/gem5/se_riscv.py --binary build/benchmarks/hello_riscv'
+hello-run-gem5: hello-build ## Executa hello_riscv no gem5 e preserva cada execução.
+	$(PODMAN_RUN) bash -lc 'python3 scripts/run-gem5.py \
+		--gem5 "$(GEM5_BIN)" \
+		--binary build/benchmarks/hello_riscv \
+		--config configs/gem5/se_riscv.py \
+		--results-dir results/hello_riscv'
