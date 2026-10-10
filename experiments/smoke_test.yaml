@@ -1,0 +1,7 @@
+# Configuração mínima: só os campos obrigatórios.
+# O restante usa os padrões, equivalentes a configs/gem5/se_riscv.py:
+# flags -O2, CPU atomic a 1GHz, sem caches, memória simple de 512MiB,
+# saída em results/smoke_test/.
+name: smoke_test
+benchmark:
+  name: hello_riscv

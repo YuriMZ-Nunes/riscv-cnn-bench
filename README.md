@@ -11,14 +11,17 @@ Disponíveis:
 - **Ambiente Containerizado:** Ubuntu 24.04 com imagem base fixada por digest, toolchain RISC-V e `uv` com versões fixadas, automatizado via Podman.
 - **Dependências Python travadas:** `uv` e `uv.lock` fixam as versões das dependências Python.
 - **gem5 para RISC-V:** compilação do simulador e configuração em modo Syscall Emulation (SE) com `AtomicSimpleCPU`, usada para validação funcional.
-- **Benchmark funcional `hello_riscv`:** valida a compilação cruzada e a execução no QEMU e no gem5. Não é uma CNN.
+- **Benchmarks de teste `hello_riscv` e `hello_riscv_param`:** validam a compilação cruzada e a execução no QEMU e no gem5; o segundo tem tamanho de vetor e repetições configuráveis. Não são CNNs.
+- **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
+- **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
 
 - Benchmarks de CNNs e kernels quantizados.
 - Modelos de CPU detalhados e hierarquias de cache para coleta de métricas de microarquitetura (ciclos, IPC, acessos à cache).
-- CLI `riscvcnnbench` para validar YAMLs, automatizar experimentos e consolidar métricas. Hoje ela implementa `version`; `validate` e `run` apenas verificam se o arquivo existe.
+- Execução de experimentos pela CLI (`riscvcnnbench run`) e consolidação de métricas. Hoje `run` apenas verifica se o arquivo existe.
+- Varreduras de parâmetros (vários experimentos a partir de um arquivo).
 
 ---
 
@@ -31,19 +34,22 @@ riscv-cnn-bench/
 ├── pyproject.toml            # Configuração do pacote Python e linters (Ruff/Mypy)
 ├── uv.lock                   # Trava de versões de dependências Python
 ├── configs/                  # Arquivos de configuração do simulador e experimentos
-│   ├── defaults.yaml         # Configuração padrão de parâmetros do framework
+│   ├── defaults.yaml         # Placeholder (vazio)
 │   └── gem5/
-│       └── se_riscv.py       # Script de configuração do gem5 (SysCall Emulation)
+│       ├── se_riscv.py              # Configuração baseline do gem5 (SysCall Emulation)
+│       └── se_riscv_configurable.py # CPU, caches e memória configuráveis
 ├── docs/                     # Documentação técnica de suporte
-├── experiments/              # Definições de experimentos em formato YAML
-├── benchmarks/hello_riscv/   # Benchmark funcional RISC-V em C
+├── experiments/              # Experimentos em YAML (formato em docs/experiments.md)
+├── benchmarks/
+│   ├── hello_riscv/          # Benchmark funcional RISC-V em C
+│   └── hello_riscv_param/    # Variante com tamanho e repetições configuráveis
 ├── scripts/
 │   ├── run-gem5.py           # Executa o gem5 e preserva cada execução em results/
 │   ├── record-gem5-build.py  # Registra commit e hash do gem5 compilado
 │   └── provenance.py         # Funções de hash, Git e versões usadas pelos scripts
 ├── src/riscvcnnbench/        # Código-fonte do framework de automação em Python
 │   ├── cli.py                # Interface de Linha de Comando (CLI)
-│   ├── config.py             # Planejado: validador de configurações (vazio)
+│   ├── config.py             # Formato e validação dos experimentos (Pydantic)
 │   ├── metric.py             # Planejado: extrator de estatísticas do gem5 (vazio)
 │   ├── parser.py             # Planejado: processamento de dados de entrada (vazio)
 │   ├── runner.py             # Planejado: interface de execução do simulador (vazio)
@@ -125,6 +131,15 @@ O `make e2e-test` requer o gem5 compilado (`make gem5-build`). Ele usa pastas te
 
 Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 
+### 7. Validar um experimento
+
+```bash
+make shell
+uv run riscvcnnbench validate experiments/hello_param_cache.yaml
+```
+
+O formato, os campos e como executar um experimento manualmente estão em [docs/experiments.md](docs/experiments.md).
+
 ---
 
 ## Comandos do Makefile
@@ -139,7 +154,7 @@ Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
-| `make e2e-test` | Compila e executa o `hello_riscv` no gem5 e verifica log, retorno e `stats.txt`. |
+| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv` e o exemplo `hello_param_cache.yaml`. |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
 | `make format` | Formata apenas o código próprio em `src/` e `tests/`. |
@@ -222,6 +237,7 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 
 ## Documentação
 
+- [Formato dos experimentos](docs/experiments.md)
 - [Execução e resultados do hello_riscv](docs/hello_riscv.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

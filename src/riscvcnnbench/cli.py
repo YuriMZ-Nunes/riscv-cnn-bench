@@ -19,12 +19,29 @@ def version() -> None:
 
 @app.command()
 def validate(experiment: Path) -> None:
-    """Valida a existência de um arquivo de experimento."""
-    if not experiment.is_file():
-        typer.echo(f"Erro: arquivo não encontrado: {experiment}", err=True)
-        raise typer.Exit(code=1)
+    """Valida um arquivo de experimento e mostra a configuração resultante."""
+    from riscvcnnbench.config import ConfigError, load_experiment
 
-    typer.echo(f"Configuração encontrada: {experiment}")
+    try:
+        config = load_experiment(experiment)
+    except ConfigError as error:
+        typer.echo(f"Erro: {error}", err=True)
+        raise typer.Exit(code=1) from error
+
+    cache = config.cache
+    levels = [
+        f"{level}={getattr(cache, level).size}/{getattr(cache, level).assoc}-way"
+        for level in ("l1i", "l1d", "l2")
+        if getattr(cache, level)
+    ]
+    typer.echo(f"Configuração válida: {experiment}")
+    typer.echo(f"  experimento: {config.name}")
+    typer.echo(f"  benchmark:   {config.benchmark.name} {' '.join(config.benchmark.args)}".rstrip())
+    typer.echo(f"  flags:       {' '.join(config.compiler.flags)}")
+    typer.echo(f"  cpu:         {config.cpu.model} @ {config.cpu.clock}")
+    typer.echo(f"  cache:       {', '.join(levels) or 'nenhuma'}")
+    typer.echo(f"  memória:     {config.memory.type}, {config.memory.size}")
+    typer.echo(f"  saída:       {config.results_dir}")
 
 
 @app.command()

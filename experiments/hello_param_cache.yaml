@@ -1,0 +1,53 @@
+# Exemplo com variação: CPU timing, caches L1/L2, DDR4 e flags próprias.
+# Todos os campos aparecem aqui; os omitidos em outros arquivos usam o padrão
+# indicado no comentário. Referência completa em docs/experiments.md.
+
+# Identificador do experimento (letras, números, _ e -). Obrigatório.
+name: hello_param_cache
+
+# Texto livre para lembrar o objetivo. Padrão: vazio.
+description: Vetor de 256KiB percorrido 2 vezes, maior que a L1 e igual à L2.
+
+benchmark:
+  # Pasta em benchmarks/ com main.c e Makefile. Obrigatório.
+  name: hello_riscv_param
+  # Argumentos do programa. Para hello_riscv_param: [N, R] = elementos do
+  # vetor (4 bytes cada) e repetições. Padrão: [].
+  args: ["65536", "2"]
+
+compiler:
+  # Flags escolhidas pelo experimento. -static, -march e -mabi são sempre
+  # adicionadas pelo Makefile do benchmark. Padrão: ["-O2"].
+  flags: ["-O3", "-funroll-loops"]
+
+cpu:
+  # atomic | timing | minor (in-order) | o3 (out-of-order). Padrão: atomic.
+  # atomic serve para validação funcional; os demais modelam tempo.
+  model: timing
+  # Frequência da CPU, em MHz ou GHz. Padrão: 1GHz.
+  clock: 2GHz
+
+# Cada nível é opcional; omitido = sem aquele cache. Padrão: sem caches.
+# size em KiB/MiB/GiB; assoc = associatividade (vias). Padrão de assoc: 4.
+# A L2 exige l1i e l1d.
+cache:
+  l1i:
+    size: 32KiB
+    assoc: 4
+  l1d:
+    size: 32KiB
+    assoc: 4
+  l2:
+    size: 256KiB
+    assoc: 8
+
+memory:
+  # simple (latência fixa) | ddr4 (DDR4-2400 com controlador). Padrão: simple.
+  type: ddr4
+  # Tamanho da memória simulada. Padrão: 512MiB.
+  size: 512MiB
+
+output:
+  # Pasta onde cada execução cria sua subpasta <run_id>.
+  # Padrão: results/<name>.
+  dir: results/hello_param_cache

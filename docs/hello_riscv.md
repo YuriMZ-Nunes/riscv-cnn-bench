@@ -299,7 +299,9 @@ O teste [tests/test_hello_e2e.py](../tests/test_hello_e2e.py) compila o `hello_r
 - `RESULT sum=499500` e `(code=0)` em `stdout.log`;
 - `simInsts`, `simTicks` e `system.cpu.numCycles` maiores que zero em `stats.txt`.
 
-Ele usa pastas temporárias, portanto não altera `build/` nem `results/`. Requer o gem5 compilado; o caminho pode ser alterado com a variável `GEM5_BIN`. Fica fora de `make test` e `make smoke-test` (marcador `e2e`) por depender do gem5. Os valores das estatísticas não são comparados com referências fixas, apenas verificados como positivos.
+O mesmo arquivo tem um segundo teste, que roda no gem5 o exemplo [`experiments/hello_param_cache.yaml`](../experiments/hello_param_cache.yaml) (ver [formato dos experimentos](experiments.md)) e confere a soma do `hello_riscv_param` e as faltas nas caches L1d e L2.
+
+Os testes usam pastas temporárias, portanto não alteram `build/` nem `results/`. Requer o gem5 compilado; o caminho pode ser alterado com a variável `GEM5_BIN`. Fica fora de `make test` e `make smoke-test` (marcador `e2e`) por depender do gem5. Os valores das estatísticas não são comparados com referências fixas, apenas verificados como positivos.
 
 ## Limpeza e preservação
 

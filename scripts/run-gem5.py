@@ -1,4 +1,9 @@
-"""Executa gem5 e preserva os artefatos de cada execução."""
+"""Executa gem5 e preserva os artefatos de cada execução.
+
+Argumentos após `--` são repassados à configuração gem5, por exemplo:
+
+    run-gem5.py --gem5 ... --binary ... --config ... --results-dir ... -- --cpu timing
+"""
 
 import argparse
 import json
@@ -75,6 +80,11 @@ def main() -> int:
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--results-dir", type=Path, required=True)
+    parser.add_argument(
+        "config_args",
+        nargs="*",
+        help="Argumentos extras repassados à configuração gem5, após --.",
+    )
     args = parser.parse_args()
 
     gem5 = args.gem5.resolve()
@@ -142,6 +152,7 @@ def main() -> int:
                 str(saved_config),
                 "--binary",
                 str(saved_binary),
+                *args.config_args,
             ]
 
             (run_dir / "command.txt").write_text(
