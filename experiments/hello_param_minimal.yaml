@@ -1,0 +1,4 @@
+# Configuração mínima do benchmark parametrizável.
+name: hello_param_minimal
+benchmark:
+  name: hello_riscv_param

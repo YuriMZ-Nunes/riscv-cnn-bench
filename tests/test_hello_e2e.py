@@ -85,3 +85,57 @@ def test_hello_riscv_gem5(tmp_path: Path) -> None:
     assert read_stat(stats, "simInsts") > 0
     assert read_stat(stats, "simTicks") > 0
     assert read_stat(stats, "system.cpu.numCycles") > 0
+
+
+def test_hello_param_cache_experiment(tmp_path: Path) -> None:
+    """Executa o exemplo com variação de experiments/ no gem5 configurável."""
+    from riscvcnnbench.config import load_experiment
+
+    assert GEM5.is_file(), f"gem5 não encontrado em {GEM5}; execute make gem5-build"
+    config = load_experiment(ROOT / "experiments/hello_param_cache.yaml")
+
+    binary = tmp_path / "build" / config.benchmark.name
+    subprocess.run(
+        [
+            "make",
+            "-C",
+            str(config.benchmark_dir),
+            f"OUT_DIR={binary.parent}",
+            f"OUT={binary}",
+            f"FLAGS={' '.join(config.compiler.flags)}",
+        ],
+        check=True,
+    )
+
+    results_dir = tmp_path / "results"
+    run = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/run-gem5.py"),
+            "--gem5",
+            str(GEM5),
+            "--binary",
+            str(binary),
+            "--config",
+            str(ROOT / "configs/gem5/se_riscv_configurable.py"),
+            "--results-dir",
+            str(results_dir),
+            "--",
+            *config.gem5_args(),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    (run_dir,) = results_dir.iterdir()
+    stdout = (run_dir / "stdout.log").read_text(encoding="utf-8")
+    stderr = (run_dir / "stderr.log").read_text(encoding="utf-8")
+    assert run.returncode == 0, f"wrapper falhou:\n{run.stdout}\n{stdout}\n{stderr}"
+
+    assert "RESULT n=65536 repeat=2 sum=4294901760" in stdout
+    assert "cpu=timing clock=2GHz l1i=32KiB l1d=32KiB l2=256KiB memória=ddr4/512MiB" in stdout
+
+    # As opções do YAML chegaram ao sistema simulado.
+    stats = (run_dir / "gem5/stats.txt").read_text(encoding="utf-8")
+    assert read_stat(stats, "system.cpu.dcache.overallMisses::total") > 0
+    assert read_stat(stats, "system.l2cache.overallMisses::total") > 0
