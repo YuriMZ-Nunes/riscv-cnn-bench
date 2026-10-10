@@ -5,21 +5,50 @@ pasta de saída. Só `name` e `benchmark.name` são obrigatórios; os demais cam
 têm padrões equivalentes a configs/gem5/se_riscv.py. Veja docs/experiments.md.
 """
 
+import difflib
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, get_args
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # Tamanhos e frequências no formato aceito pelo gem5, por exemplo 32KiB e 1GHz.
 SIZE_PATTERN = r"^[1-9][0-9]*(KiB|MiB|GiB)$"
 CLOCK_PATTERN = r"^[1-9][0-9]*(\.[0-9]+)?(MHz|GHz)$"
+NAME_PATTERN = r"^[A-Za-z0-9_-]+$"
+
+# Explicação mostrada quando um valor não segue o formato esperado.
+FORMAT_HINTS = {
+    SIZE_PATTERN: "use um tamanho como 32KiB, 512MiB ou 1GiB",
+    CLOCK_PATTERN: "use uma frequência como 800MHz ou 2GHz",
+    NAME_PATTERN: "use apenas letras, números, _ e -",
+}
 
 
 class ConfigError(Exception):
-    """Arquivo de experimento ausente, malformado ou inválido."""
+    """Arquivo de experimento ausente, malformado ou inválido.
+
+    `problems` lista cada problema encontrado, um por linha da mensagem.
+    """
+
+    def __init__(self, path: Path, problems: list[str]) -> None:
+        self.path = path
+        self.problems = problems
+        if len(problems) == 1:
+            message = f"{path}: {problems[0]}"
+        else:
+            listed = "\n".join(f"  {problem}" for problem in problems)
+            message = f"{path} tem {len(problems)} problemas:\n{listed}"
+        super().__init__(message)
 
 
 class StrictModel(BaseModel):
@@ -30,6 +59,17 @@ class StrictModel(BaseModel):
 class BenchmarkConfig(StrictModel):
     name: str = Field(description="Pasta em benchmarks/ com main.c e Makefile.")
     args: list[str] = Field(default=[], description="Argumentos passados ao programa.")
+
+    @field_validator("args", mode="before")
+    @classmethod
+    def numbers_as_strings(cls, value: Any) -> Any:
+        # Permite `args: [4096, 2]` sem exigir aspas em cada número.
+        if isinstance(value, list):
+            return [
+                str(item) if isinstance(item, int | float) and not isinstance(item, bool) else item
+                for item in value
+            ]
+        return value
 
 
 class CompilerConfig(StrictModel):
@@ -71,7 +111,7 @@ class OutputConfig(StrictModel):
 
 
 class Experiment(StrictModel):
-    name: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
+    name: str = Field(pattern=NAME_PATTERN)
     description: str = ""
     benchmark: BenchmarkConfig
     compiler: CompilerConfig = CompilerConfig()
@@ -100,35 +140,167 @@ class Experiment(StrictModel):
         return args
 
 
-def format_validation_error(error: ValidationError) -> str:
-    lines = []
-    for item in error.errors():
-        location = ".".join(str(part) for part in item["loc"]) or "(raiz)"
-        lines.append(f"  {location}: {item['msg']}")
-    return "\n".join(lines)
+def _model_at(location: tuple[Any, ...]) -> type[BaseModel] | None:
+    """Modelo Pydantic que descreve o campo em `location`."""
+    model: type[BaseModel] = Experiment
+    for part in location:
+        field = model.model_fields.get(str(part))
+        if field is None:
+            return None
+        candidates = [field.annotation, *get_args(field.annotation)]
+        nested = [c for c in candidates if isinstance(c, type) and issubclass(c, BaseModel)]
+        if not nested:
+            return None
+        model = nested[0]
+    return model
+
+
+def _describe(item: dict[str, Any]) -> str:
+    """Traduz um erro do Pydantic em uma explicação curta em português."""
+    kind = item["type"]
+    location = item["loc"]
+    value = item.get("input")
+    context = item.get("ctx", {})
+
+    if kind == "missing":
+        return "campo obrigatório ausente"
+
+    if kind == "extra_forbidden":
+        model = _model_at(location[:-1])
+        valid = sorted(model.model_fields) if model else []
+        close = difflib.get_close_matches(str(location[-1]), valid, n=1)
+        if close:
+            return f"campo desconhecido; você quis dizer '{close[0]}'?"
+        return f"campo desconhecido; campos válidos aqui: {', '.join(valid)}"
+
+    if kind == "literal_error":
+        expected = str(context["expected"]).replace(" or ", " ou ")
+        return f"valor {value!r} inválido; use {expected}"
+
+    if kind == "string_pattern_mismatch":
+        hint = FORMAT_HINTS.get(context.get("pattern", ""), "formato inválido")
+        return f"valor {value!r} inválido; {hint}"
+
+    if kind == "string_type":
+        model = _model_at(location[:-1])
+        field = model.model_fields.get(str(location[-1])) if model else None
+        patterns = [getattr(m, "pattern", None) for m in field.metadata] if field else []
+        hint = next((FORMAT_HINTS[p] for p in patterns if p in FORMAT_HINTS), None)
+        message = f"deve ser texto, mas recebeu {value!r}"
+        return f"{message}; {hint}" if hint else message
+
+    if kind == "list_type":
+        return f'deve ser uma lista, como ["a", "b"], mas recebeu {value!r}'
+
+    if kind in ("model_type", "model_attributes_type", "dict_type"):
+        return f"deve conter subcampos (um mapeamento YAML), mas recebeu {value!r}"
+
+    if kind in ("int_type", "int_parsing", "int_from_float"):
+        return f"deve ser um número inteiro, mas recebeu {value!r}"
+
+    if kind == "greater_than_equal":
+        return f"deve ser no mínimo {context['ge']}, mas recebeu {value!r}"
+
+    if kind == "value_error":
+        return str(context.get("error", item["msg"]))
+
+    return item["msg"]
+
+
+class _LineTracker:
+    """Linhas das chaves de um documento YAML, para apontar onde está cada erro."""
+
+    def __init__(self, root: yaml.Node) -> None:
+        self.lines: dict[tuple[str, ...], int] = {}
+        self.duplicates: list[tuple[tuple[str, ...], int]] = []
+        self._walk(root, ())
+
+    def _walk(self, node: yaml.Node, path: tuple[str, ...]) -> None:
+        if not isinstance(node, yaml.MappingNode):
+            return
+        for key, value in node.value:
+            child = (*path, str(key.value))
+            line = key.start_mark.line + 1
+            if child in self.lines:
+                self.duplicates.append((child, line))
+            else:
+                self.lines[child] = line
+            self._walk(value, child)
+
+    def line_of(self, location: tuple[Any, ...]) -> int | None:
+        path = tuple(str(part) for part in location)
+        while path:
+            if path in self.lines:
+                return self.lines[path]
+            path = path[:-1]
+        return None
+
+
+def _problem(line: int | None, location: tuple[Any, ...], text: str) -> tuple[int, str]:
+    field = ".".join(str(part) for part in location) or "(raiz)"
+    prefix = f"linha {line}: " if line else ""
+    return (line or 0, f"{prefix}{field}: {text}")
+
+
+def available_benchmarks() -> list[str]:
+    root = PROJECT_ROOT / "benchmarks"
+    return sorted(path.parent.name for path in root.glob("*/Makefile"))
 
 
 def load_experiment(path: Path) -> Experiment:
+    """Lê e valida um experimento, reunindo todos os problemas em um ConfigError."""
     if not path.is_file():
-        raise ConfigError(f"arquivo não encontrado: {path}")
+        raise ConfigError(path, ["arquivo não encontrado"])
 
+    text = path.read_text(encoding="utf-8")
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        root = yaml.compose(text, Loader=yaml.SafeLoader)
+        data = yaml.safe_load(text)
     except yaml.YAMLError as error:
-        raise ConfigError(f"YAML inválido em {path}:\n{error}") from error
+        mark = getattr(error, "problem_mark", None)
+        problem = getattr(error, "problem", None) or str(error)
+        where = f"linha {mark.line + 1}, coluna {mark.column + 1}: " if mark else ""
+        raise ConfigError(
+            path,
+            [f"{where}YAML inválido ({problem}); confira a indentação e os ':'"],
+        ) from error
 
+    if data is None:
+        raise ConfigError(path, ["arquivo vazio; o mínimo é name e benchmark.name"])
     if not isinstance(data, dict):
-        raise ConfigError(f"{path} deve conter um mapeamento YAML com os campos do experimento")
+        raise ConfigError(
+            path,
+            [
+                "o arquivo deve ser um mapeamento de campos (name:, benchmark:, ...), não uma lista ou valor"
+            ],
+        )
 
+    lines = _LineTracker(root)
+    problems = [
+        _problem(line, location, "campo repetido; só o último valor seria usado")
+        for location, line in lines.duplicates
+    ]
+
+    experiment = None
     try:
         experiment = Experiment.model_validate(data)
     except ValidationError as error:
-        raise ConfigError(f"{path} inválido:\n{format_validation_error(error)}") from error
+        for item in error.errors():
+            problems.append(_problem(lines.line_of(item["loc"]), item["loc"], _describe(item)))
 
-    if not (experiment.benchmark_dir / "Makefile").is_file():
-        raise ConfigError(
-            f"{path} inválido:\n  benchmark.name: benchmark não encontrado em "
-            f"benchmarks/{experiment.benchmark.name}/"
+    if experiment and not (experiment.benchmark_dir / "Makefile").is_file():
+        location = ("benchmark", "name")
+        problems.append(
+            _problem(
+                lines.line_of(location),
+                location,
+                f"benchmark {experiment.benchmark.name!r} não encontrado em benchmarks/; "
+                f"disponíveis: {', '.join(available_benchmarks()) or 'nenhum'}",
+            )
         )
 
+    if problems:
+        raise ConfigError(path, [message for _, message in sorted(problems, key=lambda p: p[0])])
+
+    assert experiment is not None
     return experiment

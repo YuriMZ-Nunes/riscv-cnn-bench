@@ -8,7 +8,7 @@ Só `name` e `benchmark.name` são obrigatórios. Todo campo omitido usa um padr
 uv run riscvcnnbench validate experiments/hello_param_cache.yaml
 ```
 
-O `validate` confere o arquivo e mostra a configuração resultante, já com os padrões aplicados. Campos desconhecidos são erro, para que um erro de digitação como `cahce:` não seja ignorado.
+O `validate` confere o arquivo e mostra a configuração resultante, já com os padrões aplicados. Campos desconhecidos são erro, para que um erro de digitação como `cahce:` não seja ignorado. `riscvcnnbench run` faz a mesma validação antes de qualquer outra coisa. Veja [Mensagens de erro](#mensagens-de-erro).
 
 > Estado atual: o formato e a validação estão implementados. `riscvcnnbench run` ainda **não** executa o YAML. Para rodar um experimento hoje, veja [Executar manualmente](#executar-manualmente).
 
@@ -35,7 +35,7 @@ benchmark:
 | `name` | obrigatório | Letras, números, `_` e `-`. Identifica o experimento e a pasta de saída. |
 | `description` | vazio | Texto livre. |
 | `benchmark.name` | obrigatório | Pasta em `benchmarks/` que contém um `Makefile`. |
-| `benchmark.args` | `[]` | Argumentos passados ao programa, como strings. |
+| `benchmark.args` | `[]` | Lista de argumentos passados ao programa. Números são aceitos e convertidos em texto (`[65536, 2]` equivale a `["65536", "2"]`). |
 | `compiler.flags` | `["-O2"]` | Flags escolhidas pelo experimento. `-static -march=rv64gc -mabi=lp64d` são sempre adicionadas pelo Makefile do benchmark. |
 | `cpu.model` | `atomic` | `atomic`, `timing`, `minor` (in-order) ou `o3` (out-of-order). |
 | `cpu.clock` | `1GHz` | Número seguido de `MHz` ou `GHz`. |
@@ -92,6 +92,37 @@ python3 scripts/run-gem5.py \
 ```
 
 Os argumentos após `--` são repassados à configuração gem5 e ficam registrados em `command.txt` e `metadata.json`.
+
+## Mensagens de erro
+
+A validação reúne **todos** os problemas do arquivo de uma vez, ordenados por linha. Cada um traz a linha, o campo e o que fazer:
+
+```text
+Erro: experiments/meu.yaml tem 7 problemas:
+  linha 1: name: valor 'meu experimento' inválido; use apenas letras, números, _ e -
+  linha 2: benchmark.name: campo obrigatório ausente
+  linha 3: benchmark.args: deve ser uma lista, como ["a", "b"], mas recebeu 4096
+  linha 4: cahce: campo desconhecido; você quis dizer 'cache'?
+  linha 8: cpu.model: valor 'pentium' inválido; use 'atomic', 'timing', 'minor' ou 'o3'
+  linha 9: cpu.clock: deve ser texto, mas recebeu 2; use uma frequência como 800MHz ou 2GHz
+  linha 11: memory.size: deve ser texto, mas recebeu 512; use um tamanho como 32KiB, 512MiB ou 1GiB
+```
+
+Além disso, são detectados:
+
+| Situação | Mensagem |
+| --- | --- |
+| Arquivo inexistente ou vazio | `arquivo não encontrado`, `arquivo vazio; o mínimo é name e benchmark.name` |
+| Erro de sintaxe YAML | `linha L, coluna C: YAML inválido (...); confira a indentação e os ':'` |
+| Arquivo que é lista ou valor solto | `o arquivo deve ser um mapeamento de campos (...)` |
+| Campo repetido | `campo repetido; só o último valor seria usado` |
+| Seção escrita como valor (`cpu: o3`) | `deve conter subcampos (um mapeamento YAML)` |
+| Benchmark inexistente | Lista os benchmarks disponíveis em `benchmarks/` |
+| L2 sem L1i/L1d | `cache.l2 requer cache.l1i e cache.l1d` |
+
+O benchmark só é procurado em `benchmarks/` quando o restante do arquivo está válido.
+
+No código, `load_experiment()` levanta `ConfigError`, cujo atributo `problems` traz a lista de mensagens.
 
 ## Limitações
 
