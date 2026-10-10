@@ -75,8 +75,13 @@ addopts = [
   "-ra",
   "--strict-markers",
   "--strict-config",
+  "-m",
+  "not e2e",
 ]
 pythonpath = ["src"]
+markers = [
+  "e2e: teste de ponta a ponta com toolchain RISC-V e gem5 (make e2e-test)",
+]
 
 [tool.coverage.run]
 branch = true

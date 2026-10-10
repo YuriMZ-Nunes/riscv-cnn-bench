@@ -20,7 +20,7 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
-	clean clean-results status hello-build hello-run hello-run-gem5
+	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -70,6 +70,9 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
+
+e2e-test: ## Compila e executa o hello_riscv no gem5 e verifica log, retorno e stats.
+	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 clean-results: ## Remove resultados gerados pelo framework.
 	rm -rf results/*
