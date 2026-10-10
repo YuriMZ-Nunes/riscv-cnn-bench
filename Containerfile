@@ -1,6 +1,9 @@
-FROM docker.io/library/ubuntu:24.04
+# Digest fixado para que reconstruções usem a mesma imagem base.
+# Para atualizar: podman pull ubuntu:24.04 && podman image inspect --format '{{.Digest}}' ubuntu:24.04
+FROM docker.io/library/ubuntu:24.04@sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG UV_VERSION=0.12.23
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -43,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+RUN curl -LsSf https://astral.sh/uv/${UV_VERSION}/install.sh | sh \
     && mv /root/.local/bin/uv /usr/local/bin/uv \
     && mv /root/.local/bin/uvx /usr/local/bin/uvx \
     && uv --version

@@ -8,14 +8,19 @@ GEM5_BIN ?= $(GEM5_DIR)/build/RISCV/gem5.opt
 UV_EXTRA ?= dev
 JOBS ?= 4
 
+PODMAN_ARGS ?=
 PODMAN_RUN = podman run --rm -it --userns=keep-id \
 	-v "$(CURDIR):/workspace:Z" \
 	-w /workspace \
+	$(PODMAN_ARGS) \
 	$(IMAGE)
+
+# Identifica a imagem usada nos metadados de cada execução.
+IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
-	clean clean-results status hello-build hello-run
+	clean clean-results status hello-build hello-run hello-run-gem5
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -55,9 +60,10 @@ gem5-status: ## Exibe o estado Git do submódulo gem5.
 
 gem5-build: ## Compila o gem5 otimizado com suporte a RISC-V. Use JOBS=N para ajustar paralelismo.
 	$(PODMAN_RUN) bash -lc 'cd $(GEM5_DIR) && scons build/RISCV/gem5.opt -j$(JOBS)'
+	$(PODMAN_RUN) bash -lc 'python3 scripts/record-gem5-build.py --gem5 "$(GEM5_BIN)" --repo $(GEM5_DIR)'
 
 gem5-clean: ## Remove os artefatos de build do gem5; não altera o código-fonte.
-	$(PODMAN_RUN) bash -lc 'cd $(GEM5_DIR) && scons -c build/RISCV/gem5.opt && rm -f .sconsign.dblite'
+	$(PODMAN_RUN) bash -lc 'cd $(GEM5_DIR) && scons -c build/RISCV/gem5.opt && rm -f .sconsign.dblite build/RISCV/gem5.opt.build-info.json build/RISCV/gem5.opt.build.diff'
 
 benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 	$(PODMAN_RUN) bash -lc 'echo "Ainda não há benchmarks configurados para build."'
@@ -95,6 +101,7 @@ hello-build: ## Compila o benchmark RISC-V hello_riscv.
 hello-run: ## Executa o benchmark RISC-V hello_riscv com o QEMU.
 	$(PODMAN_RUN) bash -lc 'qemu-riscv64 build/benchmarks/hello_riscv'
 
+hello-run-gem5: PODMAN_ARGS += -e RCB_IMAGE="$(IMAGE)" -e RCB_IMAGE_ID="$(IMAGE_ID)"
 hello-run-gem5: hello-build ## Executa hello_riscv no gem5 e preserva cada execução.
 	$(PODMAN_RUN) bash -lc 'python3 scripts/run-gem5.py \
 		--gem5 "$(GEM5_BIN)" \

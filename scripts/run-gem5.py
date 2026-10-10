@@ -1,44 +1,61 @@
 """Executa gem5 e preserva os artefatos de cada execução."""
 
 import argparse
-import hashlib
 import json
+import os
+import platform
 import shlex
 import shutil
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
+
+from provenance import (
+    build_info_path,
+    command_output,
+    gem5_version,
+    git_info,
+    save_git_diff,
+    sha256,
+)
 
 
 def timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def git_info(directory: Path) -> dict:
-    def query(*args: str) -> str | None:
-        result = subprocess.run(
-            ["git", "-C", str(directory), *args],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return result.stdout.strip() if result.returncode == 0 else None
-
-    status = query("status", "--porcelain")
+def environment_info(binary: Path) -> dict:
+    """Versões das ferramentas e do container usados na execução."""
+    prefix = os.environ.get("RISCV_PREFIX", "riscv64-linux-gnu-")
+    gcc = command_output(f"{prefix}gcc", "--version")
+    comment = command_output(f"{prefix}readelf", "-p", ".comment", str(binary))
+    compilers = [
+        line.split("]", 1)[1].strip()
+        for line in (comment or "").splitlines()
+        if line.strip().startswith("[")
+    ]
     return {
-        "commit": query("rev-parse", "HEAD"),
-        "dirty": None if status is None else bool(status),
-        "status": status,
+        "container_image": os.environ.get("RCB_IMAGE"),
+        "container_image_id": os.environ.get("RCB_IMAGE_ID"),
+        "platform": platform.platform(),
+        "python": sys.version,
+        "riscv_gcc": gcc.splitlines()[0] if gcc else None,
+        # Compilador registrado no próprio ELF, que vale mesmo se a
+        # toolchain do ambiente tiver mudado depois do build.
+        "binary_compiler": compilers or None,
     }
+
+
+def gem5_build_info(gem5: Path, gem5_hash: str) -> dict | None:
+    """Lê o registro de build-info e confere se ele corresponde ao executável."""
+    path = build_info_path(gem5)
+    if not path.is_file():
+        return None
+    info = json.loads(path.read_text(encoding="utf-8"))
+    info["matches_executable"] = info.get("gem5_sha256") == gem5_hash
+    return info
 
 
 def write_metadata(path: Path, metadata: dict) -> None:
@@ -87,7 +104,7 @@ def main() -> int:
 
     metadata_path = run_dir / "metadata.json"
     metadata = {
-        "schema_version": 1,
+        "schema_version": 2,
         "run_id": run_id,
         "started_at": timestamp(),
         "finished_at": None,
@@ -132,13 +149,28 @@ def main() -> int:
                 encoding="utf-8",
             )
 
+            gem5_hash = sha256(gem5)
+            diffs = {}
+            for key, directory in [
+                ("project", root),
+                ("gem5_repository", root / "third_party/gem5"),
+            ]:
+                if metadata[key]["dirty"]:
+                    diff_path = inputs_dir / f"{key}.diff"
+                    if save_git_diff(directory, diff_path):
+                        diffs[key] = str(diff_path.relative_to(run_dir))
+
             metadata.update(
                 {
                     "status": "running",
                     "command": command,
                     "binary_sha256": sha256(saved_binary),
                     "config_sha256": sha256(saved_config),
-                    "gem5_sha256": sha256(gem5),
+                    "gem5_sha256": gem5_hash,
+                    "gem5_version": gem5_version(gem5),
+                    "gem5_build": gem5_build_info(gem5, gem5_hash),
+                    "environment": environment_info(saved_binary),
+                    "diffs": diffs,
                 }
             )
             write_metadata(metadata_path, metadata)

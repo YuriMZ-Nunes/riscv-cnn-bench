@@ -1,15 +1,24 @@
 # riscv-cnn-bench
 
-O **riscv-cnn-bench** é um framework para simulação e benchmark de Redes Neurais Convolucionais (CNNs) quantizadas na arquitetura RISC-V, utilizando o simulador **gem5**. 
+O **riscv-cnn-bench** é um framework em desenvolvimento (Pre-Alpha) para simulação e benchmark de Redes Neurais Convolucionais (CNNs) quantizadas na arquitetura RISC-V, utilizando o simulador **gem5**.
 
 O objetivo do projeto é fornecer um ambiente padronizado, isolado e reprodutível para analisar o impacto de diferentes níveis de quantização, otimizações de compilador e configurações de microarquitetura (hierarquias de cache, modelos de CPU, etc.) no desempenho de inferência.
 
 ## Principais Recursos
 
-- **Simulação com gem5:** Coleta de métricas ciclo-a-ciclo (ciclos de CPU, acessos à cache, IPC) para simulações baseadas em RISC-V.
-- **Ambiente Containerizado:** Uso de Podman ou Docker para consistência de compiladores (Scons, GCC, CMake) e bibliotecas, eliminando conflitos locais.
-- **Gerenciador Python (CLI):** Executável `riscvcnnbench` para validar arquivos de configuração (YAML), automatizar simulações e consolidar métricas.
-- **Instalação Determinística:** Uso do gerenciador `uv` para assegurar o versionamento exato de todas as dependências Python.
+Disponíveis:
+
+- **Ambiente Containerizado:** Ubuntu 24.04 com imagem base fixada por digest, toolchain RISC-V e `uv` com versões fixadas, automatizado via Podman.
+- **Dependências Python travadas:** `uv` e `uv.lock` fixam as versões das dependências Python.
+- **gem5 para RISC-V:** compilação do simulador e configuração em modo Syscall Emulation (SE) com `AtomicSimpleCPU`, usada para validação funcional.
+- **Benchmark funcional `hello_riscv`:** valida a compilação cruzada e a execução no QEMU e no gem5. Não é uma CNN.
+- **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
+
+Planejados (ainda não implementados):
+
+- Benchmarks de CNNs e kernels quantizados.
+- Modelos de CPU detalhados e hierarquias de cache para coleta de métricas de microarquitetura (ciclos, IPC, acessos à cache).
+- CLI `riscvcnnbench` para validar YAMLs, automatizar experimentos e consolidar métricas. Hoje ela implementa `version`; `validate` e `run` apenas verificam se o arquivo existe.
 
 ---
 
@@ -27,23 +36,29 @@ riscv-cnn-bench/
 │       └── se_riscv.py       # Script de configuração do gem5 (SysCall Emulation)
 ├── docs/                     # Documentação técnica de suporte
 ├── experiments/              # Definições de experimentos em formato YAML
-├── scripts/                  # Scripts para compilação e execução de benchmarks
+├── benchmarks/hello_riscv/   # Benchmark funcional RISC-V em C
+├── scripts/
+│   ├── run-gem5.py           # Executa o gem5 e preserva cada execução em results/
+│   ├── record-gem5-build.py  # Registra commit e hash do gem5 compilado
+│   └── provenance.py         # Funções de hash, Git e versões usadas pelos scripts
 ├── src/riscvcnnbench/        # Código-fonte do framework de automação em Python
 │   ├── cli.py                # Interface de Linha de Comando (CLI)
-│   ├── config.py             # Parser e validador de configurações (Pydantic/YAML)
-│   ├── metric.py             # Extrator de estatísticas do gem5
-│   ├── parser.py             # Processamento do binário/dados de entrada
-│   ├── runner.py             # Interface de execução do simulador
-│   └── report.py             # Geração de relatórios e consolidação de dados
-├── tests/                    # Testes unitários e de integração
-└── third_party/gem5/         # Código-fonte do simulador gem5 (submódulo Git)
+│   ├── config.py             # Planejado: validador de configurações (vazio)
+│   ├── metric.py             # Planejado: extrator de estatísticas do gem5 (vazio)
+│   ├── parser.py             # Planejado: processamento de dados de entrada (vazio)
+│   ├── runner.py             # Planejado: interface de execução do simulador (vazio)
+│   └── report.py             # Planejado: relatórios e consolidação (vazio)
+├── tests/                    # Testes Python
+├── third_party/gem5/         # Código-fonte do simulador gem5 (submódulo Git)
+├── build/                    # Gerado; ignorado pelo Git
+└── results/                  # Resultados das execuções; ignorado pelo Git
 ```
 
 ---
 
 ## Requisitos do Sistema
 
-- **Podman** (recomendado para execução rootless com `--userns=keep-id`) ou **Docker**.
+- **Podman** (o Makefile usa execução rootless com `--userns=keep-id`).
 - **GNU Make** (utilizado para automação de tarefas).
 - **Git** (necessário para o gerenciamento de submódulos).
 
@@ -54,7 +69,7 @@ riscv-cnn-bench/
 ### 1. Clonar o Repositório e Submódulos
 
 ```bash
-git clone https://github.com/SEU-USUARIO/riscv-cnn-bench.git
+git clone https://github.com/YuriMZ-Nunes/riscv-cnn-bench.git
 cd riscv-cnn-bench
 
 # Inicializa e atualiza o gem5 e suas dependências internas
@@ -88,12 +103,24 @@ make gem5-build JOBS=8
 ```
 *Nota: A compilação é um processo longo e pode demorar de 15 a 45 minutos dependendo do hardware.*
 
+Ao final, `make gem5-build` grava `gem5.opt.build-info.json` ao lado do executável, com o commit do gem5 e o hash do binário. Compile sempre por esse alvo para que as execuções possam conferir de qual revisão o gem5 veio.
+
 ### 5. Executar a Verificação Geral (Smoke Test)
 
 ```bash
 make smoke-test
 ```
-Este comando executa a sincronização do ambiente, testes com Pytest, checagem do linter e formatação estática.
+Este comando executa a sincronização do ambiente, a CLI, testes com Pytest, checagem do linter e formatação estática. Ele não compila o gem5 nem executa benchmarks.
+
+### 6. Executar o hello_riscv
+
+```bash
+make hello-build      # Compila o benchmark
+make hello-run        # Executa no QEMU
+make hello-run-gem5   # Executa no gem5 e salva a execução em results/hello_riscv/<run_id>/
+```
+
+Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 
 ---
 
@@ -113,10 +140,12 @@ Este comando executa a sincronização do ambiente, testes com Pytest, checagem 
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
 | `make format` | Formata apenas o código próprio em `src/` e `tests/`. |
 | `make gem5-status` | Mostra o estado Git do submódulo gem5. |
-| `make gem5-build` | Compila `build/RISCV/gem5.opt`; use `JOBS=N` para ajustar paralelismo. |
+| `make gem5-build` | Compila `build/RISCV/gem5.opt` e registra commit/hash do build; use `JOBS=N` para ajustar paralelismo. |
 | `make gem5-clean` | Remove artefatos de build do gem5 sem alterar fontes. |
 | `make toolchain-check` | Exibe caminhos e versões da toolchain RISC-V, quando configurado. |
-| `make hello-build` | Compila o benchmark mínimo RISC-V, quando configurado. |
+| `make hello-build` | Compila o benchmark `hello_riscv`. |
+| `make hello-run` | Executa o `hello_riscv` no QEMU (não compila antes). |
+| `make hello-run-gem5` | Compila e executa o `hello_riscv` no gem5, criando uma pasta por execução. |
 | `make smoke-test` | Sincroniza ambiente, testa CLI, executa Pytest e Ruff. |
 | `make clean-results` | Remove resultados gerados sob `results/`. |
 | `make clean` | Remove `.venv`, caches e artefatos gerados pelo framework. |
@@ -158,13 +187,33 @@ make status
 Para aplicar formatação ao código próprio:
 
 ```bash
-make clean-results
-make clean
+make format
 ```
 
-Faça backup das execuções que deseja manter antes de utilizá-los.
+O Ruff verifica apenas `src/` e `tests/`; os scripts em `scripts/` e o submódulo gem5 não são verificados.
 
-A criação de uma pasta por execução evita sobrescritas entre simulações, mas não protege contra limpeza manual ou perda do ambiente.
+## Resultados e reprodutibilidade
+
+Cada `make hello-run-gem5` cria `results/hello_riscv/<run_id>/` sem sobrescrever execuções anteriores. A pasta guarda `metadata.json`, `command.txt`, `stdout.log`, `stderr.log`, cópias do binário e da configuração em `inputs/` e os arquivos do gem5 em `gem5/`.
+
+O `metadata.json` registra:
+
+- status, código de saída e datas;
+- commit e estado Git do projeto e do gem5, com diffs em `inputs/` quando há alterações locais rastreadas;
+- hashes SHA-256 do binário, da configuração e do executável gem5;
+- versão do gem5 e o registro de build, indicando se o executável ainda é o mesmo compilado por `make gem5-build`;
+- imagem do container, Python e versões do compilador RISC-V.
+
+Limitações: o executável do gem5 não é copiado (apenas identificado por hash); os caminhos são absolutos e documentam a execução original, não permitem replay automático; arquivos não rastreados não entram nos diffs; pacotes apt fixados podem deixar de existir no repositório do Ubuntu, exigindo atualização do Containerfile. O objetivo é rastreabilidade, não reprodução bit a bit.
+
+### Limpeza
+
+```bash
+make clean-results   # Remove todo o conteúdo de results/
+make clean           # Remove .venv, caches, build/ e results/
+```
+
+Faça backup das execuções que deseja manter antes de utilizá-los. A criação de uma pasta por execução evita sobrescritas entre simulações, mas não protege contra limpeza manual ou perda do ambiente.
 
 ## Documentação
 

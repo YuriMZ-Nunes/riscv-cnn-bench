@@ -104,7 +104,9 @@ results/hello_riscv/<run_id>/
 ├── stderr.log
 ├── inputs/
 │   ├── hello_riscv
-│   └── se_riscv.py
+│   ├── se_riscv.py
+│   ├── project.diff          # Somente se o repositório tiver alterações locais
+│   └── gem5_repository.diff  # Somente se o checkout do gem5 tiver alterações locais
 └── gem5/
     ├── stats.txt
     ├── config.ini
@@ -118,7 +120,8 @@ Os arquivos efetivamente gerados em `gem5/` dependem da revisão do simulador, d
 
 | Arquivo | Conteúdo |
 | --- | --- |
-| `metadata.json` | Identificador, datas, status, código de saída do gem5 quando disponível, comando, diretório de trabalho, revisões Git, alterações locais e hashes SHA-256. |
+| `metadata.json` | Identificador, datas, status, código de saída do gem5 quando disponível, comando, diretório de trabalho, revisões Git, alterações locais, hashes SHA-256, versão do gem5, registro de build do gem5 e ambiente (imagem do container, Python, compilador RISC-V). |
+| `inputs/*.diff` | Diff em relação a `HEAD` das alterações rastreadas, gerado apenas quando o repositório correspondente está modificado. Arquivos não rastreados não entram no diff; aparecem só em `status`. |
 | `command.txt` | Comando utilizado para iniciar o gem5. |
 | `stdout.log` | Saída padrão do simulador e do programa executado. |
 | `stderr.log` | Mensagens enviadas à saída de erro, incluindo avisos e falhas. |
@@ -226,7 +229,7 @@ A imagem padrão é `localhost/riscv-cnn-bench:dev`. O benchmark usa `riscv64-li
 -O2 -static -march=rv64gc -mabi=lp64d -Wall -Wextra -Werror
 ```
 
-Versões de pacotes observadas na imagem de desenvolvimento:
+Versões de pacotes fixadas no `Containerfile`, que também fixa a imagem base `ubuntu:24.04` por digest e o `uv` na versão 0.12.23:
 
 | Pacote | Versão |
 | --- | --- |
@@ -236,7 +239,9 @@ Versões de pacotes observadas na imagem de desenvolvimento:
 | `libc6-dev-riscv64-cross` | `2.39-0ubuntu8cross1` |
 | `qemu-user` | `1:8.2.2+ds-0ubuntu1.18` |
 
-A tabela registra a imagem consultada, não garante as versões de outras imagens ou reconstruções. Confira a versão efetiva do compilador e do emulador com:
+`gcc-riscv64-linux-gnu` é um metapacote: o compilador efetivamente instalado é o GCC 13.3.0 (`13.3.0-6ubuntu2~24.04.1`), que não é fixado diretamente. Por isso, cada execução no gem5 registra em `metadata.json` a versão do compilador do ambiente e a gravada no próprio binário. Versões fixadas podem ser removidas dos repositórios do Ubuntu; nesse caso, `make image` falha e o `Containerfile` precisa ser atualizado.
+
+Confira a versão efetiva do compilador e do emulador com:
 
 ```bash
 make toolchain-check
@@ -254,9 +259,9 @@ make gem5-status
 
 O wrapper registra em `metadata.json` o commit e o estado Git do repositório principal e do checkout em `third_party/gem5`. Se essas informações não puderem ser consultadas, os campos correspondentes podem ficar sem valor.
 
-A revisão do checkout e o hash do executável são informações distintas: alterações no código-fonte não significam que o gem5 tenha sido recompilado.
+A revisão do checkout e o hash do executável são informações distintas: alterações no código-fonte não significam que o gem5 tenha sido recompilado. Por isso, `make gem5-build` grava `gem5.opt.build-info.json` ao lado do executável, com o commit, o estado do checkout e o hash do executável no momento do build. O wrapper copia esse registro para `gem5_build` em `metadata.json`, e `matches_executable` indica se o executável usado ainda é o mesmo do registro. `false` significa que o gem5 foi recompilado sem passar por `make gem5-build`; ausência do campo significa que não há registro.
 
-Registre também as versões efetivas das ferramentas ao documentar os experimentos. O wrapper atual não coleta automaticamente as versões do compilador, do QEMU ou a identificação completa da imagem do container.
+O campo `environment` registra a imagem do container (nome e ID, preenchidos por `make hello-run-gem5`), a plataforma, o Python, a versão de `riscv64-linux-gnu-gcc` e o compilador gravado na seção `.comment` do próprio binário. A versão do QEMU não é registrada, pois o QEMU não participa da execução no gem5.
 
 Nenhum hash específico do gem5 é estabelecido neste guia.
 
@@ -278,6 +283,7 @@ Em caso de falha após a criação da pasta, o wrapper preserva os arquivos disp
 | Status permanece `preparing` ou `running` após encerramento | Verifique se houve encerramento abrupto e consulte os logs disponíveis. |
 | `stats.txt` ausente ou vazio | Verifique se o gem5 iniciou e até onde a simulação chegou. |
 | Erro de execução no gem5 | Confira a revisão usada e preserve a pasta completa para diagnóstico. |
+| `gem5_build` nulo ou `matches_executable` igual a `false` | O gem5 foi compilado fora de `make gem5-build`. Recompile com `make gem5-build` para registrar commit e hash do build. |
 
 Uma execução bem-sucedida no QEMU não substitui a validação no gem5.
 
