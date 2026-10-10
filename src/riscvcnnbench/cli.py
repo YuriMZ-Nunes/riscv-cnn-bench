@@ -46,10 +46,14 @@ def validate(experiment: Path) -> None:
 
 @app.command()
 def run(experiment: Path) -> None:
-    """Executa um experimento; implementação inicial de teste."""
-    if not experiment.is_file():
-        typer.echo(f"Erro: arquivo não encontrado: {experiment}", err=True)
-        raise typer.Exit(code=1)
+    """Executa um experimento; por enquanto apenas valida o arquivo."""
+    from riscvcnnbench.config import ConfigError, load_experiment
+
+    try:
+        load_experiment(experiment)
+    except ConfigError as error:
+        typer.echo(f"Erro: {error}", err=True)
+        raise typer.Exit(code=1) from error
 
     typer.echo(f"Execução futura do experimento: {experiment}")
 
