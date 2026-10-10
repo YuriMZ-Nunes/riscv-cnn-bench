@@ -287,6 +287,20 @@ Em caso de falha após a criação da pasta, o wrapper preserva os arquivos disp
 
 Uma execução bem-sucedida no QEMU não substitui a validação no gem5.
 
+## Teste de ponta a ponta
+
+```bash
+make e2e-test
+```
+
+O teste [tests/test_hello_e2e.py](../tests/test_hello_e2e.py) compila o `hello_riscv` em uma pasta temporária, executa-o no gem5 pelo wrapper e verifica:
+
+- código de saída zero do wrapper e `status: completed` com `exit_code: 0` em `metadata.json`;
+- `RESULT sum=499500` e `(code=0)` em `stdout.log`;
+- `simInsts`, `simTicks` e `system.cpu.numCycles` maiores que zero em `stats.txt`.
+
+Ele usa pastas temporárias, portanto não altera `build/` nem `results/`. Requer o gem5 compilado; o caminho pode ser alterado com a variável `GEM5_BIN`. Fica fora de `make test` e `make smoke-test` (marcador `e2e`) por depender do gem5. Os valores das estatísticas não são comparados com referências fixas, apenas verificados como positivos.
+
 ## Limpeza e preservação
 
 As pastas são mantidas entre execuções, mas continuam sujeitas aos comandos de limpeza:

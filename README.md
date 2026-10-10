@@ -118,7 +118,10 @@ Este comando executa a sincronização do ambiente, a CLI, testes com Pytest, ch
 make hello-build      # Compila o benchmark
 make hello-run        # Executa no QEMU
 make hello-run-gem5   # Executa no gem5 e salva a execução em results/hello_riscv/<run_id>/
+make e2e-test         # Teste de ponta a ponta: compila, executa no gem5 e verifica log, retorno e stats
 ```
+
+O `make e2e-test` requer o gem5 compilado (`make gem5-build`). Ele usa pastas temporárias e não altera `build/` nem `results/`.
 
 Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 
@@ -135,7 +138,8 @@ Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 | `make check` | Exibe versões de ferramentas instaladas no container. |
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
-| `make test` | Executa os testes Python. |
+| `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
+| `make e2e-test` | Compila e executa o `hello_riscv` no gem5 e verifica log, retorno e `stats.txt`. |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
 | `make format` | Formata apenas o código próprio em `src/` e `tests/`. |
@@ -179,6 +183,7 @@ Use os comandos abaixo antes de criar commits:
 
 ```bash
 make test
+make e2e-test   # Se a mudança afeta toolchain, gem5, configs ou scripts
 make lint
 make format-check
 make status
