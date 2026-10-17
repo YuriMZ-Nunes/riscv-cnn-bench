@@ -24,6 +24,7 @@ m5out/
 
 # TCC Workspace Notes
 TCC.md
+tcc-helpers/
 
 # Sistema
 .DS_Store
@@ -31,3 +32,5 @@ TCC.md
 # Helper para agentes
 contexto.md
 CLAUDE.md
+monografia.md
+*.pdf
