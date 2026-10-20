@@ -20,7 +20,7 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
-	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test
+	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test run
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -71,7 +71,7 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
 
-e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv e exemplo hello_param_cache).
+e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache e riscvcnnbench run).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 clean-results: ## Remove resultados gerados pelo framework.
@@ -111,3 +111,8 @@ hello-run-gem5: hello-build ## Executa hello_riscv no gem5 e preserva cada execu
 		--binary build/benchmarks/hello_riscv \
 		--config configs/gem5/se_riscv.py \
 		--results-dir results/hello_riscv'
+
+run: PODMAN_ARGS += -e RCB_IMAGE="$(IMAGE)" -e RCB_IMAGE_ID="$(IMAGE_ID)"
+run: ## Executa um experimento YAML: make run EXPERIMENT=experiments/smoke_test.yaml
+	@test -n "$(EXPERIMENT)" || { echo "Informe EXPERIMENT=<arquivo.yaml>"; exit 2; }
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench run "$(EXPERIMENT)" --gem5 "$(GEM5_BIN)"'

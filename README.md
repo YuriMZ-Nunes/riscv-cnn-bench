@@ -14,13 +14,14 @@ Disponíveis:
 - **Benchmarks de teste `hello_riscv` e `hello_riscv_param`:** validam a compilação cruzada e a execução no QEMU e no gem5; o segundo tem tamanho de vetor e repetições configuráveis. Não são CNNs.
 - **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
+- **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução.
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
 
 - Benchmarks de CNNs e kernels quantizados.
 - Modelos de CPU detalhados e hierarquias de cache para coleta de métricas de microarquitetura (ciclos, IPC, acessos à cache).
-- Execução de experimentos pela CLI (`riscvcnnbench run`) e consolidação de métricas. Hoje `run` apenas verifica se o arquivo existe.
+- Consolidação de métricas a partir de `stats.txt`.
 - Varreduras de parâmetros (vários experimentos a partir de um arquivo).
 
 ---
@@ -131,14 +132,15 @@ O `make e2e-test` requer o gem5 compilado (`make gem5-build`). Ele usa pastas te
 
 Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 
-### 7. Validar um experimento
+### 7. Validar e executar um experimento
 
 ```bash
 make shell
 uv run riscvcnnbench validate experiments/hello_param_cache.yaml
+uv run riscvcnnbench run experiments/hello_param_cache.yaml
 ```
 
-O formato, os campos e como executar um experimento manualmente estão em [docs/experiments.md](docs/experiments.md).
+Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`. O formato, os campos e a execução estão em [docs/experiments.md](docs/experiments.md).
 
 ---
 
@@ -154,7 +156,7 @@ O formato, os campos e como executar um experimento manualmente estão em [docs/
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
-| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv` e o exemplo `hello_param_cache.yaml`. |
+| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml` e `riscvcnnbench run` (sucesso, falha de build e de simulação). |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
 | `make format` | Formata apenas o código próprio em `src/` e `tests/`. |
@@ -165,6 +167,7 @@ O formato, os campos e como executar um experimento manualmente estão em [docs/
 | `make hello-build` | Compila o benchmark `hello_riscv`. |
 | `make hello-run` | Executa o `hello_riscv` no QEMU (não compila antes). |
 | `make hello-run-gem5` | Compila e executa o `hello_riscv` no gem5, criando uma pasta por execução. |
+| `make run EXPERIMENT=<yaml>` | Compila e executa um experimento YAML no gem5, criando uma pasta por execução. |
 | `make smoke-test` | Sincroniza ambiente, testa CLI, executa Pytest e Ruff. |
 | `make clean-results` | Remove resultados gerados sob `results/`. |
 | `make clean` | Remove `.venv`, caches e artefatos gerados pelo framework. |
@@ -214,7 +217,7 @@ O Ruff verifica apenas `src/` e `tests/`; os scripts em `scripts/` e o submódul
 
 ## Resultados e reprodutibilidade
 
-Cada `make hello-run-gem5` cria `results/hello_riscv/<run_id>/` sem sobrescrever execuções anteriores. A pasta guarda `metadata.json`, `command.txt`, `stdout.log`, `stderr.log`, cópias do binário e da configuração em `inputs/` e os arquivos do gem5 em `gem5/`.
+Cada `make hello-run-gem5` cria `results/hello_riscv/<run_id>/`, e cada `riscvcnnbench run` cria `<output.dir>/<run_id>/`, sem sobrescrever execuções anteriores. A pasta guarda `metadata.json`, `command.txt`, `stdout.log`, `stderr.log`, cópias do binário e da configuração em `inputs/` e os arquivos do gem5 em `gem5/`. O significado de cada arquivo e campo está em [docs/results.md](docs/results.md).
 
 O `metadata.json` registra:
 
@@ -239,5 +242,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 
 - [Formato dos experimentos](docs/experiments.md)
 - [Execução e resultados do hello_riscv](docs/hello_riscv.md)
+- [Resultados de uma execução](docs/results.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

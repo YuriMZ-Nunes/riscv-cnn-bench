@@ -3,6 +3,10 @@
 Argumentos após `--` são repassados à configuração gem5, por exemplo:
 
     run-gem5.py --gem5 ... --binary ... --config ... --results-dir ... -- --cpu timing
+
+Com --build-command, o benchmark é compilado dentro da pasta da execução antes
+do gem5; --run-id permite que quem chama conheça essa pasta de antemão
+(usado por `riscvcnnbench run`).
 """
 
 import argparse
@@ -17,6 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+SCHEMA_VERSION = 3
+
 from provenance import (
     build_info_path,
     command_output,
@@ -25,6 +31,14 @@ from provenance import (
     save_git_diff,
     sha256,
 )
+
+
+class BuildError(Exception):
+    """O comando de build terminou com código diferente de zero."""
+
+    def __init__(self, code: int) -> None:
+        super().__init__(code)
+        self.code = code
 
 
 def timestamp() -> str:
@@ -81,6 +95,25 @@ def main() -> int:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--results-dir", type=Path, required=True)
     parser.add_argument(
+        "--run-id",
+        help="Identificador da execução. Padrão: data/hora UTC + sufixo aleatório.",
+    )
+    parser.add_argument(
+        "--build-command",
+        type=json.loads,
+        help="Comando de build, como lista JSON, executado antes do gem5.",
+    )
+    parser.add_argument(
+        "--experiment",
+        type=Path,
+        help="YAML do experimento, copiado para inputs/experiment.yaml.",
+    )
+    parser.add_argument(
+        "--resolved-config",
+        type=Path,
+        help="Configuração resolvida (JSON), copiada e incluída nos metadados.",
+    )
+    parser.add_argument(
         "config_args",
         nargs="*",
         help="Argumentos extras repassados à configuração gem5, após --.",
@@ -91,19 +124,33 @@ def main() -> int:
     binary = args.binary.resolve()
     config = args.config.resolve()
 
+    build_command = args.build_command
+    if build_command is not None and (
+        not isinstance(build_command, list)
+        or not build_command
+        or not all(isinstance(item, str) for item in build_command)
+    ):
+        parser.error("--build-command deve ser uma lista JSON de textos.")
+
+    required = [("gem5", gem5), ("configuração", config)]
+    # Com build, o binário só existe depois da compilação.
+    if build_command is None:
+        required.append(("binário", binary))
     for label, path in [
-        ("gem5", gem5),
-        ("binário", binary),
-        ("configuração", config),
+        *required,
+        ("experimento", args.experiment),
+        ("configuração resolvida", args.resolved_config),
     ]:
-        if not path.is_file():
+        if path is not None and not path.is_file():
             parser.error(f"{label} não encontrado: {path}")
 
-    run_id = (
+    run_id = args.run_id or (
         datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
         + "-"
         + uuid4().hex[:8]
     )
+    if Path(run_id).name != run_id or run_id in (".", ".."):
+        parser.error(f"--run-id inválido: {run_id}")
     run_dir = args.results_dir.resolve() / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
 
@@ -114,11 +161,12 @@ def main() -> int:
 
     metadata_path = run_dir / "metadata.json"
     metadata = {
-        "schema_version": 2,
+        "schema_version": SCHEMA_VERSION,
         "run_id": run_id,
         "started_at": timestamp(),
         "finished_at": None,
         "status": "preparing",
+        "failed_step": None,
         "exit_code": None,
         "cwd": str(root),
         "project": git_info(root),
@@ -126,6 +174,8 @@ def main() -> int:
         "original_binary": str(binary),
         "original_config": str(config),
         "gem5_executable": str(gem5),
+        "experiment": None,
+        "build": None,
     }
     write_metadata(metadata_path, metadata)
 
@@ -136,15 +186,72 @@ def main() -> int:
         (run_dir / "stdout.log").open("w", encoding="utf-8") as stdout,
         (run_dir / "stderr.log").open("w", encoding="utf-8") as stderr,
     ):
+        step = "preparation"
         try:
             saved_binary = inputs_dir / binary.name
             saved_config = inputs_dir / config.name
+            saved_experiment = inputs_dir / "experiment.yaml"
+            saved_resolved = inputs_dir / "experiment.resolved.json"
 
-            if saved_binary == saved_config:
-                raise ValueError("Binário e configuração devem ter nomes distintos.")
+            names = [saved_binary.name, saved_config.name]
+            names += [path.name for path in (saved_experiment, saved_resolved)]
+            if len(set(names)) != len(names):
+                raise ValueError(f"Arquivos de entrada com nomes repetidos: {names}")
 
-            shutil.copy2(binary, saved_binary)
             shutil.copy2(config, saved_config)
+
+            if args.experiment or args.resolved_config:
+                experiment = {
+                    "source": None,
+                    "file": None,
+                    "sha256": None,
+                    "resolved_file": None,
+                    "resolved": None,
+                }
+                if args.experiment:
+                    shutil.copy2(args.experiment, saved_experiment)
+                    experiment["source"] = str(args.experiment.resolve())
+                    experiment["file"] = str(saved_experiment.relative_to(run_dir))
+                    experiment["sha256"] = sha256(saved_experiment)
+                if args.resolved_config:
+                    shutil.copy2(args.resolved_config, saved_resolved)
+                    experiment["resolved_file"] = str(saved_resolved.relative_to(run_dir))
+                    experiment["resolved"] = json.loads(
+                        saved_resolved.read_text(encoding="utf-8")
+                    )
+                metadata["experiment"] = experiment
+
+            if build_command is not None:
+                step = "build"
+                metadata["status"] = "building"
+                metadata["build"] = {
+                    "command": build_command,
+                    "exit_code": None,
+                    "log": "build.log",
+                }
+                write_metadata(metadata_path, metadata)
+                (run_dir / "command.txt").write_text(
+                    "# build\n" + shlex.join(build_command) + "\n",
+                    encoding="utf-8",
+                )
+                with (run_dir / "build.log").open("w", encoding="utf-8") as build_log:
+                    built = subprocess.run(
+                        build_command,
+                        cwd=root,
+                        stdout=build_log,
+                        stderr=subprocess.STDOUT,
+                        check=False,
+                    )
+                metadata["build"]["exit_code"] = built.returncode
+                if built.returncode != 0:
+                    raise BuildError(built.returncode)
+                if not binary.is_file():
+                    raise FileNotFoundError(f"build não gerou o binário {binary}")
+                step = "preparation"
+
+            # O build pode gerar o binário diretamente em inputs/.
+            if binary != saved_binary:
+                shutil.copy2(binary, saved_binary)
 
             command = [
                 str(gem5),
@@ -155,10 +262,11 @@ def main() -> int:
                 *args.config_args,
             ]
 
-            (run_dir / "command.txt").write_text(
-                shlex.join(command) + "\n",
-                encoding="utf-8",
-            )
+            gem5_line = shlex.join(command) + "\n"
+            if build_command is not None:
+                gem5_line = "# gem5\n" + gem5_line
+            with (run_dir / "command.txt").open("a", encoding="utf-8") as command_file:
+                command_file.write(gem5_line)
 
             gem5_hash = sha256(gem5)
             diffs = {}
@@ -186,6 +294,7 @@ def main() -> int:
             )
             write_metadata(metadata_path, metadata)
 
+            step = "simulation"
             result = subprocess.run(
                 command,
                 cwd=root,
@@ -197,6 +306,8 @@ def main() -> int:
             metadata["status"] = (
                 "completed" if result.returncode == 0 else "failed"
             )
+            if result.returncode != 0:
+                metadata["failed_step"] = step
             exit_code = (
                 result.returncode
                 if result.returncode >= 0
@@ -205,11 +316,20 @@ def main() -> int:
 
         except KeyboardInterrupt:
             metadata["status"] = "interrupted"
+            metadata["failed_step"] = step
             metadata["error"] = "Execução interrompida pelo usuário."
             exit_code = 130
 
+        except BuildError as error:
+            metadata["status"] = "failed"
+            metadata["failed_step"] = step
+            metadata["error"] = f"Build falhou com código {error.code}; veja build.log."
+            stderr.write(metadata["error"] + "\n")
+            exit_code = error.code if error.code > 0 else 1
+
         except Exception as error:
             metadata["status"] = "failed"
+            metadata["failed_step"] = step
             metadata["error"] = f"{type(error).__name__}: {error}"
             stderr.write(metadata["error"] + "\n")
             exit_code = 1

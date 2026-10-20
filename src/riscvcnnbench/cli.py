@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -45,17 +46,24 @@ def validate(experiment: Path) -> None:
 
 
 @app.command()
-def run(experiment: Path) -> None:
-    """Executa um experimento; por enquanto apenas valida o arquivo."""
-    from riscvcnnbench.config import ConfigError, load_experiment
+def run(
+    experiment: Path,
+    gem5: Annotated[
+        Path | None,
+        typer.Option(help="Executável do gem5. Padrão: $GEM5_BIN ou o build do submódulo."),
+    ] = None,
+) -> None:
+    """Compila o benchmark e executa o experimento no gem5, em uma pasta nova."""
+    from riscvcnnbench.config import ConfigError
+    from riscvcnnbench.runner import run_experiment
 
     try:
-        load_experiment(experiment)
+        code = run_experiment(experiment, gem5)
     except ConfigError as error:
         typer.echo(f"Erro: {error}", err=True)
         raise typer.Exit(code=1) from error
 
-    typer.echo(f"Execução futura do experimento: {experiment}")
+    raise typer.Exit(code=code)
 
 
 if __name__ == "__main__":
