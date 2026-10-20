@@ -6,9 +6,11 @@ fica em scripts/run-gem5.py; aqui se monta o que ele recebe a partir do YAML.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -18,6 +20,24 @@ from riscvcnnbench.config import PROJECT_ROOT, Experiment, load_experiment
 
 WRAPPER = PROJECT_ROOT / "scripts" / "run-gem5.py"
 GEM5_CONFIG = PROJECT_ROOT / "configs" / "gem5" / "se_riscv_configurable.py"
+
+
+class RunError(Exception):
+    """Problema do ambiente detectado antes de criar a pasta da execução."""
+
+
+@dataclass(frozen=True)
+class PreparedRun:
+    """Experimento validado, pronto para executar na pasta `run_dir`."""
+
+    experiment: Experiment
+    experiment_path: Path
+    gem5: Path
+    run_id: str
+
+    @property
+    def run_dir(self) -> Path:
+        return results_dir(self.experiment) / self.run_id
 
 
 def default_gem5() -> Path:
@@ -81,28 +101,57 @@ def wrapper_command(
         str(experiment_path),
         "--resolved-config",
         str(resolved_path),
+        "--quiet",
         "--",
         *experiment.gem5_args(),
     ]
 
 
-def run_experiment(path: Path, gem5: Path | None = None) -> int:
-    """Valida, compila e executa o experimento; retorna o código de saída do wrapper.
+def check_environment(gem5: Path) -> None:
+    """Confere gem5 e toolchain antes de criar a pasta, com mensagens específicas."""
+    if not gem5.is_file():
+        raise RunError(
+            f"gem5 não encontrado em {gem5}. Compile com `make gem5-build` "
+            "ou indique outro executável com --gem5."
+        )
+    compiler = os.environ.get("RISCV_PREFIX", "riscv64-linux-gnu-") + "gcc"
+    for tool in (compiler, "make"):
+        if shutil.which(tool) is None:
+            raise RunError(
+                f"{tool} não encontrado. Execute dentro do container: "
+                "`make run EXPERIMENT=<yaml>` ou `make shell`."
+            )
 
-    Levanta ConfigError se o YAML for inválido, antes de criar qualquer pasta.
+
+def prepare_run(path: Path, gem5: Path | None = None) -> PreparedRun:
+    """Valida o YAML e o ambiente e decide a pasta; nada é criado ainda.
+
+    Levanta ConfigError (YAML inválido) ou RunError (ambiente incompleto).
     """
     experiment = load_experiment(path)
+    gem5 = (gem5 or default_gem5()).resolve()
+    check_environment(gem5)
+    return PreparedRun(experiment, path, gem5, new_run_id())
+
+
+def execute(prepared: PreparedRun) -> int:
+    """Executa o wrapper; retorna o código de saída dele."""
     with tempfile.TemporaryDirectory(prefix="riscvcnnbench-") as temporary:
         resolved_path = Path(temporary) / "experiment.resolved.json"
         resolved_path.write_text(
-            json.dumps(resolved_config(experiment), indent=2, ensure_ascii=False) + "\n",
+            json.dumps(resolved_config(prepared.experiment), indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
         command = wrapper_command(
-            experiment,
-            path,
+            prepared.experiment,
+            prepared.experiment_path,
             resolved_path,
-            (gem5 or default_gem5()).resolve(),
-            new_run_id(),
+            prepared.gem5,
+            prepared.run_id,
         )
         return subprocess.run(command, cwd=PROJECT_ROOT, check=False).returncode
+
+
+def run_experiment(path: Path, gem5: Path | None = None) -> int:
+    """Valida, compila e executa o experimento; retorna o código de saída do wrapper."""
+    return execute(prepare_run(path, gem5))

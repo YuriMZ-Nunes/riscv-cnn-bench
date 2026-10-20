@@ -220,7 +220,7 @@ O teste [tests/test_hello_e2e.py](../tests/test_hello_e2e.py) compila o `hello_r
 
 O mesmo arquivo tem um segundo teste, que roda no gem5 o exemplo [`experiments/hello_param_cache.yaml`](../experiments/hello_param_cache.yaml) (ver [formato dos experimentos](experiments.md)) e confere a soma do `hello_riscv_param` e as faltas nas caches L1d e L2.
 
-[tests/test_run_e2e.py](../tests/test_run_e2e.py) executa `riscvcnnbench run` sobre YAMLs gerados em pasta temporária e verifica a pasta resultante (YAML, configuração resolvida, comando de build, `schema_version` 3), um build que falha (`failed_step: build`, código não zero, sem `stats.txt`) e uma simulação que falha, com um gem5 falso que retorna `3` (`failed_step: simulation`).
+[tests/test_run_e2e.py](../tests/test_run_e2e.py) executa `riscvcnnbench run` sobre YAMLs gerados em pasta temporária e verifica a pasta resultante (YAML, configuração resolvida, comando de build, `schema_version` 4), um build que falha (`failed_step: build`, código não zero, sem `stats.txt`), uma simulação que falha, com um gem5 falso que retorna `3` (`failed_step: simulation`), um benchmark que rejeita o argumento (`program_exit_code: 2`, diagnóstico `benchmark`) e um binário com uma instrução em `custom-0`, que o gem5 atual não reconhece (diagnóstico `instruction`).
 
 Os testes usam pastas temporárias, portanto não alteram `build/` nem `results/`. Requer o gem5 compilado; o caminho pode ser alterado com a variável `GEM5_BIN`. Fica fora de `make test` e `make smoke-test` (marcador `e2e`) por depender do gem5. Os valores das estatísticas não são comparados com referências fixas, apenas verificados como positivos.
 

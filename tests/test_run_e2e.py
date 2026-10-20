@@ -14,20 +14,22 @@ import pytest
 
 from riscvcnnbench.config import load_experiment
 from riscvcnnbench.runner import resolved_config
+from riscvcnnbench.runs import diagnose, load_run
 
 ROOT = Path(__file__).resolve().parents[1]
 GEM5 = ROOT / os.environ.get("GEM5_BIN", "third_party/gem5/build/RISCV/gem5.opt")
+RISCV_PREFIX = os.environ.get("RISCV_PREFIX", "riscv64-linux-gnu-")
 
 pytestmark = pytest.mark.e2e
 
 
-def write_experiment(tmp_path: Path, name: str, extra: str = "") -> Path:
+def write_experiment(tmp_path: Path, name: str, extra: str = "", args: str = "[256, 1]") -> Path:
     path = tmp_path / f"{name}.yaml"
     path.write_text(
         f"name: {name}\n"
         "benchmark:\n"
         "  name: hello_riscv_param\n"
-        "  args: [256, 1]\n"
+        f"  args: {args}\n"
         f"output:\n  dir: {tmp_path / 'results' / name}\n" + extra,
         encoding="utf-8",
     )
@@ -55,10 +57,12 @@ def test_run_executes_yaml(tmp_path: Path) -> None:
     stdout = (run_dir / "stdout.log").read_text(encoding="utf-8")
     assert run.returncode == 0, f"run falhou:\n{run.stdout}\n{run.stderr}\n{stdout}"
 
-    assert metadata["schema_version"] == 3
+    assert metadata["schema_version"] == 4
     assert metadata["status"] == "completed"
     assert metadata["failed_step"] is None
     assert metadata["exit_code"] == 0
+    assert metadata["program_exit_code"] == 0
+    assert metadata["exit_cause"] == "exiting with last active thread context"
     assert "RESULT n=256 repeat=1 sum=32640" in stdout
 
     # YAML original, configuração resolvida e comando de build na pasta.
@@ -82,8 +86,9 @@ def test_run_executes_yaml(tmp_path: Path) -> None:
     assert "# gem5\n" in command
     assert "--arg=256 --arg=1 --cpu=atomic --clock=1GHz" in command
 
-    assert f"Resultado da execução: {run_dir}" in run.stdout
-    assert "Status: completed" in run.stdout
+    assert run.stdout.startswith("Executando run_ok em ")
+    assert f"Pasta:  {run_dir}\nStatus: completed\n" in run.stdout
+    assert "Erro:" not in run.stderr
 
 
 def test_run_reports_build_failure(tmp_path: Path) -> None:
@@ -100,6 +105,9 @@ def test_run_reports_build_failure(tmp_path: Path) -> None:
     assert "Build falhou" in (run_dir / "stderr.log").read_text(encoding="utf-8")
     assert not (run_dir / "gem5/stats.txt").exists()
     assert "Status: failed" in run.stdout
+    assert "Erro: o benchmark 'hello_riscv_param' não compilou (make retornou 2): " in run.stderr
+    assert "-fno-such-flag" in run.stderr
+    assert f"Log: {run_dir}/build.log." in run.stderr
 
 
 def test_run_reports_simulation_failure(tmp_path: Path) -> None:
@@ -116,3 +124,77 @@ def test_run_reports_simulation_failure(tmp_path: Path) -> None:
     assert metadata["failed_step"] == "simulation"
     assert metadata["build"]["exit_code"] == 0
     assert metadata["exit_code"] == 3
+    assert metadata["program_exit_code"] is None
+    assert "Erro: o gem5 terminou com código 3 sem concluir a simulação." in run.stderr
+
+
+def test_run_reports_benchmark_failure(tmp_path: Path) -> None:
+    # hello_riscv_param retorna 2 para argumento inválido: falha do programa, não do gem5.
+    path = write_experiment(tmp_path, "run_bench_fail", args='["abc"]')
+
+    run, run_dir, metadata = run_cli(path)
+
+    assert run.returncode == 2
+    assert metadata["status"] == "failed"
+    assert metadata["failed_step"] == "simulation"
+    assert metadata["exit_code"] == 2
+    assert metadata["program_exit_code"] == 2
+    assert run.stderr == (
+        "Erro: o benchmark 'hello_riscv_param' terminou com código 2: o gem5 funcionou, "
+        "mas o programa reportou resultado inválido ou rejeitou a entrada. Mensagem do "
+        "programa: ERRO: N deve ser um inteiro positivo: abc. "
+        f"Veja {run_dir}/stdout.log e {run_dir}/stderr.log.\n"
+    )
+
+
+def test_unknown_instruction_is_diagnosed(tmp_path: Path) -> None:
+    """Instrução em custom-0, que o gem5 sem instruções personalizadas não conhece."""
+    source = tmp_path / "custom.c"
+    source.write_text(
+        "int main(void) {\n"
+        "    int r;\n"
+        '    __asm__ volatile(".insn r 0x0b, 0, 0, %0, %1, %2" : "=r"(r) : "r"(1), "r"(2));\n'
+        "    return r;\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    binary = tmp_path / "custom"
+    subprocess.run(
+        [
+            f"{RISCV_PREFIX}gcc",
+            "-O2",
+            "-static",
+            "-march=rv64gc",
+            "-mabi=lp64d",
+            "-o",
+            binary,
+            source,
+        ],
+        check=True,
+    )
+    results_dir = tmp_path / "results"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/run-gem5.py"),
+            "--gem5",
+            str(GEM5),
+            "--binary",
+            str(binary),
+            "--config",
+            str(ROOT / "configs/gem5/se_riscv_configurable.py"),
+            "--results-dir",
+            str(results_dir),
+        ],
+        capture_output=True,
+        check=False,
+    )
+    (run_dir,) = results_dir.iterdir()
+    run = load_run(run_dir)
+
+    assert run.metadata["failed_step"] == "simulation"
+    assert run.metadata["program_exit_code"] is None
+    problem = diagnose(run)
+    assert problem is not None
+    assert problem.kind == "instruction"
+    assert "panic: Unknown instruction 0x" in problem.message
