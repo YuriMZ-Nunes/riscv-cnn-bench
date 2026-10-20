@@ -95,7 +95,9 @@ O `run` valida o YAML (um YAML inválido não cria pasta) e chama `scripts/run-g
 
 O comando de build e o do gem5 ficam em `command.txt` e em `metadata.json` (campos `build` e `command`), junto com a configuração resolvida (`experiment.resolved`). Assim, duas execuções que diferem em um só parâmetro se distinguem comparando `experiment.resolved`. O que é cada arquivo da pasta e como interpretá-lo está em [docs/results.md](results.md).
 
-O código de saída do `run` é o do wrapper: `0` quando o gem5 retorna zero, o código do `make` quando o build falha, o do gem5 quando a simulação falha `1` quando o YAML é inválido e `2` quando o gem5 informado não existe (esses dois casos não criam pasta). Em `metadata.json`, `status` fica `failed` e `failed_step` indica a etapa (`build`, `simulation` ou `preparation`). Como antes, `completed` significa retorno zero do gem5, não validação do resultado do programa.
+Antes de criar a pasta, o `run` confere se o gem5, o compilador RISC-V (`$RISCV_PREFIX` + `gcc`) e o `make` existem; se faltar algum, sai com `1` e uma mensagem dizendo o que fazer. No fim, mostra a pasta e o status e, se a execução falhou, explica a causa e aponta o log: build que não compila, benchmark que reporta erro, instrução que o gem5 não reconhece ou erro do próprio gem5. Os tipos de falha e os códigos de saída estão em [docs/results.md](results.md#diagnóstico). Como antes, `completed` significa retorno zero do gem5, que repassa o código do programa simulado.
+
+Para listar as execuções existentes: `make runs` (ou `make runs DIR=results/<name>`), ou `uv run riscvcnnbench runs` dentro do container.
 
 O gem5 padrão é `third_party/gem5/build/RISCV/gem5.opt` (ou `$GEM5_BIN`).
 

@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -21,7 +22,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+
+# Última linha impressa pelas configurações em configs/gem5/ ao fim da simulação;
+# `code` é o código de saída do programa simulado.
+END_LINE = re.compile(
+    r"^Simulação encerrada no tick \d+: (?P<cause>.*) \(code=(?P<code>-?\d+)\)$",
+    re.MULTILINE,
+)
 
 from provenance import (
     build_info_path,
@@ -77,6 +85,14 @@ def gem5_build_info(gem5: Path, gem5_hash: str) -> dict | None:
     return info
 
 
+def simulation_end(stdout_log: Path) -> tuple[str | None, int | None]:
+    """Causa do fim e código do programa, ou (None, None) se o gem5 não chegou ao fim."""
+    matches = list(END_LINE.finditer(stdout_log.read_text(encoding="utf-8", errors="replace")))
+    if not matches:
+        return None, None
+    return matches[-1]["cause"], int(matches[-1]["code"])
+
+
 def write_metadata(path: Path, metadata: dict) -> None:
     temporary = path.with_suffix(".tmp")
     temporary.write_text(
@@ -112,6 +128,11 @@ def main() -> int:
         "--resolved-config",
         type=Path,
         help="Configuração resolvida (JSON), copiada e incluída nos metadados.",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Não imprime pasta e status; quem chama faz o próprio resumo.",
     )
     parser.add_argument(
         "config_args",
@@ -168,6 +189,8 @@ def main() -> int:
         "status": "preparing",
         "failed_step": None,
         "exit_code": None,
+        "program_exit_code": None,
+        "exit_cause": None,
         "cwd": str(root),
         "project": git_info(root),
         "gem5_repository": git_info(root / "third_party/gem5"),
@@ -179,7 +202,8 @@ def main() -> int:
     }
     write_metadata(metadata_path, metadata)
 
-    print(f"Resultado da execução: {run_dir}", flush=True)
+    if not args.quiet:
+        print(f"Resultado da execução: {run_dir}", flush=True)
     exit_code = 1
 
     with (
@@ -303,6 +327,10 @@ def main() -> int:
                 check=False,
             )
             metadata["exit_code"] = result.returncode
+            stdout.flush()
+            cause, program_code = simulation_end(run_dir / "stdout.log")
+            metadata["exit_cause"] = cause
+            metadata["program_exit_code"] = program_code
             metadata["status"] = (
                 "completed" if result.returncode == 0 else "failed"
             )
@@ -338,8 +366,9 @@ def main() -> int:
             metadata["finished_at"] = timestamp()
             write_metadata(metadata_path, metadata)
 
-    print(f"Status: {metadata['status']}", flush=True)
-    print(f"Logs: {run_dir}", flush=True)
+    if not args.quiet:
+        print(f"Status: {metadata['status']}", flush=True)
+        print(f"Logs: {run_dir}", flush=True)
     return exit_code
 
 

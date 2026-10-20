@@ -14,7 +14,7 @@ Disponíveis:
 - **Benchmarks de teste `hello_riscv` e `hello_riscv_param`:** validam a compilação cruzada e a execução no QEMU e no gem5; o segundo tem tamanho de vetor e repetições configuráveis. Não são CNNs.
 - **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
-- **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução.
+- **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
@@ -138,9 +138,10 @@ Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 make shell
 uv run riscvcnnbench validate experiments/hello_param_cache.yaml
 uv run riscvcnnbench run experiments/hello_param_cache.yaml
+uv run riscvcnnbench runs                 # lista as execuções e o status de cada uma
 ```
 
-Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`. O formato, os campos e a execução estão em [docs/experiments.md](docs/experiments.md).
+Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml` e `make runs`. O formato, os campos e a execução estão em [docs/experiments.md](docs/experiments.md).
 
 ---
 
@@ -168,6 +169,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`. O f
 | `make hello-run` | Executa o `hello_riscv` no QEMU (não compila antes). |
 | `make hello-run-gem5` | Compila e executa o `hello_riscv` no gem5, criando uma pasta por execução. |
 | `make run EXPERIMENT=<yaml>` | Compila e executa um experimento YAML no gem5, criando uma pasta por execução. |
+| `make runs [DIR=results/<name>]` | Lista as execuções existentes e o status de cada uma (padrão: `results/`). |
 | `make smoke-test` | Sincroniza ambiente, testa CLI, executa Pytest e Ruff. |
 | `make clean-results` | Remove resultados gerados sob `results/`. |
 | `make clean` | Remove `.venv`, caches e artefatos gerados pelo framework. |

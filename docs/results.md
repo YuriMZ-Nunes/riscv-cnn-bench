@@ -11,15 +11,17 @@ Cada execução no gem5, por `riscvcnnbench run` ou `make hello-run-gem5`, cria 
 
 O `run_id` combina data e hora em UTC com um sufixo aleatório, por exemplo `20261020T005249.889088Z-194128aa`. Ordenar as pastas pelo nome as ordena por horário.
 
-O terminal informa a pasta e o status ao final:
+O `riscvcnnbench run` informa a pasta no início e, ao final, a pasta, o status e, se falhou, a causa (ver [Diagnóstico](#diagnóstico)):
 
 ```text
-Resultado da execução: /workspace/results/hello_param_cache/<run_id>
+Executando hello_param_cache em results/hello_param_cache/<run_id>
+Pasta:  results/hello_param_cache/<run_id>
 Status: completed
-Logs: /workspace/results/hello_param_cache/<run_id>
 ```
 
-Os caminhos começam com `/workspace` porque a execução acontece dentro do container, onde a raiz do projeto é montada nesse ponto.
+O `make hello-run-gem5` chama o wrapper direto e imprime `Resultado da execução: ...`, `Status: ...` e `Logs: ...`, com caminhos que começam em `/workspace`, onde o container monta a raiz do projeto.
+
+Para listar as execuções existentes, veja [Listar execuções](#listar-execuções).
 
 ## Estrutura
 
@@ -60,7 +62,7 @@ Ficha da execução, em JSON. Leia com `python3 -m json.tool metadata.json`. Os 
 
 | Pergunta | Campos |
 | --- | --- |
-| Deu certo? | `status`, `failed_step`, `exit_code`, `error` (só em falha) |
+| Deu certo? | `status`, `failed_step`, `exit_code`, `program_exit_code`, `exit_cause`, `error` (só em falha) |
 | Quando? | `run_id`, `started_at`, `finished_at` (UTC) |
 | O que foi pedido? | `experiment.resolved` (configuração completa), `experiment.source` (YAML original), `experiment.sha256` |
 | Como foi compilado? | `build.command`, `build.exit_code`, `build.log` |
@@ -73,6 +75,7 @@ Ficha da execução, em JSON. Leia com `python3 -m json.tool metadata.json`. Os 
 Detalhes de alguns campos:
 
 - **`exit_code`** é o código de saída do gem5. As configurações em `configs/gem5/` terminam com o código do programa simulado, então `0` significa que o gem5 rodou e o programa retornou `0`. Fica `null` se o gem5 nem chegou a rodar (por exemplo, falha de build).
+- **`program_exit_code`** e **`exit_cause`** vêm da linha `Simulação encerrada ... : <causa> (code=N)` do `stdout.log`: o código com que o **programa** terminou e a causa informada pelo gem5. Ficam `null` quando a linha não aparece, isto é, quando o gem5 parou antes de a simulação terminar (erro do gem5). Assim, `exit_code` ≠ 0 com `program_exit_code` preenchido é falha do benchmark; com `program_exit_code: null`, é falha do gem5.
 - **`experiment.resolved`** é o que permite comparar execuções: duas pastas que diferem em um só parâmetro diferem só nesse campo do `resolved`. `experiment` fica `null` quando o wrapper é chamado sem YAML (`make hello-run-gem5`).
 - **`project.dirty` / `gem5_repository.dirty`** indicam alterações não commitadas no momento da execução. Nesse caso `diffs` aponta para os arquivos `inputs/*.diff`. Arquivos não rastreados não entram no diff; aparecem apenas em `status`.
 - **`gem5_build`** é o registro gravado por `make gem5-build` ao lado do executável (`gem5.opt.build-info.json`): commit do gem5 no momento do build e hash do executável. `matches_executable: true` confirma que o executável usado é o mesmo daquele build. `false` ou `gem5_build: null` significa que o gem5 foi compilado fora de `make gem5-build`, e então o commit do checkout não garante de qual código o executável veio.
@@ -173,15 +176,42 @@ Se a pasta ficar em `preparing`, `building` ou `running` depois que tudo termino
 | `build` | `build.log`; `build.exit_code` é o código do `make` e `exit_code` fica `null`. |
 | `simulation` | `stderr.log` e o final de `stdout.log`; `exit_code` é o código do gem5. |
 
-Em `simulation`, um `exit_code` diferente de zero pode ter duas causas: o **programa** retornou erro (por exemplo, o benchmark detectou resultado incorreto; a linha `Simulação encerrada ... (code=N)` aparece no `stdout.log`) ou o **gem5** falhou (`fatal:`/`panic:` no `stderr.log`, sem a linha `Simulação encerrada`). Distinguir os dois automaticamente está planejado (RCB-08).
+Em `simulation`, um `exit_code` diferente de zero pode ter duas causas: o **programa** retornou erro (`program_exit_code` preenchido; por exemplo, o benchmark detectou resultado incorreto ou rejeitou um argumento) ou o **gem5** falhou (`program_exit_code: null`, normalmente com `fatal:`/`panic:` no `stderr.log`).
 
-Erros detectados antes de criar a pasta, como YAML inválido ou gem5 inexistente, não geram pasta; aparecem só no terminal.
+Erros detectados antes de criar a pasta (YAML inválido, gem5 inexistente, toolchain ou `make` ausentes) não geram pasta; aparecem só no terminal.
+
+### Diagnóstico
+
+`riscvcnnbench run` (no fim da execução) e `riscvcnnbench runs` (na coluna STATUS) classificam cada falha lendo o `metadata.json` e os logs:
+
+| Tipo | Quando | Mensagem aponta |
+| --- | --- | --- |
+| `build` | `failed_step: build` | Primeira linha com `error` do `build.log`. |
+| `toolchain` | `failed_step: build` e o compilador não foi encontrado no `build.log` | Usar o container (`make run` / `make shell`). |
+| `benchmark` | `failed_step: simulation` e `program_exit_code` ≠ 0 | Código do programa e a última linha do `stderr.log` que não é do gem5 (normalmente a mensagem do próprio programa). |
+| `instruction` | `panic: Unknown/Illegal/Unimplemented instruction` no `stderr.log` | Conferir se o gem5 foi compilado do fork com as instruções personalizadas. |
+| `gem5` | Outra falha na simulação | Primeira linha `fatal:`/`panic:` do `stderr.log`, ou o código do gem5. |
+| `preparation` | `failed_step: preparation` | Campo `error`. |
+| `interrupted` | `status: interrupted` | Etapa interrompida. |
+| `incomplete` | Status `preparing`, `building` ou `running` | Execução em andamento ou encerrada abruptamente. |
+
+A classificação por texto dos logs é heurística: as mensagens do gem5 podem mudar entre versões. O `metadata.json` continua sendo a fonte de verdade.
+
+### Códigos de saída do `riscvcnnbench run`
+
+| Código | Significado |
+| --- | --- |
+| `0` | gem5 e programa retornaram `0`. |
+| `1` | YAML inválido, gem5/toolchain ausentes (sem pasta) ou falha de preparação. |
+| código do `make` | Build falhou. |
+| código do programa | O benchmark retornou erro (o gem5 repassa o código do programa). |
+| código do gem5 | O gem5 falhou; `128 + sinal` quando abortou (por exemplo, `134` em um `panic`). |
 
 ### Quando considerar uma execução válida
 
 Confira em conjunto:
 
-1. `status: completed` e `exit_code: 0` no `metadata.json`;
+1. `status: completed`, `exit_code: 0` e `program_exit_code: 0` no `metadata.json`;
 2. a linha `RESULT` esperada no `stdout.log`;
 3. `code=0` na linha `Simulação encerrada` do `stdout.log`;
 4. para resultados que serão comparados, `project.dirty: false` e `gem5_build.matches_executable: true`.
@@ -192,10 +222,30 @@ Confira em conjunto:
 
 | Versão | Mudança |
 | --- | --- |
+| `4` | `program_exit_code` e `exit_cause`, lidos da linha `Simulação encerrada` do `stdout.log`. |
 | `3` | `failed_step`, `experiment` (YAML original e configuração resolvida) e `build` (comando, código e log do build); estado `building`. Usado por `riscvcnnbench run`. |
 | `2` | Proveniência: commits, diffs, hashes, versão e build-info do gem5, ambiente. |
 
 Pastas antigas mantêm a versão com que foram criadas.
+
+## Listar execuções
+
+```bash
+uv run riscvcnnbench runs                          # tudo em results/
+uv run riscvcnnbench runs results/hello_param_cache
+```
+
+Fora do container, o equivalente é `make runs` ou `make runs DIR=results/hello_param_cache`.
+
+Exemplo ilustrativo:
+
+```text
+RUN_ID                            EXPERIMENTO        BENCHMARK          CPU          STATUS               PASTA
+20261020T005249.889088Z-194128aa  hello_param_cache  hello_riscv_param  timing@2GHz  completed            results/hello_param_cache/20261020T005249.889088Z-194128aa
+20261020T010519.345612Z-f9ab65c2  demo               hello_riscv_param  atomic@1GHz  failed (benchmark)   results/demo/20261020T010519.345612Z-f9ab65c2
+```
+
+As execuções aparecem das mais antigas para as mais recentes. Execuções de `make hello-run-gem5` (sem YAML) aparecem com o nome da pasta como experimento e `-` na CPU. Para a mensagem completa de uma falha, veja o `metadata.json` e os logs da pasta, conforme a tabela de [Diagnóstico](#diagnóstico).
 
 ## Comandos úteis
 

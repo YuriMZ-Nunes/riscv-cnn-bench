@@ -74,9 +74,10 @@ def test_wrapper_command_builds_inside_run_dir(tmp_path: Path) -> None:
     command = wrapper_command(experiment, path, resolved, Path("/gem5"), "run1")
 
     binary = tmp_path / "out" / "run1" / "inputs" / "hello_riscv_param"
-    # command = [python, wrapper, --opção, valor, ..., "--", *gem5_args]
+    # command = [python, wrapper, --opção, valor, ..., --quiet, "--", *gem5_args]
     separator = command.index("--")
-    options = dict(zip(command[2:separator:2], command[3:separator:2], strict=True))
+    assert command[separator - 1] == "--quiet"
+    options = dict(zip(command[2 : separator - 1 : 2], command[3 : separator - 1 : 2], strict=True))
     assert options["--binary"] == str(binary)
     assert options["--config"] == str(GEM5_CONFIG)
     assert options["--results-dir"] == str(tmp_path / "out")
