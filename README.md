@@ -245,5 +245,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Formato dos experimentos](docs/experiments.md)
 - [Execução e resultados do hello_riscv](docs/hello_riscv.md)
 - [Resultados de uma execução](docs/results.md)
+- [Escopo experimental: operações, quantização, dimensões e métricas](docs/scope.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)
