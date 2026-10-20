@@ -80,90 +80,9 @@ Esse fluxo é um teste funcional, não uma avaliação detalhada de desempenho d
 
 ## Organização dos resultados
 
-Cada execução pelo wrapper cria uma pasta exclusiva em:
+Cada execução cria uma pasta exclusiva em `results/hello_riscv/<run_id>/`, com `metadata.json`, `command.txt`, `stdout.log`, `stderr.log`, cópias do binário e da configuração em `inputs/` e os arquivos do gem5 em `gem5/`. Execuções anteriores não são sobrescritas.
 
-```text
-results/hello_riscv/<run_id>/
-```
-
-O identificador combina data e horário em UTC com um sufixo aleatório. Exemplo:
-
-```text
-20261008T000507.815006Z-fd6cf822
-```
-
-Execuções anteriores não são sobrescritas.
-
-A estrutura de uma execução é:
-
-```text
-results/hello_riscv/<run_id>/
-├── metadata.json
-├── command.txt
-├── stdout.log
-├── stderr.log
-├── inputs/
-│   ├── hello_riscv
-│   ├── se_riscv.py
-│   ├── project.diff          # Somente se o repositório tiver alterações locais
-│   └── gem5_repository.diff  # Somente se o checkout do gem5 tiver alterações locais
-└── gem5/
-    ├── stats.txt
-    ├── config.ini
-    ├── config.json
-    └── ...
-```
-
-Os arquivos efetivamente gerados em `gem5/` dependem da revisão do simulador, das ferramentas disponíveis e de até onde a execução chegou. Em caso de falha, alguns arquivos podem estar ausentes ou incompletos.
-
-### Metadados e logs
-
-| Arquivo | Conteúdo |
-| --- | --- |
-| `metadata.json` | Identificador, datas, status, código de saída do gem5 quando disponível, comando, diretório de trabalho, revisões Git, alterações locais, hashes SHA-256, versão do gem5, registro de build do gem5 e ambiente (imagem do container, Python, compilador RISC-V). |
-| `inputs/*.diff` | Diff em relação a `HEAD` das alterações rastreadas, gerado apenas quando o repositório correspondente está modificado. Arquivos não rastreados não entram no diff; aparecem só em `status`. |
-| `command.txt` | Comando utilizado para iniciar o gem5. |
-| `stdout.log` | Saída padrão do simulador e do programa executado. |
-| `stderr.log` | Mensagens enviadas à saída de erro, incluindo avisos e falhas. |
-
-O `stderr.log` pode estar vazio em uma execução sem mensagens de erro.
-
-Os estados registrados pelo wrapper são:
-
-- `preparing`: preparação dos arquivos.
-- `running`: início da execução do simulador.
-- `completed`: o simulador retornou código zero.
-- `failed`: falha na preparação, inicialização ou execução.
-- `interrupted`: interrupção pelo usuário tratada pelo wrapper.
-
-Um encerramento abrupto do container ou do computador pode impedir a atualização final dos metadados. Nesse caso, a pasta pode permanecer com status `preparing` ou `running`.
-
-### Arquivos de entrada
-
-| Arquivo | Conteúdo |
-| --- | --- |
-| `inputs/hello_riscv` | Cópia do executável RISC-V utilizado na simulação. |
-| `inputs/se_riscv.py` | Cópia do script de configuração utilizado na simulação. |
-
-O wrapper registra os hashes SHA-256 dessas cópias para identificar seu conteúdo.
-
-O executável do gem5 não é copiado para a pasta. Seu caminho e hash são registrados nos metadados. Portanto, a pasta documenta a execução, mas não constitui, sozinha, um ambiente completo e independente para reproduzi-la.
-
-### Arquivos gerados pelo gem5
-
-| Arquivo | Finalidade |
-| --- | --- |
-| `gem5/stats.txt` | Estatísticas e contadores produzidos durante a simulação. |
-| `gem5/config.ini` | Configuração efetivamente instanciada, em formato INI. |
-| `gem5/config.json` | Configuração efetivamente instanciada, em formato JSON. |
-| `gem5/config.dot` | Descrição do grafo de componentes e conexões. |
-| `gem5/config.dot.pdf` | Visualização do grafo em PDF, quando gerada. |
-| `gem5/config.dot.svg` | Visualização do grafo em SVG, quando gerada. |
-| `gem5/citations.bib` | Referências bibliográficas registradas pelo gem5 e seus componentes. |
-
-`config.ini` e `config.json` descrevem a máquina simulada. `stats.txt` contém estatísticas da execução.
-
-Os arquivos de diagrama e referências podem variar conforme o ambiente e os componentes utilizados.
+O que é cada arquivo, os campos do `metadata.json`, os estados e como interpretar uma falha estão em [docs/results.md](results.md).
 
 ## Inspecionar uma execução
 
@@ -300,6 +219,8 @@ O teste [tests/test_hello_e2e.py](../tests/test_hello_e2e.py) compila o `hello_r
 - `simInsts`, `simTicks` e `system.cpu.numCycles` maiores que zero em `stats.txt`.
 
 O mesmo arquivo tem um segundo teste, que roda no gem5 o exemplo [`experiments/hello_param_cache.yaml`](../experiments/hello_param_cache.yaml) (ver [formato dos experimentos](experiments.md)) e confere a soma do `hello_riscv_param` e as faltas nas caches L1d e L2.
+
+[tests/test_run_e2e.py](../tests/test_run_e2e.py) executa `riscvcnnbench run` sobre YAMLs gerados em pasta temporária e verifica a pasta resultante (YAML, configuração resolvida, comando de build, `schema_version` 3), um build que falha (`failed_step: build`, código não zero, sem `stats.txt`) e uma simulação que falha, com um gem5 falso que retorna `3` (`failed_step: simulation`).
 
 Os testes usam pastas temporárias, portanto não alteram `build/` nem `results/`. Requer o gem5 compilado; o caminho pode ser alterado com a variável `GEM5_BIN`. Fica fora de `make test` e `make smoke-test` (marcador `e2e`) por depender do gem5. Os valores das estatísticas não são comparados com referências fixas, apenas verificados como positivos.
 

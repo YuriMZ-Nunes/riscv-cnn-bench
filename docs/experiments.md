@@ -10,7 +10,7 @@ uv run riscvcnnbench validate experiments/hello_param_cache.yaml
 
 O `validate` confere o arquivo e mostra a configuração resultante, já com os padrões aplicados. Campos desconhecidos são erro, para que um erro de digitação como `cahce:` não seja ignorado. `riscvcnnbench run` faz a mesma validação antes de qualquer outra coisa. Veja [Mensagens de erro](#mensagens-de-erro).
 
-> Estado atual: o formato e a validação estão implementados. `riscvcnnbench run` ainda **não** executa o YAML. Para rodar um experimento hoje, veja [Executar manualmente](#executar-manualmente).
+Para executar, veja [Executar um experimento](#executar-um-experimento).
 
 ## Exemplos
 
@@ -42,7 +42,7 @@ benchmark:
 | `cache.l1i`, `cache.l1d`, `cache.l2` | sem cache | Cada nível tem `size` (`KiB`/`MiB`/`GiB`) e `assoc` (padrão 4). A L2 exige L1i e L1d. |
 | `memory.type` | `simple` | `simple` (latência fixa) ou `ddr4` (DDR4-2400 com controlador). |
 | `memory.size` | `512MiB` | `KiB`/`MiB`/`GiB`. |
-| `output.dir` | `results/<name>` | Pasta onde cada execução cria sua subpasta `<run_id>`. |
+| `output.dir` | `results/<name>` | Pasta onde cada execução cria sua subpasta `<run_id>`. Caminho relativo parte da raiz do projeto. |
 
 ### Escolhendo a CPU
 
@@ -74,9 +74,34 @@ O formato corresponde a três peças:
 
 A configuração baseline `se_riscv.py` continua intacta, e `make hello-run-gem5` segue usando-a.
 
-## Executar manualmente
+## Executar um experimento
 
-Até a integração com `riscvcnnbench run`, o equivalente de `hello_param_cache.yaml` é, dentro do container (`make shell`):
+```bash
+make run EXPERIMENT=experiments/hello_param_cache.yaml
+```
+
+ou, dentro do container (`make shell`):
+
+```bash
+uv run riscvcnnbench run experiments/hello_param_cache.yaml
+uv run riscvcnnbench run experiments/hello_param_cache.yaml --gem5 caminho/gem5.opt
+```
+
+O `run` valida o YAML (um YAML inválido não cria pasta) e chama `scripts/run-gem5.py`, que cria `<output.dir>/<run_id>/` e:
+
+1. copia o YAML para `inputs/experiment.yaml` e grava a configuração resolvida, com todos os padrões preenchidos, em `inputs/experiment.resolved.json`;
+2. compila o benchmark com `compiler.flags` diretamente em `inputs/<benchmark>` (log em `build.log`);
+3. executa o gem5 com `se_riscv_configurable.py` e os argumentos de `gem5_args()`.
+
+O comando de build e o do gem5 ficam em `command.txt` e em `metadata.json` (campos `build` e `command`), junto com a configuração resolvida (`experiment.resolved`). Assim, duas execuções que diferem em um só parâmetro se distinguem comparando `experiment.resolved`. O que é cada arquivo da pasta e como interpretá-lo está em [docs/results.md](results.md).
+
+O código de saída do `run` é o do wrapper: `0` quando o gem5 retorna zero, o código do `make` quando o build falha, o do gem5 quando a simulação falha `1` quando o YAML é inválido e `2` quando o gem5 informado não existe (esses dois casos não criam pasta). Em `metadata.json`, `status` fica `failed` e `failed_step` indica a etapa (`build`, `simulation` ou `preparation`). Como antes, `completed` significa retorno zero do gem5, não validação do resultado do programa.
+
+O gem5 padrão é `third_party/gem5/build/RISCV/gem5.opt` (ou `$GEM5_BIN`).
+
+### Equivalente manual
+
+O wrapper continua aceitando a chamada direta, sem build nem YAML. O equivalente de `hello_param_cache.yaml`, dentro do container, é:
 
 ```bash
 make -C benchmarks/hello_riscv_param FLAGS="-O3 -funroll-loops"
@@ -91,7 +116,7 @@ python3 scripts/run-gem5.py \
      --l2-size=256KiB --l2-assoc=8 --mem-type=ddr4 --mem-size=512MiB
 ```
 
-Os argumentos após `--` são repassados à configuração gem5 e ficam registrados em `command.txt` e `metadata.json`.
+Os argumentos após `--` são repassados à configuração gem5 e ficam registrados em `command.txt` e `metadata.json`. Nesse caso, `experiment` e `build` ficam nulos em `metadata.json`.
 
 ## Mensagens de erro
 
