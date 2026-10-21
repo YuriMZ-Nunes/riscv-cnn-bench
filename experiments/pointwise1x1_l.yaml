@@ -1,0 +1,8 @@
+# Convolução pointwise 1x1, tamanho L (dados excedem a L1 e cabem na L2 de 256KiB).
+# args: [H, W, Cin, Cout, R]. Formas em docs/scope.md; kernels em docs/kernels.md.
+# CPU atomic (padrão): validação funcional. Os cenários de medição ficam
+# para a RCB-18.
+name: pointwise1x1_l
+benchmark:
+  name: pointwise1x1
+  args: [32, 32, 64, 64, 1]

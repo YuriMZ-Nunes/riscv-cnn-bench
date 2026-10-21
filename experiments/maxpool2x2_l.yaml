@@ -1,0 +1,8 @@
+# Max pooling 2x2, tamanho L (dados excedem a L1 e cabem na L2 de 256KiB).
+# args: [H, W, C, R]. Formas em docs/scope.md; kernels em docs/kernels.md.
+# CPU atomic (padrão): validação funcional. Os cenários de medição ficam
+# para a RCB-18.
+name: maxpool2x2_l
+benchmark:
+  name: maxpool2x2
+  args: [64, 64, 32, 1]

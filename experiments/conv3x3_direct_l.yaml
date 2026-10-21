@@ -1,0 +1,8 @@
+# Convolução 3x3 direta, tamanho L (dados excedem a L1 e cabem na L2 de 256KiB).
+# args: [H, W, Cin, Cout, R]. Formas em docs/scope.md; kernels em docs/kernels.md.
+# CPU atomic (padrão): validação funcional. Os cenários de medição ficam
+# para a RCB-18.
+name: conv3x3_direct_l
+benchmark:
+  name: conv3x3_direct
+  args: [32, 32, 16, 32, 1]

@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: **planejado**. Nenhum kernel de CNN existe ainda. Os números de velocidade de simulação e os nomes de estatísticas abaixo foram medidos no gem5 do projeto. As contagens de instruções por operação são **estimativas** a confirmar quando os kernels de referência existirem (RCB-12).
+> Estado: os kernels de referência das sete operações existem (RCB-12, [kernels.md](kernels.md)); as variantes personalizada e RVV são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -155,23 +155,35 @@ Velocidade de simulação medida no host do projeto (20/10/2026). O teste foi `h
 | minor | ~0,31 M |
 | o3 | ~0,27 M |
 
-Suposições da estimativa:
-- **Instruções por MAC:** 5 na referência escalar compilada com `-O2` (não medido; confirmar na RCB-12).
-- **Pooling e requantização:** 4 e 10 instruções por elemento.
-- **Variantes:** as personalizadas e RVV executam no máximo o mesmo que a referência, então a estimativa é um teto.
+Instruções da variante de referência, medidas em 20/10/2026 no gem5 atomic (RCB-12; tabela por operação em [kernels.md](kernels.md#instruções-medidas)):
 
-Por variante, isso dá ≈ 75 M de instruções nas sete operações L e ≈ 5 M nas S, ou seja, **≈ 80 M**.
+| | ROI (kernel) | Simulado (ROI + verificação) |
+| --- | --- | --- |
+| Sete operações S | 8,1 M | 18,4 M |
+| Sete operações L | 115,0 M | 248,4 M |
+| **Por variante** | **123,0 M** | **266,8 M** |
+
+- **Instruções por MAC:** entre 7,0 e 8,5 nas convoluções, na pointwise e na FC, e 13,2 a 13,6 na depthwise. A estimativa anterior supunha 5.
+- **Pooling e requantização:** cerca de 6,9 instruções por elemento de entrada e 12,0 por elemento, respectivamente. A estimativa anterior supunha 4 e 10.
+- **Verificação:** o oráculo e a comparação rodam fora da ROI, mas também são simulados e custam cerca de tanto quanto o kernel. A inicialização dos dados, antes da ROI, também é simulada e não entra nesses números.
+
+Suposição restante: as variantes personalizada e RVV executam no máximo o mesmo que a referência na ROI, e a verificação é a mesma. Assim a estimativa é um teto.
 
 | Item | Valor |
 | --- | --- |
 | Binários | 7 operações × 2 tamanhos × 3 variantes = 42 |
 | Configurações | 4 cenários de memória (RCB-18) × 3 CPUs + atomic para validação = 13 |
-| Instruções por configuração | ≤ 3 × 80 M = 240 M |
-| Tempo por cenário de memória | o3 ≈ 15 min, minor ≈ 13 min, timing ≈ 4 min |
-| Total por passada da matriz | ≈ 2,2 h (546 execuções); com verificação interna do resultado, até ≈ 4,5 h |
-| Maior execução isolada | Conv L, referência, em o3: ≈ 90 s |
+| Instruções simuladas por configuração | ≤ 3 × 266,8 M ≈ 800 M |
+| Tempo por cenário de memória | o3 ≈ 49 min, minor ≈ 43 min, timing ≈ 14 min (≈ 1,8 h) |
+| Total por passada da matriz | ≈ 7,1 h nos 4 cenários, mais ≈ 11 min de atomic (546 execuções) |
+| Total se a verificação não fosse simulada nas CPUs detalhadas | ≈ 3,3 h |
+| Maior execução isolada | Conv direta L, referência, em o3: ≈ 290 s |
 
-A matriz cabe no cronograma da proposta (experimentos em outubro e novembro). As incertezas:
+Formas de reduzir o tempo, a decidir nas RCB-18 e RCB-22:
+- validar só no QEMU e no atomic e, nas CPUs detalhadas, comparar o checksum com o da validação em vez de simular o oráculo;
+- simular fora da ROI com a CPU atomic e trocar para a CPU detalhada só na ROI, como permite o gem5. Isso também afeta o estado das caches no início da ROI.
+
+Mesmo sem reduções, a matriz cabe no cronograma da proposta (experimentos em outubro e novembro), com uma passada por dia. As incertezas:
 - a velocidade foi medida com um laço simples; configurações sem cache geram mais eventos de memória e podem simular mais devagar;
 - a velocidade das instruções vetoriais no gem5 não foi medida.
 

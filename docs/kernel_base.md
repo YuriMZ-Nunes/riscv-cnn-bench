@@ -16,7 +16,7 @@ As operações, a quantização e as dimensões estão em [scope.md](scope.md). 
 | Headers em [benchmarks/common/](../benchmarks/common/) | Existente |
 | Benchmark de exemplo [int8_base_example](../benchmarks/int8_base_example/main.c) | Existente; roda no QEMU e no gem5, nas quatro CPUs |
 | ROI separada no `stats.txt` | Existente; verificado nas CPUs atomic, timing, minor e o3 |
-| Kernels das sete operações | Planejado (RCB-12) |
+| Kernels das sete operações | Existente (RCB-12, [kernels.md](kernels.md)) |
 | Leitura automática do bloco da ROI | Planejado (RCB-16) |
 
 ## Roteiro de um benchmark
@@ -206,9 +206,11 @@ make -C benchmarks/int8_base_example && qemu-riscv64 build/benchmarks/int8_base_
 | `tests/test_kernel_base_e2e.py::test_other_illegal_instructions_still_crash` | O tratador de SIGILL não esconde instruções ilegais que não são m5ops | `pytest -m e2e` |
 | `cnn_insn_semantics` | `rcb_requantize` coincide com o modelo do `cnn.rqnt` | `pytest -m e2e`, pelos testes da RCB-10 |
 
-## Como acrescentar uma operação (RCB-12)
+## Como acrescentar uma operação
 
-1. Crie `benchmarks/<operação>/` com `main.c` e um `Makefile` copiado do `int8_base_example`.
+As sete operações da RCB-12 seguem estes passos ([kernels.md](kernels.md)).
+
+1. Crie `benchmarks/<operação>/` com `main.c`, `kernel.h`, `kernel_ref.c` e um `Makefile` de duas linhas (`NAME := <operação>` e `include ../common/kernel.mk`). Oráculos novos vão em `benchmarks/common/rcb_ops.h`.
 2. Siga o roteiro: parâmetros, dados com uma `SEED` própria, kernel na ROI, oráculo e `rcb_finish`.
 3. Use dimensões múltiplas de 8 na dimensão contígua e aloque tudo com `rcb_alloc`.
 4. Acrescente um YAML em `experiments/` e um teste e2e que rode a operação no QEMU e no gem5.
