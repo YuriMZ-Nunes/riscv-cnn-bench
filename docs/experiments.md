@@ -59,9 +59,10 @@ Para comparar caches ou memória, use `timing`, `minor` ou `o3`.
 | --- | --- | --- |
 | `hello_riscv` | nenhum | `RESULT sum=499500` |
 | `hello_riscv_param` | `[N, R]`: soma um vetor de `N` inteiros (`N*4` bytes) `R` vezes. Padrão `1024 1`. | `RESULT n=N repeat=R sum=R*N*(N-1)/2` |
+| `int8_base_example` | `[K, M, R]`: `M` produtos escalares int8 de tamanho `K` (múltiplo de 8) com requantização, repetidos `R` vezes na região de interesse. Padrão `64 16 1`. | `RESULT bench=int8_base_example variant=ref K=.. M=.. R=.. checksum=0x... mismatches=0` |
 | `cnn_insn_semantics` | nenhum. Com `compiler.flags: [-O2, -DCNN_INSN_HW]` usa as instruções personalizadas reais, que só existem no gem5 do fork (RCB-13). | `RESULT mode=model cases=39 failures=0` (ou `mode=hw`) |
 
-O `hello_riscv_param` existe para testar as opções. Com `N` maior que a L1 (por exemplo, `65536` = 256KiB), as faltas de cache e o tipo de memória passam a aparecer nas estatísticas. Os dois `hello_*` são de teste, não CNNs. O `cnn_insn_semantics` confere os casos de teste das instruções personalizadas, descritos em [custom_instructions.md](custom_instructions.md).
+O `hello_riscv_param` existe para testar as opções. Com `N` maior que a L1 (por exemplo, `65536` = 256KiB), as faltas de cache e o tipo de memória passam a aparecer nas estatísticas. Os dois `hello_*` são de teste, não CNNs. O `int8_base_example` exercita a base comum dos kernels e separa a região de interesse no `stats.txt` ([kernel_base.md](kernel_base.md)). O `cnn_insn_semantics` confere os casos de teste das instruções personalizadas, descritos em [custom_instructions.md](custom_instructions.md).
 
 ## Como o YAML vira simulação
 

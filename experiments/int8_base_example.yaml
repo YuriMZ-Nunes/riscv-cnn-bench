@@ -1,0 +1,14 @@
+# Exemplo da base comum dos kernels int8 (RCB-11): K=64, M=16, uma repetição.
+# O stats.txt fica com dois blocos: o primeiro só com a região de interesse
+# (o kernel) e o segundo com o resto do programa. Documentação: docs/kernel_base.md.
+name: int8_base_example
+benchmark:
+  name: int8_base_example
+  args: [64, 16, 1]
+cpu:
+  model: timing
+cache:
+  l1i:
+    size: 32KiB
+  l1d:
+    size: 32KiB

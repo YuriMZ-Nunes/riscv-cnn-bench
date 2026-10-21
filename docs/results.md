@@ -149,13 +149,22 @@ Algumas estatísticas de `stats.txt` úteis para conferir uma execução:
 
 | Estatística | Significado |
 | --- | --- |
-| `simInsts` | Instruções executadas (inclui inicialização do programa, não só o kernel). |
+| `simInsts` | Instruções executadas no bloco: o programa inteiro, ou só a região de interesse no primeiro bloco dos benchmarks que a marcam. |
 | `simTicks` | Tempo simulado, em ticks. |
 | `system.cpu.numCycles` | Ciclos da CPU. |
 | `system.cpu.dcache.overallMisses::total` | Faltas na L1 de dados (só com `cache.l1d`). |
 | `system.l2cache.overallMisses::total` | Faltas na L2 (só com `cache.l2`). |
 
-Os números cobrem a execução inteira do programa, incluindo a inicialização. Medir apenas a região de interesse e definir as métricas do TCC (IPC por operação etc.) está planejado (RCB-09, RCB-11 e RCB-16) e ainda não existe.
+Nos benchmarks sem região de interesse (`hello_riscv`, `hello_riscv_param`, `cnn_insn_semantics`), o `stats.txt` tem um bloco só, com a execução inteira, incluindo a inicialização.
+
+Os benchmarks que usam a base comum marcam a região de interesse (ROI) com m5ops, e o `stats.txt` fica com dois blocos. Cada um começa com `---------- Begin Simulation Statistics ----------`:
+
+| Bloco | Cobre |
+| --- | --- |
+| 1 | Só a ROI, isto é, o kernel com as suas repetições |
+| 2 | Do fim da ROI ao fim do programa: verificação, impressão e saída |
+
+A inicialização antes da ROI não aparece em nenhum bloco. Hoje isso vale para o `int8_base_example`. Os detalhes estão em [kernel_base.md](kernel_base.md#região-de-interesse). Ler os blocos automaticamente e calcular as métricas do TCC está planejado (RCB-16) e ainda não existe.
 
 ## Status e falhas
 
