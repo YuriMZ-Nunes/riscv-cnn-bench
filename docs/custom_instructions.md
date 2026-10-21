@@ -1,13 +1,14 @@
 # Instruções personalizadas
 
-Referência técnica das instruções RISC-V personalizadas do framework: codificação, semântica, uso em C, testes e o que o gem5 precisa implementar. As operações, a quantização e as dimensões que motivam o conjunto estão em [scope.md](scope.md).
+Referência técnica das instruções RISC-V personalizadas do framework: codificação, semântica, uso em C, testes e implementação no gem5. As operações, a quantização e as dimensões que motivam o conjunto estão em [scope.md](scope.md).
 
 | Parte | Situação |
 | --- | --- |
 | Especificação (este documento) | Existente |
 | Header [benchmarks/common/cnn_insn.h](../benchmarks/common/cnn_insn.h): macros `.insn` e modelo em C | Existente |
-| Benchmark [cnn_insn_semantics](../benchmarks/cnn_insn_semantics/main.c) com os casos de teste | Existente; o modo modelo roda no QEMU e no gem5 atual |
-| Instruções no decodificador do gem5 (fork) | Planejado (RCB-13). Hoje um binário com as instruções reais termina com `panic: Unknown instruction` |
+| Benchmark [cnn_insn_semantics](../benchmarks/cnn_insn_semantics/main.c) com os casos de teste | Existente; o modo modelo roda no QEMU e em qualquer gem5, o modo `hw` no gem5 do fork |
+| Instruções no decodificador do gem5 (fork `YuriMZ-Nunes/gem5`, branch `riscv-cnn-bench`) | Existente (RCB-13), nas CPUs atomic, timing, minor e o3. Ver [Implementação no gem5](#implementação-no-gem5) |
+| Latência própria e configurável das instruções | Planejado. Hoje usam as unidades `IntMult` e `IntAlu` de cada CPU |
 | Kernels que usam as instruções | Planejado (RCB-14) |
 
 ## Resumo
@@ -46,7 +47,7 @@ Todas usam o formato R:
 | `cnn.rqnt` | `0x2B` (custom-1) | `0` | `0x00` | não | `.insn r CUSTOM_1, 0, 0x00, rd, rs1, rs2` |
 | `cnn.rqnt.relu` | `0x2B` (custom-1) | `0` | `0x01` | não | `.insn r CUSTOM_1, 0, 0x01, rd, rs1, rs2` |
 
-As demais combinações de `funct3` e `funct7` em custom-0 e custom-1 ficam reservadas. O gem5 deve tratá-las como instrução desconhecida.
+As demais combinações de `funct3` e `funct7` em custom-0 e custom-1 ficam reservadas, e o gem5 as trata como instrução desconhecida. As instruções só existem em RV64: com `riscv_type = RV32`, custom-0 e custom-1 continuam desconhecidas.
 
 | Opcode | Espaço | Uso |
 | --- | --- | --- |
@@ -55,7 +56,7 @@ As demais combinações de `funct3` e `funct7` em custom-0 e custom-1 ficam rese
 | `0x5B` | custom-2 | Não usar: reservado ao RV128 pela especificação |
 | `0x7B` | custom-3 | Não usar: m5ops do gem5 (`util/m5/src/abi/riscv/m5op.S`), usadas para marcar a região de interesse |
 
-O teste e2e confere que um binário compilado com `-DCNN_INSN_HW` contém exatamente estas 8 codificações. O `objdump` com `rv64gc` mostra todas como `.insn`, ou seja, não as confunde com instruções padrão. Extensões de fabricante que também usam custom-0, como as da T-Head, só existem com `-march=..._xthead*`.
+O teste e2e confere que um binário compilado com `-DCNN_INSN_HW` contém exatamente estas 8 codificações, e que 6 combinações reservadas continuam gerando `Unknown instruction` no gem5. O `objdump` com `rv64gc` mostra todas como `.insn`, ou seja, não as confunde com instruções padrão. Extensões de fabricante que também usam custom-0, como as da T-Head, só existem com `-march=..._xthead*`.
 
 ## Semântica
 
@@ -211,7 +212,7 @@ compiler:
   flags: [-O2, -DCNN_INSN_HW]   # sem -DCNN_INSN_HW, usa o modelo em C
 ```
 
-| Modo | QEMU | gem5 atual | gem5 com RCB-13 |
+| Modo | QEMU | gem5 oficial (sem as instruções) | gem5 do fork (`third_party/gem5`) |
 | --- | --- | --- | --- |
 | Modelo (padrão) | roda | roda | roda |
 | `-DCNN_INSN_HW` | `Illegal instruction` | `panic: Unknown instruction`, que a CLI classifica como `instruction` | roda |
@@ -236,29 +237,69 @@ A saída é `RESULT mode=<model|hw> cases=39 failures=0`, com código de saída 
 | `tests/test_custom_insn_e2e.py::test_model_runs_on_gem5_from_yaml` | Idem no gem5, pelo fluxo `riscvcnnbench run` | `pytest -m e2e` |
 | `cnn_insn_semantics` nos casos de requantização | O oráculo `rcb_requantize` da base comum ([kernel_base.md](kernel_base.md)) coincide com o modelo do `cnn.rqnt` | `pytest -m e2e`, pelos testes acima |
 | `tests/test_custom_insn_e2e.py::test_hw_build_uses_only_the_specified_encodings` | O binário com `-DCNN_INSN_HW` tem exatamente as 8 codificações; sem a flag, nenhuma | `pytest -m e2e` |
-| Instruções reais nas CPUs atomic, timing, minor e o3 | Benchmark com `-DCNN_INSN_HW` | Planejado (RCB-13) |
+| `tests/test_custom_insn_e2e.py::test_hw_runs_on_gem5[atomic\|timing\|minor\|o3]` | Instruções reais no gem5 do fork: `RESULT mode=hw cases=39 failures=0` em cada CPU, pelo fluxo `riscvcnnbench run` | `pytest -m e2e` |
+| `tests/test_custom_insn_e2e.py::test_reserved_encodings_are_unknown` | 6 combinações reservadas de custom-0/1 terminam com `panic: Unknown instruction` com a palavra esperada, diagnosticado como `instruction` | `pytest -m e2e` |
 
-## Implementação no gem5 (RCB-13)
+## Implementação no gem5
 
-O que o fork `YuriMZ-Nunes/gem5`, branch `riscv-cnn-bench`, precisa implementar:
+As instruções estão no fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nunes/gem5), branch `riscv-cnn-bench`, que é o submódulo `third_party/gem5` (RCB-13). É a única mudança do fork em relação ao gem5 oficial, e fica restrita a `src/arch/riscv/`:
 
-- **Decodificador.** Em `src/arch/riscv/isa/decoder.isa`, no nível `decode OPCODE5`, acrescentar os casos `0x02` (custom-0) e `0x0a` (custom-1), que hoje não existem. Dentro deles, decodificar `FUNCT7` e `FUNCT3` conforme a tabela de codificação.
-- **Fontes.** `cnn.dot8` e `cnn.dwmac` leem `Rd` além de `Rs1` e `Rs2`.
-- **Classe de operação.** `IntMultOp` para `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt*`, declarada como último argumento, como no `mul`. `cnn.max8` fica sem classe declarada, e o parser do ISA usa `IntAluOp`.
+| Arquivo do fork | Conteúdo |
+| --- | --- |
+| `src/arch/riscv/insts/cnn.hh` | Semântica: `cnn::dot8`, `cnn::dwmac`, `cnn::max8` e `cnn::rqnt`, cópias do modelo em C de `cnn_insn.h`; classe base `CnnOp` |
+| `src/arch/riscv/insts/cnn.cc` | Disassembly de `CnnOp` (ver abaixo) |
+| `src/arch/riscv/isa/formats/cnn.isa` | Formato `CnnOp` do parser do ISA |
+| `src/arch/riscv/isa/decoder.isa` | Casos `0x02` (custom-0) e `0x0a` (custom-1) no `decode OPCODE5`, dentro de `decode RVTYPE` (só RV64) |
+| `src/arch/riscv/insts/SConscript`, `isa/includes.isa`, `isa/formats/formats.isa` | Registro dos arquivos novos |
+
+- **Decodificação.** Segue a tabela de codificação. As combinações reservadas e qualquer uso em RV32 caem no `Unknown instruction` padrão do decodificador.
+- **Fontes e destino.** `cnn.dot8` e `cnn.dwmac` leem `Rd` além de `Rs1` e `Rs2`. O parser do ISA marca `Rd` como fonte e destino porque ele aparece dos dois lados da atribuição. Isso cria a dependência pelo acumulador nas CPUs minor e o3.
+- **Classe de operação.** `IntMultOp` para `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt*`, como no `mul`. `cnn.max8` usa a classe padrão, `IntAluOp`. As instruções contam em `commitStats0.committedInstType::IntMult` e `::IntAlu`.
 - **Contagem.** Cada instrução é uma só, sem micro-operações, e conta 1 em `numInsts` e `numOps`.
-- **Latência.** É a da classe no pool de unidades de cada CPU. Se possível, deve ser configurável, para análise de sensibilidade.
+- **Nomes no gem5.** No trace (`--debug-flags=Exec`), os mnemônicos usam `_` no lugar do ponto: `cnn_dot8 a6, a1, a2`, `cnn_dwmac a6, a1, a2, 3`, `cnn_max8`, `cnn_rqnt` e `cnn_rqnt_relu`. No `cnn.dwmac`, o último campo é `p`.
 
-Latências padrão no gem5 do projeto, lidas em `src/cpu/minor/BaseMinorCPU.py` e `src/cpu/o3/FuncUnitConfig.py`:
+### Latência por CPU
+
+A latência é a da classe de operação no pool de unidades funcionais de cada CPU. Valores padrão do gem5 do projeto, lidos em `src/cpu/minor/BaseMinorCPU.py` e `src/cpu/o3/FuncUnitConfig.py`:
 
 | Classe | MinorCPU | O3CPU |
 | --- | --- | --- |
-| `IntAlu` | 3 ciclos, 2 unidades | 1 ciclo, 6 unidades |
-| `IntMult` | 3 ciclos, 1 unidade | 3 ciclos, 2 unidades |
+| `IntAlu` | 3 ciclos, 2 unidades. A latência efetiva para um dependente é ~1 ciclo, porque `srcRegsRelativeLats=[2]` | 1 ciclo, 6 unidades |
+| `IntMult` | 3 ciclos, 1 unidade com pipeline | 3 ciclos, 2 unidades com pipeline |
 | `Simd*`, usadas pelo RVV | 6 ciclos, 1 unidade compartilhada com ponto flutuante | 1 ciclo, 4 unidades |
 
-As CPUs atomic e timing não modelam unidades funcionais. Isso ainda deve ser confirmado na RCB-13.
+As CPUs atomic e timing ignoram a classe de operação: em `src/cpu/simple/base.cc`, ela só alimenta a estatística `issuedInstType`.
 
-Pronto quando: `cnn_insn_semantics` compilado com `-DCNN_INSN_HW` imprime `RESULT mode=hw cases=39 failures=0` nas quatro CPUs.
+Confirmação medida em 21/10/2026, com um microbenchmark temporário que não faz parte do repositório:
+- 2000 iterações de 8 instruções iguais, ou seja, 16000 instruções medidas e ~20 mil no total da ROI;
+- compilado com `-march=rv64g`, sem instruções comprimidas, para que nenhuma instrução de 4 bytes fique desalinhada;
+- L1I e L1D de 32KiB, 1GHz.
+
+"Dependente" usa o resultado anterior como fonte. "Independente" usa 8 acumuladores. A tabela mostra `numCycles` da ROI:
+
+| Cadeia | atomic | timing | minor | o3 |
+| --- | --- | --- | --- | --- |
+| `add` dependente | 20.080 | 40.616 | 18.536 | 16.317 |
+| `mul` dependente | 20.132 | 40.816 | 48.697 | 48.433 |
+| `cnn.dot8` dependente | 20.167 | 41.078 | 49.060 | 48.723 |
+| `cnn.dwmac` dependente | 20.208 | 41.130 | 49.092 | 48.698 |
+| `cnn.max8` dependente | 20.281 | 41.414 | 21.352 | 16.793 |
+| `cnn.rqnt` dependente | 20.236 | 41.240 | 49.261 | 48.739 |
+| `mul` independente | 20.327 | 41.550 | 21.541 | 8.884 |
+| `cnn.dot8` independente | 20.386 | 41.728 | 19.633 | 8.940 |
+
+Leitura da tabela:
+
+- **atomic e timing.** O custo é o mesmo para qualquer classe: ~1 ciclo por instrução na atomic e ~2 na timing, que inclui o acerto na L1I.
+- **minor e o3, cadeias `IntMult` dependentes.** Custam ~3,0 ciclos por instrução (≈ 48–49 mil ciclos para 16000 instruções), iguais ao `mul`.
+- **`cnn.max8`.** Custa o mesmo que o `add`.
+- **Cadeias independentes.** A o3 executa duas por ciclo, porque tem 2 unidades `IntMult`. A minor executa uma por ciclo, porque tem 1 unidade com pipeline.
+
+Em resumo, nas CPUs detalhadas as instruções novas custam o mesmo que um `mul` ou um `add`. Supor que 8 multiplicações cabem na latência de um `mul` é uma hipótese otimista, discutida em [Decisões de projeto](#decisões-de-projeto).
+
+**Limitação: latência própria.** Como `IntMult` é compartilhada com `mul`/`mulw`, mudar a latência dessa classe muda também a referência. Uma latência só das instruções exige uma classe de operação nova no gem5, registrada nas unidades da MinorCPU e da O3CPU. Isso fica para a análise de sensibilidade (RCB-18).
+
+**Alinhamento em atomic e timing.** Com `-march=rv64gc`, uma instrução de 4 bytes pode começar num endereço 2 mod 4, depois de instruções comprimidas, e então a CPU precisa de duas buscas. No mesmo microbenchmark compilado com `rv64gc` e sem caches, as cadeias de instruções personalizadas ficaram desalinhadas e custaram, por instrução, +1 ciclo na atomic e ~+40 na timing, em relação ao `mul` alinhado. O efeito vale para qualquer instrução de 4 bytes, não só para as personalizadas. Ele deve ser lembrado ao comparar `numCycles` de variantes nessas CPUs.
 
 ## Como alterar uma instrução
 
@@ -269,7 +310,7 @@ Uma mudança de semântica ou de codificação precisa tocar, juntos:
 3. a tabela de casos e o pseudocódigo neste documento;
 4. o modelo em Python e, se mudar o número de casos, a contagem em `tests/test_custom_insn.py`;
 5. `ENCODINGS` e `MODEL_RESULT` em `tests/test_custom_insn_e2e.py`;
-6. o decodificador no fork do gem5, depois da RCB-13.
+6. no fork do gem5, a função em `src/arch/riscv/insts/cnn.hh` (semântica) e o caso em `src/arch/riscv/isa/decoder.isa` (codificação); depois, commit no fork, `make gem5-build` e atualização do submódulo.
 
 Se os itens 2 e 3 divergirem, ou se um valor esperado não bater com o modelo em Python, `pytest` falha.
 

@@ -15,7 +15,8 @@ Disponíveis:
 - **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
-- **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5. As instruções ainda não existem no gem5 (RCB-13).
+- **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5.
+- **Instruções personalizadas no gem5:** o submódulo `third_party/gem5` aponta para o fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nunes/gem5), branch `riscv-cnn-bench`, que tem código próprio: as cinco instruções no decodificador RISC-V. Um binário compilado com `-DCNN_INSN_HW` roda nas CPUs atomic, timing, minor e o3.
 - **Base comum dos kernels int8:** headers em `benchmarks/common/` com parâmetros por argumento, dados determinísticos, requantização de referência, comparação com oráculo, checksum e região de interesse marcada com m5ops (o `stats.txt` separa o kernel do resto do programa); o mesmo binário roda no QEMU. Exemplo em `int8_base_example` (ver [docs/kernel_base.md](docs/kernel_base.md)).
 - **Kernels de referência das operações de CNN:** convolução 3×3 direta e por im2col + GEMM, depthwise 3×3, pointwise 1×1, max pooling 2×2, requantização com ReLU e totalmente conectada, em int8, com YAMLs para os tamanhos S e L (ver [docs/kernels.md](docs/kernels.md)). As variantes com instruções personalizadas e RVV ainda não existem.
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
@@ -23,7 +24,7 @@ Disponíveis:
 Planejados (ainda não implementados):
 
 - Variantes dos kernels com instruções personalizadas e RVV.
-- Instruções personalizadas no decodificador do gem5 (fork) e kernels que as usam.
+- Latência própria e configurável para as instruções personalizadas (hoje usam as unidades `IntMult`/`IntAlu` da CPU).
 - Modelos de CPU detalhados e hierarquias de cache para coleta de métricas de microarquitetura (ciclos, IPC, acessos à cache).
 - Consolidação de métricas a partir de `stats.txt`.
 - Varreduras de parâmetros (vários experimentos a partir de um arquivo).
@@ -118,7 +119,7 @@ make gem5-build JOBS=8
 ```
 *Nota: A compilação é um processo longo e pode demorar de 15 a 45 minutos dependendo do hardware.*
 
-Ao final, `make gem5-build` grava `gem5.opt.build-info.json` ao lado do executável, com o commit do gem5 e o hash do binário. Compile sempre por esse alvo para que as execuções possam conferir de qual revisão o gem5 veio.
+Ao final, `make gem5-build` grava `gem5.opt.build-info.json` ao lado do executável, com o commit, a branch e a URL do fork do gem5 e o hash do binário. Compile sempre por esse alvo para que as execuções possam conferir de qual revisão o gem5 veio.
 
 ### 5. Executar a Verificação Geral (Smoke Test)
 

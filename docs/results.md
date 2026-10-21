@@ -68,7 +68,7 @@ Ficha da execução, em JSON. Leia com `python3 -m json.tool metadata.json`. Os 
 | Como foi compilado? | `build.command`, `build.exit_code`, `build.log` |
 | Como o gem5 foi chamado? | `command` (lista), `cwd`, `original_config`, `original_binary` |
 | Quais arquivos exatamente? | `binary_sha256`, `config_sha256`, `gem5_sha256` |
-| Qual versão do código? | `project` e `gem5_repository` (`commit`, `dirty`, `status`), `diffs` |
+| Qual versão do código? | `project` e `gem5_repository` (`commit`, `branch`, `remote_url`, `dirty`, `status`), `diffs` |
 | Qual gem5? | `gem5_executable`, `gem5_version`, `gem5_build` |
 | Qual ambiente? | `environment` (imagem do container, plataforma, Python, compilador) |
 
@@ -77,8 +77,9 @@ Detalhes de alguns campos:
 - **`exit_code`** é o código de saída do gem5. As configurações em `configs/gem5/` terminam com o código do programa simulado, então `0` significa que o gem5 rodou e o programa retornou `0`. Fica `null` se o gem5 nem chegou a rodar (por exemplo, falha de build).
 - **`program_exit_code`** e **`exit_cause`** vêm da linha `Simulação encerrada ... : <causa> (code=N)` do `stdout.log`: o código com que o **programa** terminou e a causa informada pelo gem5. Ficam `null` quando a linha não aparece, isto é, quando o gem5 parou antes de a simulação terminar (erro do gem5). Assim, `exit_code` ≠ 0 com `program_exit_code` preenchido é falha do benchmark; com `program_exit_code: null`, é falha do gem5.
 - **`experiment.resolved`** é o que permite comparar execuções: duas pastas que diferem em um só parâmetro diferem só nesse campo do `resolved`. `experiment` fica `null` quando o wrapper é chamado sem YAML (`make hello-run-gem5`).
+- **`branch` / `remote_url`** dizem de onde veio o código: a branch do checkout e a URL do remoto `origin`, sem usuário nem token. No gem5, identificam o fork e a branch com as instruções personalizadas. `branch` fica `null` com HEAD destacado, que é o estado comum de um submódulo depois de `git submodule update`; o `commit` continua identificando o código.
 - **`project.dirty` / `gem5_repository.dirty`** indicam alterações não commitadas no momento da execução. Nesse caso `diffs` aponta para os arquivos `inputs/*.diff`. Arquivos não rastreados não entram no diff; aparecem apenas em `status`.
-- **`gem5_build`** é o registro gravado por `make gem5-build` ao lado do executável (`gem5.opt.build-info.json`): commit do gem5 no momento do build e hash do executável. `matches_executable: true` confirma que o executável usado é o mesmo daquele build. `false` ou `gem5_build: null` significa que o gem5 foi compilado fora de `make gem5-build`, e então o commit do checkout não garante de qual código o executável veio.
+- **`gem5_build`** é o registro gravado por `make gem5-build` ao lado do executável (`gem5.opt.build-info.json`): commit, branch e URL do gem5 no momento do build e hash do executável. `matches_executable: true` confirma que o executável usado é o mesmo daquele build. `false` ou `gem5_build: null` significa que o gem5 foi compilado fora de `make gem5-build`, e então o commit do checkout não garante de qual código o executável veio.
 - **`environment`**: `container_image` e `container_image_id` são preenchidos pelos alvos do Makefile (`make run`, `make hello-run-gem5`) e ficam `null` quando se chama a CLI direto no `make shell`. `binary_compiler` é o compilador gravado dentro do próprio binário, que vale mesmo se a toolchain mudar depois.
 
 ### `stdout.log`
@@ -231,6 +232,7 @@ Confira em conjunto:
 
 | Versão | Mudança |
 | --- | --- |
+| `5` | `branch` e `remote_url` em `project` e `gem5_repository` (o gem5 passou a ser um fork com código próprio). O build-info do gem5 passou à versão 2, com os mesmos campos em `repository`. |
 | `4` | `program_exit_code` e `exit_cause`, lidos da linha `Simulação encerrada` do `stdout.log`. |
 | `3` | `failed_step`, `experiment` (YAML original e configuração resolvida) e `build` (comando, código e log do build); estado `building`. Usado por `riscvcnnbench run`. |
 | `2` | Proveniência: commits, diffs, hashes, versão e build-info do gem5, ambiente. |

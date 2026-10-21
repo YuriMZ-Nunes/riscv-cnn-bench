@@ -66,7 +66,7 @@ Para comparar caches ou memória, use `timing`, `minor` ou `o3`.
 | `requant_relu` | `[N, R]`. S: `4096`; L: `32768`. | idem, com `N=` |
 | `fc` | `[In, Out, R]`. S: `512 32`; L: `1024 512`. | idem, com `In=` e `Out=` |
 | `int8_base_example` | `[K, M, R]`: `M` produtos escalares int8 de tamanho `K` (múltiplo de 8) com requantização, repetidos `R` vezes na região de interesse. Padrão `64 16 1`. | `RESULT bench=int8_base_example variant=ref K=.. M=.. R=.. checksum=0x... mismatches=0` |
-| `cnn_insn_semantics` | nenhum. Com `compiler.flags: [-O2, -DCNN_INSN_HW]` usa as instruções personalizadas reais, que só existem no gem5 do fork (RCB-13). | `RESULT mode=model cases=39 failures=0` (ou `mode=hw`) |
+| `cnn_insn_semantics` | nenhum. Com `compiler.flags: [-O2, -DCNN_INSN_HW]` usa as instruções personalizadas reais, que só existem no gem5 do fork (`third_party/gem5`). | `RESULT mode=model cases=39 failures=0` (ou `mode=hw`) |
 
 O `hello_riscv_param` existe para testar as opções. Com `N` maior que a L1 (por exemplo, `65536` = 256KiB), as faltas de cache e o tipo de memória passam a aparecer nas estatísticas. Os dois `hello_*` são de teste, não CNNs. As sete operações de CNN são descritas em [kernels.md](kernels.md); cada uma tem `experiments/<operação>_s.yaml` e `_l.yaml`. O `int8_base_example` exercita a base comum dos kernels e separa a região de interesse no `stats.txt` ([kernel_base.md](kernel_base.md)). O `cnn_insn_semantics` confere os casos de teste das instruções personalizadas, descritos em [custom_instructions.md](custom_instructions.md).
 
