@@ -10,6 +10,7 @@ EXAMPLES = [
     "experiments/smoke_test.yaml",
     "experiments/hello_param_minimal.yaml",
     "experiments/hello_param_cache.yaml",
+    "experiments/cnn_insn_semantics.yaml",
 ]
 
 
@@ -170,7 +171,7 @@ VALID_START = "name: x\nbenchmark:\n  name: hello_riscv\n"
         (
             "name: x\nbenchmark:\n  name: nao_existe\n",
             "linha 3: benchmark.name: benchmark 'nao_existe' não encontrado em benchmarks/; "
-            "disponíveis: hello_riscv, hello_riscv_param",
+            "disponíveis: cnn_insn_semantics, hello_riscv, hello_riscv_param",
         ),
         (
             VALID_START + "cpu:\n  model: o3\ncpu:\n  model: timing\n",

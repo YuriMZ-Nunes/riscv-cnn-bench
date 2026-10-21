@@ -15,11 +15,13 @@ Disponíveis:
 - **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
+- **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5. As instruções ainda não existem no gem5 (RCB-13).
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
 
 - Benchmarks de CNNs e kernels quantizados.
+- Instruções personalizadas no decodificador do gem5 (fork) e kernels que as usam.
 - Modelos de CPU detalhados e hierarquias de cache para coleta de métricas de microarquitetura (ciclos, IPC, acessos à cache).
 - Consolidação de métricas a partir de `stats.txt`.
 - Varreduras de parâmetros (vários experimentos a partir de um arquivo).
@@ -43,7 +45,9 @@ riscv-cnn-bench/
 ├── experiments/              # Experimentos em YAML (formato em docs/experiments.md)
 ├── benchmarks/
 │   ├── hello_riscv/          # Benchmark funcional RISC-V em C
-│   └── hello_riscv_param/    # Variante com tamanho e repetições configuráveis
+│   ├── hello_riscv_param/    # Variante com tamanho e repetições configuráveis
+│   ├── cnn_insn_semantics/   # Casos de teste das instruções personalizadas
+│   └── common/cnn_insn.h     # Macros .insn e modelo em C das instruções
 ├── scripts/
 │   ├── run-gem5.py           # Executa o gem5 e preserva cada execução em results/
 │   ├── record-gem5-build.py  # Registra commit e hash do gem5 compilado
@@ -246,5 +250,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Execução e resultados do hello_riscv](docs/hello_riscv.md)
 - [Resultados de uma execução](docs/results.md)
 - [Escopo experimental: operações, quantização, dimensões e métricas](docs/scope.md)
+- [Instruções personalizadas: especificação e casos de teste](docs/custom_instructions.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

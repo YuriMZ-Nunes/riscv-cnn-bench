@@ -81,7 +81,7 @@ Cada operação e cada tamanho têm três variantes, com **resultado idêntico b
 | Variante | Compilação | Observação |
 | --- | --- | --- |
 | Referência escalar | `-march=rv64gc` | C portátil, base de comparação (RCB-12). |
-| Instruções personalizadas | `-march=rv64gc` + `.insn` em `custom-0..3` | Instruções da RCB-10, implementadas no fork do gem5 (RCB-13, RCB-14). |
+| Instruções personalizadas | `-march=rv64gc` + `.insn` em `custom-0` e `custom-1` | Instruções especificadas em [custom_instructions.md](custom_instructions.md) (RCB-10), implementadas no fork do gem5 (RCB-13, RCB-14). |
 | Vetorial RVV | `-march=rv64gcv`, intrínsecos `riscv_vector.h` | Extensão V padrão como comparação com as instruções personalizadas. |
 
 Viabilidade do RVV, verificada em 20/10/2026 com um produto escalar int8 (`vle8`, `vwmul`, `vwredsum`):
