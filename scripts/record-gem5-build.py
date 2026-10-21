@@ -28,7 +28,7 @@ def main() -> int:
     diff_path.unlink(missing_ok=True)
 
     info = {
-        "schema_version": 1,
+        "schema_version": 2,
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "gem5_executable": str(gem5),
         "gem5_sha256": sha256(gem5),

@@ -3,6 +3,7 @@
 import hashlib
 import subprocess
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 
 def sha256(path: Path) -> str:
@@ -27,10 +28,31 @@ def command_output(*command: str) -> str | None:
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def without_credentials(url: str | None) -> str | None:
+    """Remove usuário e senha (ou token) de uma URL http(s) antes de gravá-la."""
+    if url is None:
+        return None
+    parts = urlsplit(url)
+    if parts.scheme in ("http", "https") and "@" in parts.netloc:
+        return urlunsplit(parts._replace(netloc=parts.netloc.rsplit("@", 1)[1]))
+    return url
+
+
 def git_info(directory: Path) -> dict:
+    """Commit, branch e remoto do repositório, e se há alterações não commitadas.
+
+    `branch` fica None com HEAD destacado (estado comum de um submódulo depois
+    de `git submodule update`); `remote_url` é a URL do remoto `origin`.
+    """
     status = command_output("git", "-C", str(directory), "status", "--porcelain")
     return {
         "commit": command_output("git", "-C", str(directory), "rev-parse", "HEAD"),
+        "branch": command_output(
+            "git", "-C", str(directory), "symbolic-ref", "--short", "-q", "HEAD"
+        ),
+        "remote_url": without_credentials(
+            command_output("git", "-C", str(directory), "remote", "get-url", "origin")
+        ),
         "dirty": None if status is None else bool(status),
         "status": status,
     }

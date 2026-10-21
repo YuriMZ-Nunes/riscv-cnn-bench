@@ -1,7 +1,7 @@
-"""Testes de ponta a ponta do benchmark de semântica das instruções (RCB-10).
+"""Testes de ponta a ponta das instruções personalizadas (RCB-10 e RCB-13).
 
 Executados apenas com `make e2e-test` (ou `pytest -m e2e`) dentro do container,
-pois precisam da toolchain RISC-V, do QEMU e do gem5 compilado.
+pois precisam da toolchain RISC-V, do QEMU e do gem5 do fork compilado.
 """
 
 import json
@@ -13,11 +13,14 @@ from pathlib import Path
 
 import pytest
 
+from riscvcnnbench.runs import diagnose, load_run
+
 ROOT = Path(__file__).resolve().parents[1]
 GEM5 = ROOT / os.environ.get("GEM5_BIN", "third_party/gem5/build/RISCV/gem5.opt")
 RISCV_PREFIX = os.environ.get("RISCV_PREFIX", "riscv64-linux-gnu-")
 BENCHMARK = ROOT / "benchmarks/cnn_insn_semantics"
 MODEL_RESULT = "RESULT mode=model cases=39 failures=0"
+HW_RESULT = "RESULT mode=hw cases=39 failures=0"
 
 # (opcode, funct3, funct7) de cada instrução, conforme docs/custom_instructions.md.
 ENCODINGS = {
@@ -29,6 +32,16 @@ ENCODINGS = {
     (0x0B, 3, 0x01): "cnn.dwmac p=3",
     (0x2B, 0, 0x00): "cnn.rqnt",
     (0x2B, 0, 0x01): "cnn.rqnt.relu",
+}
+
+# Combinações reservadas de custom-0/1, que o gem5 deve tratar como desconhecidas.
+RESERVED = {
+    (0x0B, 2, 0x00): "custom-0, funct7 0, funct3 livre",
+    (0x0B, 7, 0x00): "custom-0, funct7 0, último funct3",
+    (0x0B, 4, 0x01): "cnn.dwmac com p = 4",
+    (0x0B, 0, 0x02): "custom-0, funct7 livre",
+    (0x2B, 1, 0x00): "custom-1, funct3 livre",
+    (0x2B, 0, 0x02): "custom-1, funct7 livre",
 }
 
 pytestmark = pytest.mark.e2e
@@ -64,12 +77,14 @@ def test_model_runs_on_qemu(tmp_path: Path) -> None:
     assert run.stdout.strip() == MODEL_RESULT
 
 
-def test_model_runs_on_gem5_from_yaml(tmp_path: Path) -> None:
+def run_semantics_yaml(tmp_path: Path, extra: str = "") -> tuple[str, dict]:
+    """Executa experiments/cnn_insn_semantics.yaml (mais `extra`) e devolve stdout e metadados."""
     assert GEM5.is_file(), f"gem5 não encontrado em {GEM5}; execute make gem5-build"
     results = tmp_path / "results"
     experiment = tmp_path / "cnn_insn_semantics.yaml"
     experiment.write_text(
         (ROOT / "experiments/cnn_insn_semantics.yaml").read_text(encoding="utf-8")
+        + extra
         + f"output:\n  dir: {results}\n",
         encoding="utf-8",
     )
@@ -81,11 +96,78 @@ def test_model_runs_on_gem5_from_yaml(tmp_path: Path) -> None:
     )
     (run_dir,) = results.iterdir()
     metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
+    stdout = (run_dir / "stdout.log").read_text(encoding="utf-8")
 
-    assert run.returncode == 0, f"{run.stdout}\n{run.stderr}"
+    assert run.returncode == 0, f"{run.stdout}\n{run.stderr}\n{stdout}"
     assert metadata["status"] == "completed"
     assert metadata["program_exit_code"] == 0
-    assert MODEL_RESULT in (run_dir / "stdout.log").read_text(encoding="utf-8")
+    return stdout, metadata
+
+
+def test_model_runs_on_gem5_from_yaml(tmp_path: Path) -> None:
+    stdout, _ = run_semantics_yaml(tmp_path)
+
+    assert MODEL_RESULT in stdout
+
+
+@pytest.mark.parametrize("cpu", ["atomic", "timing", "minor", "o3"])
+def test_hw_runs_on_gem5(tmp_path: Path, cpu: str) -> None:
+    """Instruções reais no gem5 do fork: cada caso confere instrução e modelo."""
+    stdout, metadata = run_semantics_yaml(
+        tmp_path, f"compiler:\n  flags: [-O2, -DCNN_INSN_HW]\ncpu:\n  model: {cpu}\n"
+    )
+
+    assert metadata["experiment"]["resolved"]["cpu"]["model"] == cpu
+    assert HW_RESULT in stdout
+
+
+@pytest.mark.parametrize("encoding", RESERVED, ids=RESERVED.values())
+def test_reserved_encodings_are_unknown(tmp_path: Path, encoding: tuple[int, int, int]) -> None:
+    assert GEM5.is_file(), f"gem5 não encontrado em {GEM5}; execute make gem5-build"
+    opcode, funct3, funct7 = encoding
+    source = tmp_path / "reserved.c"
+    source.write_text(
+        "int main(void) {\n"
+        f'    __asm__ volatile(".insn r {opcode}, {funct3}, {funct7}, a0, a1, a2");\n'
+        "    return 0;\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    binary = tmp_path / "reserved"
+    subprocess.run(
+        [f"{RISCV_PREFIX}gcc", "-O2", "-static", "-march=rv64gc", "-mabi=lp64d"]
+        + ["-o", str(binary), str(source)],
+        check=True,
+    )
+    results_dir = tmp_path / "results"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/run-gem5.py"),
+            "--gem5",
+            str(GEM5),
+            "--binary",
+            str(binary),
+            "--config",
+            str(ROOT / "configs/gem5/se_riscv_configurable.py"),
+            "--results-dir",
+            str(results_dir),
+            "--quiet",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    (run_dir,) = results_dir.iterdir()
+    problem = diagnose(load_run(run_dir))
+
+    assert problem is not None
+    assert problem.kind == "instruction", problem.message
+    # rd = a0 (x10), rs1 = a1 (x11), rs2 = a2 (x12).
+    word = opcode | 10 << 7 | funct3 << 12 | 11 << 15 | 12 << 20 | funct7 << 25
+    stderr = (run_dir / "stderr.log").read_text(encoding="utf-8")
+    reported = re.search(r"Unknown instruction (0x[0-9a-f]+)", stderr)
+    assert reported is not None, stderr
+    assert int(reported[1], 16) & 0xFFFFFFFF == word
 
 
 def test_hw_build_uses_only_the_specified_encodings(tmp_path: Path) -> None:

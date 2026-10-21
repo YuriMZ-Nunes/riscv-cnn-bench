@@ -26,7 +26,7 @@ def make_run(
     run_dir = root / "exp" / run_id
     run_dir.mkdir(parents=True)
     content = {
-        "schema_version": 4,
+        "schema_version": 5,
         "run_id": run_id,
         "status": "completed",
         "failed_step": None,

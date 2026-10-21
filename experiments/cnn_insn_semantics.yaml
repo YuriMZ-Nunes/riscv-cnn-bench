@@ -1,6 +1,7 @@
 # Casos de teste de semântica das instruções personalizadas (RCB-10).
-# Sem flags extras, o benchmark confere só o modelo em C, que roda no gem5 atual.
-# Para conferir as instruções reais (gem5 do fork, RCB-13), use:
+# Sem flags extras, o benchmark confere só o modelo em C, que roda em qualquer
+# gem5 e no QEMU. Para conferir também as instruções reais, que só existem no
+# gem5 do fork (third_party/gem5), use:
 #   compiler:
 #     flags: [-O2, -DCNN_INSN_HW]
 # Especificação: docs/custom_instructions.md.

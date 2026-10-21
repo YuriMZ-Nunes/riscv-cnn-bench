@@ -36,6 +36,12 @@ def write_experiment(tmp_path: Path, name: str, extra: str = "", args: str = "[2
     return path
 
 
+def git(directory: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(directory), *args], capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
 def run_cli(path: Path, gem5: Path = GEM5) -> tuple[subprocess.CompletedProcess, Path, dict]:
     """Executa `riscvcnnbench run` e devolve o processo, a pasta e os metadados."""
     run = subprocess.run(
@@ -57,7 +63,7 @@ def test_run_executes_yaml(tmp_path: Path) -> None:
     stdout = (run_dir / "stdout.log").read_text(encoding="utf-8")
     assert run.returncode == 0, f"run falhou:\n{run.stdout}\n{run.stderr}\n{stdout}"
 
-    assert metadata["schema_version"] == 4
+    assert metadata["schema_version"] == 5
     assert metadata["status"] == "completed"
     assert metadata["failed_step"] is None
     assert metadata["exit_code"] == 0
@@ -85,6 +91,14 @@ def test_run_executes_yaml(tmp_path: Path) -> None:
     assert command.startswith("# build\nmake -C ")
     assert "# gem5\n" in command
     assert "--arg=256 --arg=1 --cpu=atomic --clock=1GHz" in command
+
+    # Proveniência do código: commit, branch e remoto do projeto e do fork do gem5.
+    gem5_dir = ROOT / "third_party/gem5"
+    for key, directory in (("project", ROOT), ("gem5_repository", gem5_dir)):
+        repository = metadata[key]
+        assert set(repository) == {"commit", "branch", "remote_url", "dirty", "status"}
+        assert repository["commit"] == git(directory, "rev-parse", "HEAD")
+        assert repository["remote_url"] == git(directory, "remote", "get-url", "origin")
 
     assert run.stdout.startswith("Executando run_ok em ")
     assert f"Pasta:  {run_dir}\nStatus: completed\n" in run.stdout
@@ -148,12 +162,12 @@ def test_run_reports_benchmark_failure(tmp_path: Path) -> None:
 
 
 def test_unknown_instruction_is_diagnosed(tmp_path: Path) -> None:
-    """Instrução em custom-0, que o gem5 sem instruções personalizadas não conhece."""
+    """Codificação reservada de custom-0 (funct3 2), que o gem5 do fork não conhece."""
     source = tmp_path / "custom.c"
     source.write_text(
         "int main(void) {\n"
         "    int r;\n"
-        '    __asm__ volatile(".insn r 0x0b, 0, 0, %0, %1, %2" : "=r"(r) : "r"(1), "r"(2));\n'
+        '    __asm__ volatile(".insn r CUSTOM_0, 2, 0, %0, %1, %2" : "=r"(r) : "r"(1), "r"(2));\n'
         "    return r;\n"
         "}\n",
         encoding="utf-8",

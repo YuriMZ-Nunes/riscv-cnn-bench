@@ -176,9 +176,9 @@ git -C third_party/gem5 describe --tags --always --dirty
 make gem5-status
 ```
 
-O wrapper registra em `metadata.json` o commit e o estado Git do repositório principal e do checkout em `third_party/gem5`. Se essas informações não puderem ser consultadas, os campos correspondentes podem ficar sem valor.
+O wrapper registra em `metadata.json` o commit, a branch, a URL do remoto `origin` e o estado Git do repositório principal e do checkout em `third_party/gem5`. Se essas informações não puderem ser consultadas, os campos correspondentes podem ficar sem valor.
 
-A revisão do checkout e o hash do executável são informações distintas: alterações no código-fonte não significam que o gem5 tenha sido recompilado. Por isso, `make gem5-build` grava `gem5.opt.build-info.json` ao lado do executável, com o commit, o estado do checkout e o hash do executável no momento do build. O wrapper copia esse registro para `gem5_build` em `metadata.json`, e `matches_executable` indica se o executável usado ainda é o mesmo do registro. `false` significa que o gem5 foi recompilado sem passar por `make gem5-build`; ausência do campo significa que não há registro.
+A revisão do checkout e o hash do executável são informações distintas: alterações no código-fonte não significam que o gem5 tenha sido recompilado. Por isso, `make gem5-build` grava `gem5.opt.build-info.json` ao lado do executável, com o commit, a branch, a URL do fork, o estado do checkout e o hash do executável no momento do build. O wrapper copia esse registro para `gem5_build` em `metadata.json`, e `matches_executable` indica se o executável usado ainda é o mesmo do registro. `false` significa que o gem5 foi recompilado sem passar por `make gem5-build`; ausência do campo significa que não há registro.
 
 O campo `environment` registra a imagem do container (nome e ID, preenchidos por `make hello-run-gem5`), a plataforma, o Python, a versão de `riscv64-linux-gnu-gcc` e o compilador gravado na seção `.comment` do próprio binário. A versão do QEMU não é registrada, pois o QEMU não participa da execução no gem5.
 

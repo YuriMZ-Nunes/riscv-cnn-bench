@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Última linha impressa pelas configurações em configs/gem5/ ao fim da simulação;
 # `code` é o código de saída do programa simulado.
