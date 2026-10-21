@@ -71,7 +71,7 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
 
-e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run e cnn_insn_semantics).
+e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics e int8_base_example).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 clean-results: ## Remove resultados gerados pelo framework.

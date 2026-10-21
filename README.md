@@ -16,6 +16,7 @@ Disponíveis:
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5. As instruções ainda não existem no gem5 (RCB-13).
+- **Base comum dos kernels int8:** headers em `benchmarks/common/` com parâmetros por argumento, dados determinísticos, requantização de referência, comparação com oráculo, checksum e região de interesse marcada com m5ops (o `stats.txt` separa o kernel do resto do programa); o mesmo binário roda no QEMU. Exemplo em `int8_base_example` (ver [docs/kernel_base.md](docs/kernel_base.md)).
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
@@ -47,7 +48,8 @@ riscv-cnn-bench/
 │   ├── hello_riscv/          # Benchmark funcional RISC-V em C
 │   ├── hello_riscv_param/    # Variante com tamanho e repetições configuráveis
 │   ├── cnn_insn_semantics/   # Casos de teste das instruções personalizadas
-│   └── common/cnn_insn.h     # Macros .insn e modelo em C das instruções
+│   ├── int8_base_example/    # Exemplo da base comum dos kernels
+│   └── common/               # Base comum (rcb_*.h) e instruções (cnn_insn.h)
 ├── scripts/
 │   ├── run-gem5.py           # Executa o gem5 e preserva cada execução em results/
 │   ├── record-gem5-build.py  # Registra commit e hash do gem5 compilado
@@ -251,5 +253,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Resultados de uma execução](docs/results.md)
 - [Escopo experimental: operações, quantização, dimensões e métricas](docs/scope.md)
 - [Instruções personalizadas: especificação e casos de teste](docs/custom_instructions.md)
+- [Base comum dos kernels int8 e região de interesse](docs/kernel_base.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

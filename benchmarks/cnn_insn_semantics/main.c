@@ -11,6 +11,9 @@
  * gem5 do fork (RCB-13); no gem5 atual a primeira instrução gera
  * "Unknown instruction".
  *
+ * Nos casos de requantização, confere também que o oráculo da base comum
+ * (rcb_requantize, RCB-11) dá o mesmo resultado.
+ *
  * Imprime "RESULT mode=<model|hw> cases=N failures=F" e retorna 0 se não houve
  * falha, 1 caso contrário.
  */
@@ -19,6 +22,7 @@
 #include <stdio.h>
 
 #include "../common/cnn_insn.h"
+#include "../common/rcb_quant.h"
 
 enum cnn_op {
     CNN_OP_DOT8,
@@ -148,6 +152,17 @@ static uint64_t run_hw(const struct cnn_case *c)
 }
 #endif
 
+/* Oráculo da base comum, só para os casos de requantização. */
+static int check_oracle(const struct cnn_case *c)
+{
+    if (c->op != CNN_OP_RQNT && c->op != CNN_OP_RQNT_RELU) {
+        return 0;
+    }
+    struct rcb_qparams q = {(int32_t)(uint32_t)c->rs2, (unsigned)(c->rs2 >> 32) & 31u};
+    int32_t y = rcb_requantize((int32_t)c->rs1, q, c->op == CNN_OP_RQNT_RELU);
+    return (uint64_t)(int64_t)y != c->expected;
+}
+
 static int check(const char *what, const struct cnn_case *c, uint64_t got)
 {
     if (got == c->expected) {
@@ -165,6 +180,10 @@ int main(void)
 
     for (unsigned i = 0; i < n; ++i) {
         failures += check("modelo", &CASES[i], run_model(&CASES[i]));
+        if (check_oracle(&CASES[i])) {
+            fprintf(stderr, "FALHA %s: rcb_requantize difere do esperado\n", CASES[i].id);
+            ++failures;
+        }
 #ifdef CNN_INSN_HW
         failures += check("instrução", &CASES[i], run_hw(&CASES[i]));
 #endif

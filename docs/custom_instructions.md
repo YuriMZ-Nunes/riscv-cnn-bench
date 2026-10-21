@@ -234,6 +234,7 @@ A saída é `RESULT mode=<model|hw> cases=39 failures=0`, com código de saída 
 | `tests/test_custom_insn.py` | As tabelas deste documento e a tabela `CASES` do benchmark são iguais; cada valor esperado é recalculado por um modelo em Python independente do modelo em C | `pytest` |
 | `tests/test_custom_insn_e2e.py::test_model_runs_on_qemu` | Modelo em C passa nos 39 casos no QEMU | `pytest -m e2e` |
 | `tests/test_custom_insn_e2e.py::test_model_runs_on_gem5_from_yaml` | Idem no gem5, pelo fluxo `riscvcnnbench run` | `pytest -m e2e` |
+| `cnn_insn_semantics` nos casos de requantização | O oráculo `rcb_requantize` da base comum ([kernel_base.md](kernel_base.md)) coincide com o modelo do `cnn.rqnt` | `pytest -m e2e`, pelos testes acima |
 | `tests/test_custom_insn_e2e.py::test_hw_build_uses_only_the_specified_encodings` | O binário com `-DCNN_INSN_HW` tem exatamente as 8 codificações; sem a flag, nenhuma | `pytest -m e2e` |
 | Instruções reais nas CPUs atomic, timing, minor e o3 | Benchmark com `-DCNN_INSN_HW` | Planejado (RCB-13) |
 

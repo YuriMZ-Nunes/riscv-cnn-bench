@@ -24,7 +24,7 @@ CFLAGS := \
 all: $(OUT)
 
 # FORCE recompila sempre, pois FLAGS pode mudar entre experimentos.
-$(OUT): main.c ../common/cnn_insn.h FORCE
+$(OUT): main.c $(wildcard ../common/*.h) FORCE
 	mkdir -p $(OUT_DIR)
 	$(CC) $(CFLAGS) -o $@ $<
 
