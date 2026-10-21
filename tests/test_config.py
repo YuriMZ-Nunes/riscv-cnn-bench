@@ -12,6 +12,20 @@ EXAMPLES = [
     "experiments/hello_param_cache.yaml",
     "experiments/cnn_insn_semantics.yaml",
     "experiments/int8_base_example.yaml",
+    "experiments/conv3x3_direct_s.yaml",
+    "experiments/conv3x3_direct_l.yaml",
+    "experiments/conv3x3_im2col_s.yaml",
+    "experiments/conv3x3_im2col_l.yaml",
+    "experiments/depthwise3x3_s.yaml",
+    "experiments/depthwise3x3_l.yaml",
+    "experiments/pointwise1x1_s.yaml",
+    "experiments/pointwise1x1_l.yaml",
+    "experiments/maxpool2x2_s.yaml",
+    "experiments/maxpool2x2_l.yaml",
+    "experiments/requant_relu_s.yaml",
+    "experiments/requant_relu_l.yaml",
+    "experiments/fc_s.yaml",
+    "experiments/fc_l.yaml",
 ]
 
 
@@ -172,8 +186,9 @@ VALID_START = "name: x\nbenchmark:\n  name: hello_riscv\n"
         (
             "name: x\nbenchmark:\n  name: nao_existe\n",
             "linha 3: benchmark.name: benchmark 'nao_existe' não encontrado em benchmarks/; "
-            "disponíveis: cnn_insn_semantics, hello_riscv, hello_riscv_param, "
-            "int8_base_example",
+            "disponíveis: cnn_insn_semantics, conv3x3_direct, conv3x3_im2col, depthwise3x3, fc, "
+            "hello_riscv, hello_riscv_param, int8_base_example, maxpool2x2, pointwise1x1, "
+            "requant_relu",
         ),
         (
             VALID_START + "cpu:\n  model: o3\ncpu:\n  model: timing\n",

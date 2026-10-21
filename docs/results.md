@@ -164,7 +164,7 @@ Os benchmarks que usam a base comum marcam a região de interesse (ROI) com m5op
 | 1 | Só a ROI, isto é, o kernel com as suas repetições |
 | 2 | Do fim da ROI ao fim do programa: verificação, impressão e saída |
 
-A inicialização antes da ROI não aparece em nenhum bloco. Hoje isso vale para o `int8_base_example`. Os detalhes estão em [kernel_base.md](kernel_base.md#região-de-interesse). Ler os blocos automaticamente e calcular as métricas do TCC está planejado (RCB-16) e ainda não existe.
+A inicialização antes da ROI não aparece em nenhum bloco. Isso vale para o `int8_base_example` e para os sete benchmarks de operação ([kernels.md](kernels.md)). Os detalhes estão em [kernel_base.md](kernel_base.md#região-de-interesse). Ler os blocos automaticamente e calcular as métricas do TCC está planejado (RCB-16) e ainda não existe.
 
 ## Status e falhas
 

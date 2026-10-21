@@ -1,0 +1,8 @@
+# Convolução depthwise 3x3, tamanho S (dados cabem na L1 de 32KiB).
+# args: [H, W, C, R]. Formas em docs/scope.md; kernels em docs/kernels.md.
+# CPU atomic (padrão): validação funcional. Os cenários de medição ficam
+# para a RCB-18.
+name: depthwise3x3_s
+benchmark:
+  name: depthwise3x3
+  args: [16, 16, 32, 1]

@@ -17,11 +17,12 @@ Disponíveis:
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5. As instruções ainda não existem no gem5 (RCB-13).
 - **Base comum dos kernels int8:** headers em `benchmarks/common/` com parâmetros por argumento, dados determinísticos, requantização de referência, comparação com oráculo, checksum e região de interesse marcada com m5ops (o `stats.txt` separa o kernel do resto do programa); o mesmo binário roda no QEMU. Exemplo em `int8_base_example` (ver [docs/kernel_base.md](docs/kernel_base.md)).
+- **Kernels de referência das operações de CNN:** convolução 3×3 direta e por im2col + GEMM, depthwise 3×3, pointwise 1×1, max pooling 2×2, requantização com ReLU e totalmente conectada, em int8, com YAMLs para os tamanhos S e L (ver [docs/kernels.md](docs/kernels.md)). As variantes com instruções personalizadas e RVV ainda não existem.
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
 
-- Benchmarks de CNNs e kernels quantizados.
+- Variantes dos kernels com instruções personalizadas e RVV.
 - Instruções personalizadas no decodificador do gem5 (fork) e kernels que as usam.
 - Modelos de CPU detalhados e hierarquias de cache para coleta de métricas de microarquitetura (ciclos, IPC, acessos à cache).
 - Consolidação de métricas a partir de `stats.txt`.
@@ -49,7 +50,8 @@ riscv-cnn-bench/
 │   ├── hello_riscv_param/    # Variante com tamanho e repetições configuráveis
 │   ├── cnn_insn_semantics/   # Casos de teste das instruções personalizadas
 │   ├── int8_base_example/    # Exemplo da base comum dos kernels
-│   └── common/               # Base comum (rcb_*.h) e instruções (cnn_insn.h)
+│   ├── conv3x3_direct/ ...   # Sete operações de CNN int8 (ver docs/kernels.md)
+│   └── common/               # Base comum (rcb_*.h, kernel.mk), oráculos (rcb_ops.h), instruções (cnn_insn.h)
 ├── scripts/
 │   ├── run-gem5.py           # Executa o gem5 e preserva cada execução em results/
 │   ├── record-gem5-build.py  # Registra commit e hash do gem5 compilado
@@ -254,5 +256,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Escopo experimental: operações, quantização, dimensões e métricas](docs/scope.md)
 - [Instruções personalizadas: especificação e casos de teste](docs/custom_instructions.md)
 - [Base comum dos kernels int8 e região de interesse](docs/kernel_base.md)
+- [Kernels das operações: formas, referência, oráculos e instruções medidas](docs/kernels.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

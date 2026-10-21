@@ -1,0 +1,8 @@
+# Camada totalmente conectada, tamanho S (dados cabem na L1 de 32KiB).
+# args: [In, Out, R]. Formas em docs/scope.md; kernels em docs/kernels.md.
+# CPU atomic (padrão): validação funcional. Os cenários de medição ficam
+# para a RCB-18.
+name: fc_s
+benchmark:
+  name: fc
+  args: [512, 32, 1]
