@@ -14,6 +14,8 @@ EXAMPLES = [
     "experiments/int8_base_example.yaml",
     "experiments/conv3x3_direct_s.yaml",
     "experiments/conv3x3_direct_l.yaml",
+    "experiments/conv3x3_direct_s_custom.yaml",
+    "experiments/conv3x3_direct_s_rvv.yaml",
     "experiments/conv3x3_im2col_s.yaml",
     "experiments/conv3x3_im2col_l.yaml",
     "experiments/depthwise3x3_s.yaml",
@@ -43,9 +45,11 @@ def test_examples_are_valid(example: str) -> None:
 def test_minimal_uses_defaults(tmp_path: Path) -> None:
     config = load_experiment(write(tmp_path, "name: m\nbenchmark:\n  name: hello_riscv\n"))
 
+    assert config.benchmark.variant == "ref"
     assert config.compiler.flags == ["-O2"]
     assert config.cpu.model == "atomic"
     assert config.cpu.clock == "1GHz"
+    assert config.cpu.vlen == 256
     assert config.cache.l1i is None and config.cache.l1d is None and config.cache.l2 is None
     assert config.memory.type == "simple"
     assert config.memory.size == "512MiB"
@@ -53,6 +57,7 @@ def test_minimal_uses_defaults(tmp_path: Path) -> None:
     assert config.gem5_args() == [
         "--cpu=atomic",
         "--clock=1GHz",
+        "--vlen=256",
         "--mem-type=simple",
         "--mem-size=512MiB",
     ]
@@ -66,6 +71,7 @@ def test_cache_example_gem5_args() -> None:
         "--arg=2",
         "--cpu=timing",
         "--clock=2GHz",
+        "--vlen=256",
         "--l1i-size=32KiB",
         "--l1i-assoc=4",
         "--l1d-size=32KiB",
@@ -87,11 +93,13 @@ description: todos os campos
 benchmark:
   name: hello_riscv_param
   args: [4096, "2"]
+  variant: ref
 compiler:
   flags: ["-O3"]
 cpu:
   model: o3
   clock: 2.5GHz
+  vlen: 512
 cache:
   l1i: {size: 16KiB}
   l1d: {size: 32KiB, assoc: 8}
@@ -109,7 +117,7 @@ output:
     assert config.description == "todos os campos"
     assert config.benchmark.args == ["4096", "2"]
     assert config.compiler.flags == ["-O3"]
-    assert (config.cpu.model, config.cpu.clock) == ("o3", "2.5GHz")
+    assert (config.cpu.model, config.cpu.clock, config.cpu.vlen) == ("o3", "2.5GHz", 512)
     assert config.cache.l1i is not None and config.cache.l1i.assoc == 4
     assert config.cache.l1d is not None and config.cache.l1d.assoc == 8
     assert config.cache.l2 is not None and config.cache.l2.size == "1MiB"
@@ -154,6 +162,19 @@ VALID_START = "name: x\nbenchmark:\n  name: hello_riscv\n"
         (
             VALID_START + "cpu:\n  model: pentium\n",
             "linha 5: cpu.model: valor 'pentium' inválido; use 'atomic', 'timing', 'minor' ou 'o3'",
+        ),
+        (
+            VALID_START + "  variant: rvvv\n",
+            "linha 4: benchmark.variant: valor 'rvvv' inválido; use 'ref', 'custom' ou 'rvv'",
+        ),
+        (
+            VALID_START + "  variant: rvv\n",
+            "linha 4: benchmark.variant: o benchmark 'hello_riscv' não tem a variante 'rvv'; "
+            "disponíveis: ref",
+        ),
+        (
+            VALID_START + "cpu:\n  vlen: 300\n",
+            "linha 5: cpu.vlen: valor 300 inválido; use 128, 256, 512 ou 1024",
         ),
         (
             VALID_START + "cpu:\n  clock: 2\n",

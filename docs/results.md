@@ -88,7 +88,7 @@ Saída do gem5 misturada com a do programa simulado. Exemplo real (`hello_param_
 
 ```text
 Executando: .../inputs/hello_riscv_param 65536 2
-Sistema: cpu=timing clock=2GHz l1i=32KiB l1d=32KiB l2=256KiB memória=ddr4/512MiB
+Sistema: cpu=timing clock=2GHz vlen=256 l1i=32KiB l1d=32KiB l2=256KiB memória=ddr4/512MiB
 RESULT n=65536 repeat=2 sum=4294901760
 Simulação encerrada no tick 1865429000: exiting with last active thread context (code=0)
 ```

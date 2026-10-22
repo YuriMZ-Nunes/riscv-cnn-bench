@@ -14,10 +14,15 @@ benchmark:
   # Argumentos do programa. Para hello_riscv_param: [N, R] = elementos do
   # vetor (4 bytes cada) e repetições. Padrão: [].
   args: ["65536", "2"]
+  # Implementação do kernel: ref (referência escalar) | custom (instruções
+  # personalizadas, só no gem5 do fork) | rvv (extensão V). Só as operações de
+  # CNN têm custom e rvv; hello_riscv_param tem apenas ref. Padrão: ref.
+  variant: ref
 
 compiler:
   # Flags escolhidas pelo experimento. -static, -march e -mabi são sempre
-  # adicionadas pelo Makefile do benchmark. Padrão: ["-O2"].
+  # adicionadas pelo Makefile do benchmark (o -march depende da variante).
+  # Padrão: ["-O2"].
   flags: ["-O3", "-funroll-loops"]
 
 cpu:
@@ -26,6 +31,9 @@ cpu:
   model: timing
   # Frequência da CPU, em MHz ou GHz. Padrão: 1GHz.
   clock: 2GHz
+  # VLEN da extensão V, em bits: 128 | 256 | 512 | 1024. Só afeta a variante
+  # rvv. Padrão: 256 (o do gem5).
+  vlen: 256
 
 # Cada nível é opcional; omitido = sem aquele cache. Padrão: sem caches.
 # size em KiB/MiB/GiB; assoc = associatividade (vias). Padrão de assoc: 4.

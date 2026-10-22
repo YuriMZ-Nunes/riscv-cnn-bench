@@ -11,8 +11,10 @@
 
 #include "rcb_args.h"
 
-/* Variante, deduzida das flags de compilação. */
-#if defined(CNN_INSN_HW)
+/* Variante: a do Makefile (kernel.mk) ou, sem ela, deduzida das flags. */
+#if defined(RCB_VARIANT_NAME)
+#define RCB_VARIANT RCB_VARIANT_NAME
+#elif defined(CNN_INSN_HW)
 #define RCB_VARIANT "custom"
 #elif defined(__riscv_vector)
 #define RCB_VARIANT "rvv"

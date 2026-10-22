@@ -23,9 +23,9 @@ def test_resolved_config_fills_defaults(tmp_path: Path) -> None:
     assert resolved_config(experiment) == {
         "name": "x",
         "description": "",
-        "benchmark": {"name": "hello_riscv", "args": []},
+        "benchmark": {"name": "hello_riscv", "args": [], "variant": "ref"},
         "compiler": {"flags": ["-O2"]},
-        "cpu": {"model": "atomic", "clock": "1GHz"},
+        "cpu": {"model": "atomic", "clock": "1GHz", "vlen": 256},
         "cache": {"l1i": None, "l1d": None, "l2": None},
         "memory": {"type": "simple", "size": "512MiB"},
         "output": {"dir": str(PROJECT_ROOT / "results" / "x")},
@@ -60,7 +60,16 @@ def test_build_command_uses_experiment_flags(tmp_path: Path) -> None:
         f"OUT_DIR={binary.parent}",
         f"OUT={binary}",
         "FLAGS=-O3 -funroll-loops",
+        "VARIANT=ref",
     ]
+
+
+def test_build_command_passes_variant(tmp_path: Path) -> None:
+    experiment = load_experiment(
+        write(tmp_path, "name: x\nbenchmark:\n  name: fc\n  variant: rvv\n")
+    )
+
+    assert build_command(experiment, tmp_path / "fc")[-1] == "VARIANT=rvv"
 
 
 def test_wrapper_command_builds_inside_run_dir(tmp_path: Path) -> None:

@@ -1,7 +1,7 @@
 """Formato dos arquivos de experimento (YAML).
 
-Um experimento escolhe benchmark, flags de compilação, CPU, caches, memória e
-pasta de saída. Só `name` e `benchmark.name` são obrigatórios; os demais campos
+Um experimento escolhe benchmark (e variante do kernel), flags de compilação,
+CPU, caches, memória e pasta de saída. Só `name` e `benchmark.name` são obrigatórios; os demais campos
 têm padrões equivalentes a configs/gem5/se_riscv.py. Veja docs/experiments.md.
 """
 
@@ -59,6 +59,10 @@ class StrictModel(BaseModel):
 class BenchmarkConfig(StrictModel):
     name: str = Field(description="Pasta em benchmarks/ com main.c e Makefile.")
     args: list[str] = Field(default=[], description="Argumentos passados ao programa.")
+    variant: Literal["ref", "custom", "rvv"] = Field(
+        default="ref",
+        description="Implementação do kernel: referência, instruções personalizadas ou RVV.",
+    )
 
     @field_validator("args", mode="before")
     @classmethod
@@ -82,6 +86,9 @@ class CompilerConfig(StrictModel):
 class CpuConfig(StrictModel):
     model: Literal["atomic", "timing", "minor", "o3"] = "atomic"
     clock: str = Field(default="1GHz", pattern=CLOCK_PATTERN)
+    vlen: Literal[128, 256, 512, 1024] = Field(
+        default=256, description="VLEN da extensão V, em bits (padrão do gem5)."
+    )
 
 
 class CacheLevelConfig(StrictModel):
@@ -131,7 +138,7 @@ class Experiment(StrictModel):
     def gem5_args(self) -> list[str]:
         """Argumentos para configs/gem5/se_riscv_configurable.py."""
         args = [f"--arg={arg}" for arg in self.benchmark.args]
-        args += [f"--cpu={self.cpu.model}", f"--clock={self.cpu.clock}"]
+        args += [f"--cpu={self.cpu.model}", f"--clock={self.cpu.clock}", f"--vlen={self.cpu.vlen}"]
         for level in ("l1i", "l1d", "l2"):
             cache = getattr(self.cache, level)
             if cache:
@@ -247,6 +254,12 @@ def available_benchmarks() -> list[str]:
     return sorted(path.parent.name for path in root.glob("*/Makefile"))
 
 
+def available_variants(benchmark_dir: Path) -> list[str]:
+    """Variantes de um benchmark: `ref` e uma por arquivo kernel_<variante>.c."""
+    variants = {path.stem.removeprefix("kernel_") for path in benchmark_dir.glob("kernel_*.c")}
+    return ["ref", *(v for v in ("custom", "rvv") if v in variants)]
+
+
 def load_experiment(path: Path) -> Experiment:
     """Lê e valida um experimento, reunindo todos os problemas em um ConfigError."""
     if not path.is_file():
@@ -298,6 +311,19 @@ def load_experiment(path: Path) -> Experiment:
                 f"disponíveis: {', '.join(available_benchmarks()) or 'nenhum'}",
             )
         )
+
+    elif experiment:
+        variants = available_variants(experiment.benchmark_dir)
+        if experiment.benchmark.variant not in variants:
+            location = ("benchmark", "variant")
+            problems.append(
+                _problem(
+                    lines.line_of(location),
+                    location,
+                    f"o benchmark {experiment.benchmark.name!r} não tem a variante "
+                    f"{experiment.benchmark.variant!r}; disponíveis: {', '.join(variants)}",
+                )
+            )
 
     if problems:
         raise ConfigError(path, [message for _, message in sorted(problems, key=lambda p: p[0])])

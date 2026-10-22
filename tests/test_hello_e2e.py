@@ -133,7 +133,9 @@ def test_hello_param_cache_experiment(tmp_path: Path) -> None:
     assert run.returncode == 0, f"wrapper falhou:\n{run.stdout}\n{stdout}\n{stderr}"
 
     assert "RESULT n=65536 repeat=2 sum=4294901760" in stdout
-    assert "cpu=timing clock=2GHz l1i=32KiB l1d=32KiB l2=256KiB memória=ddr4/512MiB" in stdout
+    assert (
+        "cpu=timing clock=2GHz vlen=256 l1i=32KiB l1d=32KiB l2=256KiB memória=ddr4/512MiB" in stdout
+    )
 
     # As opções do YAML chegaram ao sistema simulado.
     stats = (run_dir / "gem5/stats.txt").read_text(encoding="utf-8")

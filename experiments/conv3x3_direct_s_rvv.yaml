@@ -1,0 +1,8 @@
+# Convolução 3x3 direta, tamanho S, variante rvv: extensão V (intrínsecos RVV, VLEN 256).
+# Mesmos dados e checksum da referência (conv3x3_direct_s.yaml); só o kernel
+# muda. Variantes em docs/kernels.md.
+name: conv3x3_direct_s_rvv
+benchmark:
+  name: conv3x3_direct
+  args: [16, 16, 8, 16, 1]
+  variant: rvv
