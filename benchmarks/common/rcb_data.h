@@ -59,6 +59,60 @@ static inline void rcb_fill_i32(int32_t *dst, size_t n, struct rcb_rng *rng, int
     }
 }
 
+/*
+ * Conjunto de dados (RCB-15), escolhido na compilação com -DRCB_DATA=<n>:
+ *
+ *   0  random  aleatório na faixa de cada tensor (padrão, usado nas medições);
+ *   1  satpos  entradas e pesos -128 (cada produto vale +16384) e bias no
+ *              máximo da faixa: os acumuladores saturam em 127;
+ *   2  satneg  entradas -128, pesos 127 (cada produto vale -16256) e bias no
+ *              mínimo: os acumuladores ficam negativos e o ReLU dá 0.
+ *
+ * O main.c preenche os tensores com rcb_fill_* (a sequência do gerador não
+ * muda) e depois chama rcb_dataset_* com o papel de cada tensor; com
+ * RCB_DATA=0 essas chamadas não fazem nada.
+ */
+#ifndef RCB_DATA
+#define RCB_DATA 0
+#endif
+
+#if RCB_DATA == 0
+#define RCB_DATA_NAME "random"
+#elif RCB_DATA == 1
+#define RCB_DATA_NAME "satpos"
+#elif RCB_DATA == 2
+#define RCB_DATA_NAME "satneg"
+#else
+#error "RCB_DATA deve ser 0 (random), 1 (satpos) ou 2 (satneg)"
+#endif
+
+enum rcb_role {
+    RCB_INPUT,  /* ativações int8 */
+    RCB_WEIGHT, /* pesos int8 */
+    RCB_BIAS,   /* bias int32, ou a entrada int32 da requantização */
+};
+
+/* Sobrescreve um tensor int8 com o valor extremo do seu papel. */
+static inline void rcb_dataset_i8(int8_t *dst, size_t n, enum rcb_role role)
+{
+    if (RCB_DATA == 0) {
+        return;
+    }
+    int8_t value = (RCB_DATA == 2 && role == RCB_WEIGHT) ? 127 : -128;
+    memset(dst, (uint8_t)value, n);
+}
+
+/* Sobrescreve um tensor int32 com o extremo da faixa [lo, hi] usada no rcb_fill_i32. */
+static inline void rcb_dataset_i32(int32_t *dst, size_t n, int32_t lo, int32_t hi)
+{
+    if (RCB_DATA == 0) {
+        return;
+    }
+    for (size_t i = 0; i < n; ++i) {
+        dst[i] = RCB_DATA == 1 ? hi : lo;
+    }
+}
+
 /* Buffer zerado e alinhado a RCB_ALIGN. Sem memória, encerra com código 2. */
 static inline void *rcb_alloc(size_t bytes, const char *what)
 {

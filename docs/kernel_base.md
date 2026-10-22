@@ -36,6 +36,7 @@ int main(int argc, char **argv)
     int8_t *x = rcb_alloc(n, "x");
     struct rcb_rng rng = rcb_rng_init(SEED);
     rcb_fill_i8(x, n, &rng, -128, 127);
+    rcb_dataset_i8(x, n, RCB_INPUT); /* conjunto extremo, se RCB_DATA != 0 */
 
     /* 3. Kernel dentro da ROI, R vezes. */
     rcb_roi_begin();
@@ -71,7 +72,7 @@ Todos são só headers, com funções `static inline`. Basta incluir `rcb_bench.
 | Header | Oferece |
 | --- | --- |
 | `rcb_args.h` | `struct rcb_param` e `rcb_parse_params` |
-| `rcb_data.h` | `struct rcb_rng`, `rcb_rng_init`, `rcb_rng_next`, `rcb_rng_range`, `rcb_fill_i8`, `rcb_fill_i32`, `rcb_alloc`, `RCB_ALIGN` |
+| `rcb_data.h` | `struct rcb_rng`, `rcb_rng_init`, `rcb_rng_next`, `rcb_rng_range`, `rcb_fill_i8`, `rcb_fill_i32`, `rcb_alloc`, `RCB_ALIGN`; conjuntos de dados `RCB_DATA`, `RCB_DATA_NAME`, `rcb_dataset_i8`, `rcb_dataset_i32` |
 | `rcb_quant.h` | `struct rcb_qparams`, `rcb_requantize`, `rcb_qparams_from_scale` |
 | `rcb_check.h` | `rcb_compare_i8`, `rcb_checksum`, `rcb_finish`, `RCB_VARIANT` |
 | `rcb_roi.h` | `rcb_roi_begin`, `rcb_roi_end` |
@@ -97,6 +98,15 @@ Dimensões e repetições vêm sempre daqui, nunca de constantes espalhadas pelo
 - **Gerador:** `splitmix64`, com só aritmética inteira de 64 bits. A mesma semente dá os mesmos tensores no QEMU, no gem5 e em qualquer variante.
 - **Preenchimento:** `rcb_fill_i8` e `rcb_fill_i32` sorteiam uniformemente numa faixa fechada `[lo, hi]`. O padrão para ativações e pesos é `[-128, 127]`, para incluir os extremos.
 - **Ordem:** os tensores são sorteados sempre na mesma ordem, a do código.
+- **Conjuntos extremos (RCB-15):** depois do sorteio, `rcb_dataset_i8(buf, n, papel)` e `rcb_dataset_i32(buf, n, lo, hi)` sobrescrevem cada tensor conforme o conjunto escolhido na compilação com `-DRCB_DATA=<n>`. Com o padrão, `RCB_DATA=0`, essas chamadas não fazem nada. O papel é `RCB_INPUT`, `RCB_WEIGHT` ou `RCB_BIAS`, este último também para a entrada int32 da requantização.
+
+  | `RCB_DATA` | Nome (`data=`) | Entradas | Pesos | Bias / int32 | Efeito |
+  | --- | --- | --- | --- | --- | --- |
+  | 0 | `random` | sorteadas | sorteados | sorteados | Padrão; usado nas medições |
+  | 1 | `satpos` | −128 | −128 | `hi` da faixa | Cada produto vale +16384; toda saída requantizada satura em 127 |
+  | 2 | `satneg` | −128 | 127 | `lo` da faixa | Cada produto vale −16256; o ReLU zera toda saída |
+
+  Os extremos ficam dentro das faixas do sorteio, então os limites de acumulação de [custom_instructions.md](custom_instructions.md) continuam valendo. No max pooling, os dois conjuntos põem −128 em toda a entrada, e a saída também é −128: isso confere a comparação com sinal. Pelo YAML, o conjunto entra em `compiler.flags`, por exemplo `[-O2, -DRCB_DATA=1]`.
 - **Alocação:** `rcb_alloc` devolve memória zerada e alinhada a 64 bytes, o que atende o requisito de 8 bytes das instruções personalizadas e coincide com a linha de cache. Sem memória, o programa encerra com código 2.
 
 ### Quantização
@@ -116,7 +126,7 @@ Dimensões e repetições vêm sempre daqui, nunca de constantes espalhadas pelo
 - **Resultado:** `rcb_finish` imprime a linha abaixo e devolve o código de saída.
 
   ```
-  RESULT bench=<nome> variant=<ref|custom|rvv> <P>=<valor>... checksum=0x<16 hex> mismatches=<n>
+  RESULT bench=<nome> variant=<ref|custom|rvv> data=<random|satpos|satneg> <P>=<valor>... checksum=0x<16 hex> mismatches=<n>
   ```
 
 `variant` vem de `RCB_VARIANT_NAME`, que o Makefile das operações define a partir de `VARIANT` (o `benchmark.variant` do YAML). Assim a variante `custom` compilada com o modelo em C (`CNN_INSN=model`) também imprime `custom`. Sem essa macro, como nos benchmarks com Makefile próprio, `variant` é deduzida das flags:
@@ -214,6 +224,6 @@ make -C benchmarks/int8_base_example && qemu-riscv64 build/benchmarks/int8_base_
 As sete operações da RCB-12 seguem estes passos ([kernels.md](kernels.md)).
 
 1. Crie `benchmarks/<operação>/` com `main.c`, `kernel.h`, `kernel_ref.c` e um `Makefile` de duas linhas (`NAME := <operação>` e `include ../common/kernel.mk`). Oráculos novos vão em `benchmarks/common/rcb_ops.h`.
-2. Siga o roteiro: parâmetros, dados com uma `SEED` própria, kernel na ROI, oráculo e `rcb_finish`.
+2. Siga o roteiro: parâmetros, dados com uma `SEED` própria (e `rcb_dataset_*` para cada tensor), kernel na ROI, oráculo e `rcb_finish`.
 3. Use dimensões múltiplas de 8 na dimensão contígua e aloque tudo com `rcb_alloc`.
-4. Acrescente um YAML em `experiments/` e um teste e2e que rode a operação no QEMU e no gem5.
+4. Acrescente `kernel_custom.c` e `kernel_rvv.c` (RCB-14), um YAML em `experiments/` e a operação em `OPS` de `tests/test_kernels_e2e.py` (e o tamanho da saída em `tests/test_validation.py`), para que ela entre no e2e e na validação.

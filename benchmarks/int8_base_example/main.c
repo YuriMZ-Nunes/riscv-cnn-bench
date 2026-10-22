@@ -76,6 +76,9 @@ int main(int argc, char **argv)
     rcb_fill_i8(x, (size_t)k_len, &rng, -128, 127);
     rcb_fill_i8(w, (size_t)(m_len * k_len), &rng, -128, 127);
     rcb_fill_i32(bias, (size_t)m_len, &rng, -4096, 4096);
+    rcb_dataset_i8(x, (size_t)k_len, RCB_INPUT);
+    rcb_dataset_i8(w, (size_t)(m_len * k_len), RCB_WEIGHT);
+    rcb_dataset_i32(bias, (size_t)m_len, -4096, 4096);
     /* Escala que espalha as saídas na faixa int8 para entradas uniformes. */
     struct rcb_qparams q = rcb_qparams_from_scale(1.0 / (16.0 * (double)k_len));
 

@@ -18,12 +18,11 @@ Disponíveis:
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5.
 - **Instruções personalizadas no gem5:** o submódulo `third_party/gem5` aponta para o fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nunes/gem5), branch `riscv-cnn-bench`, que tem código próprio: as cinco instruções no decodificador RISC-V. Um binário compilado com `-DCNN_INSN_HW` roda nas CPUs atomic, timing, minor e o3.
 - **Base comum dos kernels int8:** headers em `benchmarks/common/` com parâmetros por argumento, dados determinísticos, requantização de referência, comparação com oráculo, checksum e região de interesse marcada com m5ops (o `stats.txt` separa o kernel do resto do programa); o mesmo binário roda no QEMU. Exemplo em `int8_base_example` (ver [docs/kernel_base.md](docs/kernel_base.md)).
-- **Kernels das operações de CNN em três variantes:** convolução 3×3 direta e por im2col + GEMM, depthwise 3×3, pointwise 1×1, max pooling 2×2, requantização com ReLU e totalmente conectada, em int8, com YAMLs para os tamanhos S e L. Cada operação tem a referência escalar, a variante com as instruções personalizadas e a variante RVV (intrínsecos, VLEN configurável), escolhidas por `benchmark.variant` no YAML. As três dão o mesmo resultado (ver [docs/kernels.md](docs/kernels.md)).
+- **Kernels das operações de CNN em três variantes:** convolução 3×3 direta e por im2col + GEMM, depthwise 3×3, pointwise 1×1, max pooling 2×2, requantização com ReLU e totalmente conectada, em int8, com YAMLs para os tamanhos S e L. Cada operação tem a referência escalar, a variante com as instruções personalizadas e a variante RVV (intrínsecos, VLEN configurável), escolhidas por `benchmark.variant` no YAML. As três dão o mesmo resultado, conferido por `make validate`, inclusive com dados extremos (ver [docs/kernels.md](docs/kernels.md)).
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
 
-- Validação formal da equivalência entre as variantes (RCB-15).
 - Latência própria e configurável para as instruções personalizadas (hoje usam as unidades `IntMult`/`IntAlu` da CPU).
 - Modelos de CPU detalhados e hierarquias de cache para coleta de métricas de microarquitetura (ciclos, IPC, acessos à cache).
 - Consolidação de métricas a partir de `stats.txt`.
@@ -135,6 +134,7 @@ make hello-build      # Compila o benchmark
 make hello-run        # Executa no QEMU
 make hello-run-gem5   # Executa no gem5 e salva a execução em results/hello_riscv/<run_id>/
 make e2e-test         # Teste de ponta a ponta: compila, executa no gem5 e verifica log, retorno e stats
+make validate         # e2e + equivalência das variantes (S/L, dados extremos) antes da campanha
 ```
 
 O `make e2e-test` requer o gem5 compilado (`make gem5-build`). Ele usa pastas temporárias e não altera `build/` nem `results/`.
@@ -166,7 +166,8 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml` e `m
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
-| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml` e `riscvcnnbench run` (sucesso, falha de build e de simulação). |
+| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas e as sete operações nas três variantes. |
+| `make validate` | Validação antes da campanha: e2e mais a equivalência das três variantes em S e L e com dados extremos, no QEMU e no gem5 (`RCB_JOBS=N` para o paralelismo). |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
 | `make format` | Formata apenas o código próprio em `src/` e `tests/`. |

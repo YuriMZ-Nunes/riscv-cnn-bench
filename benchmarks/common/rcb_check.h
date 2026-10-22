@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "rcb_args.h"
+#include "rcb_data.h"
 
 /* Variante: a do Makefile (kernel.mk) ou, sem ela, deduzida das flags. */
 #if defined(RCB_VARIANT_NAME)
@@ -51,13 +52,14 @@ static inline size_t rcb_compare_i8(const int8_t *got, const int8_t *want, size_
 }
 
 /*
- * Imprime "RESULT bench=<nome> variant=<v> <P>=<valor>... checksum=0x...
- * mismatches=<n>" e devolve o código de saída: 0 sem diferenças, 1 com.
+ * Imprime "RESULT bench=<nome> variant=<v> data=<conjunto> <P>=<valor>...
+ * checksum=0x... mismatches=<n>" e devolve o código de saída: 0 sem
+ * diferenças, 1 com.
  */
 static inline int rcb_finish(const char *bench, const struct rcb_param *params, int count,
                              uint64_t checksum, size_t mismatches)
 {
-    printf("RESULT bench=%s variant=%s", bench, RCB_VARIANT);
+    printf("RESULT bench=%s variant=%s data=%s", bench, RCB_VARIANT, RCB_DATA_NAME);
     for (int i = 0; i < count; ++i) {
         printf(" %s=%ld", params[i].name, params[i].value);
     }

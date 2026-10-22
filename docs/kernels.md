@@ -9,7 +9,7 @@ Benchmarks das sete operações de [scope.md](scope.md), construídos sobre a ba
 | Variante RVV (`kernel_rvv.c`) das sete operações | Existente; passa no QEMU (S e L) e no gem5 (S e L na atomic; formas reduzidas na timing, minor e o3) |
 | Oráculos em `benchmarks/common/rcb_ops.h` | Existente |
 | YAMLs `experiments/<operação>_{s,l}.yaml` | Existente; CPU atomic, variante `ref` (as outras pelo campo `benchmark.variant`) |
-| Equivalência entre variantes | Mesmo checksum nas três, conferido pelos testes e2e. A validação formal é planejada (RCB-15) |
+| Equivalência entre variantes | Existente (RCB-15): `make validate`, ver [Validação de equivalência](#validação-de-equivalência) |
 
 ## Operações
 
@@ -224,6 +224,41 @@ uv run riscvcnnbench run experiments/conv3x3_direct_s.yaml
 grep -E '^simInsts ' results/conv3x3_direct_s/<run_id>/gem5/stats.txt   # 1ª linha = ROI
 ```
 
+## Validação de equivalência
+
+Antes de usar qualquer número de desempenho, as três variantes de cada operação precisam produzir a mesma saída (RCB-15). Como todas recebem os mesmos dados e são comparadas com o mesmo oráculo ([kernel_base.md](kernel_base.md#verificação-e-resultado)), a equivalência é:
+
+1. todas terminam com `mismatches=0` e código 0;
+2. todas têm o mesmo `checksum`;
+3. o mesmo binário dá o mesmo checksum no QEMU e no gem5.
+
+```bash
+make validate                 # e2e + validação; RCB_JOBS=N ajusta o paralelismo
+uv run pytest -m validation   # só a validação, dentro do container
+```
+
+`tests/test_validation.py` monta a matriz abaixo e simula tudo em paralelo. Em 21/10/2026, com 4 processos, a matriz levou ~5 min (196 execuções: 84 no QEMU e 112 no gem5, mais as 84 compilações), e `make validate` inteiro levou 9 min 22 s (188 testes passaram).
+
+| Variante | QEMU | gem5 atomic |
+| --- | --- | --- |
+| `ref` | sim | sim |
+| `custom`, modo modelo (`CNN_INSN=model`) | sim (valida a lógica do kernel) | sim |
+| `custom`, instruções reais | não (instrução ilegal) | sim, só no fork |
+| `rvv` | sim, `-cpu rv64,v=true,vlen=256,vext_spec=v1.0` | sim, VLEN 256 |
+
+Cobertura:
+
+- **Tamanhos e conjuntos de dados.** O conjunto aleatório roda em S e L. Os extremos `satpos` e `satneg` ([kernel_base.md](kernel_base.md#dados-determinísticos)) rodam em S. São 7 operações × 4 casos (S aleatório, L aleatório, S `satpos`, S `satneg`) × 7 execuções (3 no QEMU + 4 no gem5), com 7 checksums iguais por caso.
+- **Saturação de toda a saída.** Nos conjuntos extremos, além de bater com o oráculo, o checksum precisa ser o de uma saída inteira saturada: 127 em `satpos`, 0 em `satneg` e −128 no pooling. Isso prova que os extremos de fato chegaram às bordas da requantização.
+- **Casos de borda das instruções.** São os 39 casos de [custom_instructions.md](custom_instructions.md), no modo hw, nas quatro CPUs (e2e).
+
+Testes negativos (e2e):
+
+| Erro | Como é provocado | Detecção |
+| --- | --- | --- |
+| Kernel errado | `-DRCB_INJECT_ERROR` muda `y[0]`, nas três variantes | Saída 1, `mismatches=1` e `ERRO: y[0] = ..., oráculo = ...` (`test_wrong_kernel_is_detected`) |
+| Semântica errada de uma instrução | `-DCNN_INSN_INJECT_ERROR` no `cnn_insn_semantics` executa outra instrução real (`cnn.dwmac p=0`) no lugar do `cnn.dot8`, como faria um decodificador errado | No gem5, exatamente os 8 casos `dot8-*` em que as duas diferem falham; o de zeros coincide. Saída 1 (`test_wrong_instruction_semantics_is_detected`) |
+
 ## Testes
 
 `tests/test_kernels_e2e.py`, executado com `pytest -m e2e`:
@@ -243,7 +278,7 @@ Os tamanhos L no gem5 e os tamanhos S nas CPUs detalhadas não entram no e2e, pe
 ## Limites
 
 - **Qualidade das implementações.** As três são razoáveis, mas não ajustadas ao máximo: nenhuma desenrola laços à mão, e a RVV requantiza as operações de produto escalar no escalar. As conclusões valem para estas implementações. O ganho das variantes é medido contra a referência. Outra versão do GCC ou outro nível de otimização mudam as contagens; a proveniência de cada execução registra a toolchain.
-- **Oráculo simulado.** A verificação custa cerca de tanto quanto o kernel no gem5. A forma de reduzir isso está em [scope.md](scope.md#estimativa-de-tempo-de-simulação).
+- **Oráculo simulado.** A verificação custa cerca de tanto quanto o kernel no gem5, e é mantida em todas as CPUs para que cada execução da campanha confira a própria saída (decisão em [scope.md](scope.md#estimativa-de-tempo-de-simulação)).
 - **Caches no início da ROI.** A ROI começa com as caches aquecidas pela inicialização ([kernel_base.md](kernel_base.md#cuidados)), e a decisão fica para a RCB-18.
 - **im2col escalar nas três variantes.** A montagem do buffer é a mesma em todas, e só a GEMM muda. Uma RVV completa também vetorizaria a cópia.
 - **Contorno no gem5.** A redução RVV em LMUL 1 contorna a [limitação da O3](#limitação-do-gem5-reduções-rvv-na-o3cpu), com 3 instruções a mais por saída nas operações de produto escalar.

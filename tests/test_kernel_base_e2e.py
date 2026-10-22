@@ -18,7 +18,7 @@ RISCV_PREFIX = os.environ.get("RISCV_PREFIX", "riscv64-linux-gnu-")
 BENCHMARK = ROOT / "benchmarks/int8_base_example"
 BLOCK_HEADER = "---------- Begin Simulation Statistics ----------"
 RESULT = re.compile(
-    r"^RESULT bench=int8_base_example variant=ref K=(\d+) M=(\d+) R=(\d+) "
+    r"^RESULT bench=int8_base_example variant=ref data=random K=(\d+) M=(\d+) R=(\d+) "
     r"checksum=(0x[0-9a-f]{16}) mismatches=(\d+)$",
     re.MULTILINE,
 )

@@ -115,9 +115,18 @@ static uint64_t run_hw(const struct cnn_case *c)
 
     switch (c->op) {
     case CNN_OP_DOT8:
+#ifdef CNN_INSN_INJECT_ERROR
+        /* Teste negativo (RCB-15): simula um decodificador que executa outra
+         * instrução real, cnn.dwmac p=0, no lugar do cnn.dot8. Os casos
+         * dot8-* devem falhar. */
+        __asm__ volatile(".insn r CUSTOM_0, 0, 0x01, %0, %1, %2"
+                         : "+r"(rd)
+                         : "r"(c->rs1), "r"(c->rs2));
+#else
         __asm__ volatile(".insn r CUSTOM_0, 0, 0x00, %0, %1, %2"
                          : "+r"(rd)
                          : "r"(c->rs1), "r"(c->rs2));
+#endif
         return rd;
     case CNN_OP_MAX8:
         return cnn_max8(c->rs1, c->rs2);

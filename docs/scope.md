@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência formal (RCB-15) e as métricas (RCB-16+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); as métricas (RCB-16+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -76,7 +76,7 @@ As formas seguem camadas de modelos de Edge AI de referência do MLPerf Tiny: Re
 
 ## Variantes de implementação
 
-Cada operação e cada tamanho têm três variantes, com **resultado idêntico byte a byte** (RCB-15):
+Cada operação e cada tamanho têm três variantes, com **resultado idêntico byte a byte**, conferido por `make validate` (RCB-15, [kernels.md](kernels.md#validação-de-equivalência)):
 
 | Variante | Compilação | Observação |
 | --- | --- | --- |
@@ -186,16 +186,15 @@ As velocidades de simulação acima foram medidas com código escalar. Na atomic
 | Instruções simuladas por configuração | 595,0 M (era ≤ 800 M na estimativa da RCB-12, que supunha as variantes iguais à referência) |
 | Tempo por cenário de memória | o3 ≈ 37 min, minor ≈ 32 min, timing ≈ 11 min (≈ 1,3 h) |
 | Total por passada da matriz | ≈ 5,3 h nos 4 cenários, mais ≈ 8 min de atomic (546 execuções) |
-| Total se a verificação não fosse simulada nas CPUs detalhadas | ≈ 1,5 h |
 | Maior execução isolada | Conv direta L, referência, em o3: ≈ 290 s |
 
-Formas de reduzir o tempo, a decidir nas RCB-18 e RCB-22:
-- validar só no QEMU e no atomic e, nas CPUs detalhadas, comparar o checksum com o da validação em vez de simular o oráculo;
-- simular fora da ROI com a CPU atomic e trocar para a CPU detalhada só na ROI, como permite o gem5. Isso também afeta o estado das caches no início da ROI.
+**Decisão (21/10/2026):** o oráculo e a comparação são simulados em todas as CPUs, inclusive nas detalhadas. Cada execução da campanha verifica a própria saída (`mismatches=0` e código de saída 0), e uma execução que calculou errado aparece como falha no `metadata.json`. Isso protege as medições contra defeitos do simulador que só aparecem nas CPUs detalhadas, como o da redução RVV na O3CPU ([kernels.md](kernels.md#limitação-do-gem5-reduções-rvv-na-o3cpu)), e por isso a estimativa acima já inclui a verificação.
+
+Forma de reduzir o tempo ainda em aberto, a decidir nas RCB-18 e RCB-22: simular fora da ROI com a CPU atomic e trocar para a CPU detalhada só na ROI, como permite o gem5. A verificação continua valendo, porque a saída calculada na CPU detalhada é comparada com o oráculo, ainda que o oráculo rode na atomic. Isso também afeta o estado das caches no início da ROI.
 
 Mesmo sem reduções, a matriz cabe no cronograma da proposta (experimentos em outubro e novembro), com uma passada por dia. As incertezas:
 - a velocidade foi medida com um laço simples; configurações sem cache geram mais eventos de memória e podem simular mais devagar;
-- a velocidade das instruções vetoriais no gem5 não foi medida.
+- a velocidade de simulação das instruções vetoriais nas CPUs detalhadas não foi medida (na atomic, foi parecida com a do código escalar).
 
 Como o gem5 é determinístico, repetir uma execução com as mesmas entradas deve reproduzir as mesmas estatísticas (a confirmar); repetições servem só para medir o tempo do host.
 

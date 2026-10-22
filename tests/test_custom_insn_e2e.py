@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from riscvcnnbench.runs import diagnose, load_run
+from test_custom_insn import model, source_cases
 
 ROOT = Path(__file__).resolve().parents[1]
 GEM5 = ROOT / os.environ.get("GEM5_BIN", "third_party/gem5/build/RISCV/gem5.opt")
@@ -119,6 +120,48 @@ def test_hw_runs_on_gem5(tmp_path: Path, cpu: str) -> None:
 
     assert metadata["experiment"]["resolved"]["cpu"]["model"] == cpu
     assert HW_RESULT in stdout
+
+
+def test_wrong_instruction_semantics_is_detected(tmp_path: Path) -> None:
+    """Teste negativo: com CNN_INSN_INJECT_ERROR, o modo hw executa cnn.dwmac p=0 no lugar
+    do cnn.dot8 (como um erro do decodificador), e os casos afetados precisam falhar."""
+    assert GEM5.is_file(), f"gem5 não encontrado em {GEM5}; execute make gem5-build"
+    binary = build(tmp_path, "hw_bug", "-O2 -DCNN_INSN_HW -DCNN_INSN_INJECT_ERROR")
+    results_dir = tmp_path / "results"
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/run-gem5.py"),
+            "--gem5",
+            str(GEM5),
+            "--binary",
+            str(binary),
+            "--config",
+            str(ROOT / "configs/gem5/se_riscv_configurable.py"),
+            "--results-dir",
+            str(results_dir),
+            "--quiet",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    (run_dir,) = results_dir.iterdir()
+    metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
+    stdout = (run_dir / "stdout.log").read_text(encoding="utf-8")
+    stderr = (run_dir / "stderr.log").read_text(encoding="utf-8")
+
+    # Casos de dot8 em que cnn.dwmac p=0 dá outro valor, pelo modelo em Python.
+    expected = sorted(
+        cid
+        for cid, (op, _, rd, rs1, rs2, value) in source_cases().items()
+        if op == "dot8" and model("dwmac", 0, rd, rs1, rs2) != value
+    )
+    failed = sorted(re.findall(r"^FALHA ([\w.-]+) instrução:", stderr, re.MULTILINE))
+
+    assert metadata["program_exit_code"] == 1
+    assert expected and failed == expected
+    assert "FALHA" not in stderr.replace("FALHA dot8-", "")
+    assert f"RESULT mode=hw cases=39 failures={len(expected)}" in stdout
 
 
 @pytest.mark.parametrize("encoding", RESERVED, ids=RESERVED.values())
