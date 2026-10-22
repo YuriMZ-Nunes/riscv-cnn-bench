@@ -43,11 +43,12 @@ VARIANTS = ("ref", "custom", "rvv")
 pytestmark = pytest.mark.e2e
 
 
-def result_pattern(op: str, args: str, variant: str) -> re.Pattern:
+def result_pattern(op: str, args: str, variant: str, data: str = "random") -> re.Pattern:
     names = OPS[op][0].split()
     params = " ".join(f"{name}={value}" for name, value in zip(names, args.split(), strict=True))
     return re.compile(
-        rf"^RESULT bench={op} variant={variant} {params} checksum=(0x[0-9a-f]{{16}}) "
+        rf"^RESULT bench={op} variant={variant} data={data} {params} "
+        r"checksum=(0x[0-9a-f]{16}) "
         r"mismatches=(\d+)$",
         re.MULTILINE,
     )

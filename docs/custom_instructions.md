@@ -239,6 +239,7 @@ A saída é `RESULT mode=<model|hw> cases=39 failures=0`, com código de saída 
 | `cnn_insn_semantics` nos casos de requantização | O oráculo `rcb_requantize` da base comum ([kernel_base.md](kernel_base.md)) coincide com o modelo do `cnn.rqnt` | `pytest -m e2e`, pelos testes acima |
 | `tests/test_custom_insn_e2e.py::test_hw_build_uses_only_the_specified_encodings` | O binário com `-DCNN_INSN_HW` tem exatamente as 8 codificações; sem a flag, nenhuma | `pytest -m e2e` |
 | `tests/test_custom_insn_e2e.py::test_hw_runs_on_gem5[atomic\|timing\|minor\|o3]` | Instruções reais no gem5 do fork: `RESULT mode=hw cases=39 failures=0` em cada CPU, pelo fluxo `riscvcnnbench run` | `pytest -m e2e` |
+| `tests/test_custom_insn_e2e.py::test_wrong_instruction_semantics_is_detected` | Teste negativo (RCB-15): com `-DCNN_INSN_INJECT_ERROR`, o modo hw executa `cnn.dwmac p=0` no lugar do `cnn.dot8`; no gem5, exatamente os casos `dot8-*` em que as duas diferem (8 de 9, calculados pelo modelo em Python) falham, e o benchmark sai com 1 | `pytest -m e2e` |
 | `tests/test_custom_insn_e2e.py::test_reserved_encodings_are_unknown` | 6 combinações reservadas de custom-0/1 terminam com `panic: Unknown instruction` com a palavra esperada, diagnosticado como `instruction` | `pytest -m e2e` |
 
 ## Implementação no gem5

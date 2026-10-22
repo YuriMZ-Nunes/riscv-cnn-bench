@@ -76,11 +76,12 @@ addopts = [
   "--strict-markers",
   "--strict-config",
   "-m",
-  "not e2e",
+  "not e2e and not validation",
 ]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
 markers = [
   "e2e: teste de ponta a ponta com toolchain RISC-V e gem5 (make e2e-test)",
+  "validation: validação de equivalência entre as variantes antes da campanha (make validate)",
 ]
 
 [tool.coverage.run]

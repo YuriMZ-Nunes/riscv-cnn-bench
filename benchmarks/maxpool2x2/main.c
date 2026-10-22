@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 
     struct rcb_rng rng = rcb_rng_init(SEED);
     rcb_fill_i8(x, nx, &rng, -128, 127);
+    rcb_dataset_i8(x, nx, RCB_INPUT);
 
     rcb_roi_begin();
     for (long r = 0; r < repeat; ++r) {

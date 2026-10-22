@@ -42,6 +42,9 @@ int main(int argc, char **argv)
     rcb_fill_i8(x, nx, &rng, -128, 127);
     rcb_fill_i8(w, nw, &rng, -128, 127);
     rcb_fill_i32(bias, (size_t)s.cin, &rng, -8192, 8192);
+    rcb_dataset_i8(x, nx, RCB_INPUT);
+    rcb_dataset_i8(w, nw, RCB_WEIGHT);
+    rcb_dataset_i32(bias, (size_t)s.cin, -8192, 8192);
     struct rcb_qparams q = rcb_qparams_from_scale(SCALE);
 
     rcb_roi_begin();

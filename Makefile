@@ -20,7 +20,7 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
-	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test run runs
+	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -73,6 +73,10 @@ smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 
 e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example e as sete operações nas três variantes; ~5 min).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
+
+validate: PODMAN_ARGS += $(if $(RCB_JOBS),-e RCB_JOBS=$(RCB_JOBS))
+validate: ## Validação completa antes da campanha: e2e + equivalência das variantes (S e L, dados extremos) no QEMU e no gem5. Use RCB_JOBS=N para o paralelismo.
+	$(PODMAN_RUN) bash -lc 'uv run pytest -m "e2e or validation" -v'
 
 clean-results: ## Remove resultados gerados pelo framework.
 	rm -rf results/*

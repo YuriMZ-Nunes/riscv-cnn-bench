@@ -33,6 +33,7 @@ int main(int argc, char **argv)
 
     struct rcb_rng rng = rcb_rng_init(SEED);
     rcb_fill_i32(acc, (size_t)n, &rng, -32768, 32767);
+    rcb_dataset_i32(acc, (size_t)n, -32768, 32767);
     struct rcb_qparams q = rcb_qparams_from_scale(SCALE);
 
     rcb_roi_begin();
