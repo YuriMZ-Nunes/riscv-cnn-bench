@@ -9,7 +9,7 @@ Referência técnica das instruções RISC-V personalizadas do framework: codifi
 | Benchmark [cnn_insn_semantics](../benchmarks/cnn_insn_semantics/main.c) com os casos de teste | Existente; o modo modelo roda no QEMU e em qualquer gem5, o modo `hw` no gem5 do fork |
 | Instruções no decodificador do gem5 (fork `YuriMZ-Nunes/gem5`, branch `riscv-cnn-bench`) | Existente (RCB-13), nas CPUs atomic, timing, minor e o3. Ver [Implementação no gem5](#implementação-no-gem5) |
 | Latência própria e configurável das instruções | Planejado. Hoje usam as unidades `IntMult` e `IntAlu` de cada CPU |
-| Kernels que usam as instruções | Planejado (RCB-14) |
+| Kernels que usam as instruções (`kernel_custom.c` das sete operações) | Existente (RCB-14), ver [kernels.md](kernels.md#instruções-personalizadas-kernel_customc) |
 
 ## Resumo
 
@@ -188,12 +188,13 @@ Inclua o header a partir do benchmark:
 
 | Função ou macro | Sem `CNN_INSN_HW` | Com `CNN_INSN_HW` |
 | --- | --- | --- |
-| `int32_t cnn_dot8(int32_t acc, uint64_t x, uint64_t w)` | modelo em C | `cnn.dot8` |
+| `int64_t cnn_dot8(int64_t acc, uint64_t x, uint64_t w)` | modelo em C | `cnn.dot8` |
 | `CNN_DWMAC(acc, x, w, p)` (atualiza `acc`, um `uint64_t`; `p` literal de 0 a 3) | modelo em C | `cnn.dwmac p` |
 | `uint64_t cnn_max8(uint64_t a, uint64_t b)` | modelo em C | `cnn.max8` |
-| `int32_t cnn_rqnt(int32_t acc, uint64_t prm)` e `cnn_rqnt_relu` | modelo em C | `cnn.rqnt` e `cnn.rqnt.relu` |
+| `int64_t cnn_rqnt(int64_t acc, uint64_t prm)` e `cnn_rqnt_relu` | modelo em C | `cnn.rqnt` e `cnn.rqnt.relu` |
 | `cnn_dot8_model`, `cnn_dwmac_model`, `cnn_max8_model`, `cnn_rqnt_model` | sempre o modelo em C | idem |
 | `uint64_t cnn_rqnt_params(int32_t m0, unsigned s)` | empacota `rs2` | idem |
+| `uint64_t cnn_ld8(const void *p)`, `void cnn_sd8(void *p, uint64_t v)` | 8 bytes alinhados com um `ld`/`sd` (`memcpy` + `__builtin_assume_aligned`) | idem |
 
 O modelo em C é a definição executável da semântica e o oráculo da equivalência (RCB-15). Ele assume deslocamento aritmético à direita de inteiros negativos, como o GCC faz.
 
@@ -201,7 +202,7 @@ Requisitos dos kernels:
 
 - **Alinhamento.** Tensores alinhados a 8 bytes, para que cada `ld` leia 8 int8 de uma vez.
 - **Dimensões.** A dimensão contígua deve ser múltipla de 8. Todas as formas de [scope.md](scope.md) já atendem: `Cin`, canais, `K` do im2col e `In` da FC.
-- **Acumuladores int32.** Valores de 32 bits ficam estendidos com sinal no registrador, pela ABI do RV64. As instruções seguem a mesma convenção, então `int32_t` pode ir direto de `cnn_dot8` para `cnn_rqnt`.
+- **Acumuladores `int64_t`.** `cnn_dot8` e `cnn_rqnt*` usam a largura do registrador. As instruções leem só os bits 31:0 e devolvem o resultado estendido com sinal, então o valor pode ir direto de `cnn_dot8` para `cnn_rqnt`, e um `int32_t` (o bias, por exemplo) entra por conversão implícita. Até a RCB-13 a interface usava `int32_t`. Na RCB-14 isso se mostrou caro: o GCC não sabe que a instrução devolve o valor estendido e colocava um `sext.w` depois de cada `cnn.dot8` no laço interno, ou seja, uma instrução a mais por 8 MACs que não pertence à variante. A semântica não mudou. O benchmark `cnn_insn_semantics` usa `asm` direto no modo hw e não foi afetado.
 
 ## Compilar e executar
 
@@ -335,7 +336,7 @@ Com ativações em NHWC e a dimensão contígua múltipla de 8, um `ld` traz 8 i
 
 A montagem do buffer do im2col é só cópia de dados e não tem cálculo a acelerar.
 
-Estimativa analítica do laço interno, que **não é medida**. Ela supõe uma referência escalar que carrega cada int8 com `lb` e ignora o controle do laço. Os números reais virão de `numInsts` nas RCB-12 e RCB-14.
+Estimativa analítica do laço interno, que **não é medida**. Ela supõe uma referência escalar que carrega cada int8 com `lb` e ignora o controle do laço. Os números medidos da referência e das variantes estão em [kernels.md](kernels.md#instruções-medidas).
 
 | Operação | Bloco | Referência (≈) | Com as instruções |
 | --- | --- | --- | --- |

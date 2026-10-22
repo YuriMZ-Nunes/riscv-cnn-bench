@@ -1,0 +1,9 @@
+# Convolução 3x3 direta, tamanho S, variante custom: instruções personalizadas (cnn.dot8 e cnn.rqnt.relu). Só roda no gem5
+# do fork (third_party/gem5).
+# Mesmos dados e checksum da referência (conv3x3_direct_s.yaml); só o kernel
+# muda. Variantes em docs/kernels.md.
+name: conv3x3_direct_s_custom
+benchmark:
+  name: conv3x3_direct
+  args: [16, 16, 8, 16, 1]
+  variant: custom

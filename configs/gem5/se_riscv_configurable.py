@@ -1,7 +1,7 @@
 """Executa um binário RISC-V Linux no gem5 em modo SE com sistema configurável.
 
-Permite escolher modelo de CPU, clock, caches L1/L2 e tipo/tamanho de memória
-por argumentos. Sem argumentos opcionais, monta o mesmo sistema de
+Permite escolher modelo de CPU, clock, VLEN, caches L1/L2 e tipo/tamanho de
+memória por argumentos. Sem argumentos opcionais, monta o mesmo sistema de
 se_riscv.py: AtomicSimpleCPU a 1GHz, sem caches e SimpleMemory de 512MiB.
 
 Os argumentos correspondem às seções cpu, cache e memory dos YAMLs em
@@ -71,6 +71,9 @@ def main():
     )
     parser.add_argument("--cpu", choices=sorted(CPU_MODELS), default="atomic")
     parser.add_argument("--clock", default="1GHz")
+    parser.add_argument(
+        "--vlen", type=int, default=256, help="VLEN da extensão V, em bits (padrão do gem5)."
+    )
     parser.add_argument("--mem-type", choices=["simple", "ddr4"], default="simple")
     parser.add_argument("--mem-size", default="512MiB")
     for level in ["l1i", "l1d", "l2"]:
@@ -95,6 +98,7 @@ def main():
     system.mem_ranges = [AddrRange(args.mem_size)]
 
     system.cpu = CPU_MODELS[args.cpu]()
+    system.cpu.isa = [system.cpu.ArchISA(vlen=args.vlen)]
     system.membus = SystemXBar()
 
     # Caches L1 ligam a CPU à L2 (se existir) ou diretamente ao barramento.
@@ -145,7 +149,7 @@ def main():
 
     print(f"Executando: {shlex.join(process.cmd)}", flush=True)
     print(
-        f"Sistema: cpu={args.cpu} clock={args.clock} "
+        f"Sistema: cpu={args.cpu} clock={args.clock} vlen={args.vlen} "
         f"l1i={args.l1i_size} l1d={args.l1d_size} l2={args.l2_size} "
         f"memória={args.mem_type}/{args.mem_size}",
         flush=True,

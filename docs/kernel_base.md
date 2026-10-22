@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 
 Cada parte tem um papel fixo:
 
-- **Kernel:** a implementação medida. Na RCB-12 é a referência escalar. Na RCB-14 vira a variante personalizada, e depois a RVV.
+- **Kernel:** a implementação medida. Nas operações há um arquivo por variante (`kernel_ref.c`, `kernel_custom.c`, `kernel_rvv.c`, RCB-12 e RCB-14), escolhido pelo Makefile; o resto do programa é o mesmo.
 - **Oráculo:** a versão mais simples possível da operação, que nunca muda entre variantes.
 - **Comparação:** como todas as variantes são comparadas com o mesmo oráculo e geram os mesmos dados, a equivalência byte a byte da RCB-15 se reduz a todas passarem e terem o mesmo checksum.
 
@@ -75,7 +75,9 @@ Todos são só headers, com funções `static inline`. Basta incluir `rcb_bench.
 | `rcb_quant.h` | `struct rcb_qparams`, `rcb_requantize`, `rcb_qparams_from_scale` |
 | `rcb_check.h` | `rcb_compare_i8`, `rcb_checksum`, `rcb_finish`, `RCB_VARIANT` |
 | `rcb_roi.h` | `rcb_roi_begin`, `rcb_roi_end` |
-| `cnn_insn.h` | Instruções personalizadas, da RCB-10. Não faz parte de `rcb_bench.h` |
+| `cnn_insn.h` | Instruções personalizadas, da RCB-10, e `cnn_ld8`/`cnn_sd8` (8 bytes alinhados com um `ld`/`sd`). Não faz parte de `rcb_bench.h` |
+| `rcb_rvv.h` | Blocos da variante RVV (RCB-14): `rcb_rvv_zero`, `rcb_rvv_mac`, `rcb_rvv_reduce`, `rcb_rvv_requant_relu`. Só compila com `-march=rv64gcv`; não faz parte de `rcb_bench.h` |
+| `rcb_ops.h` | Oráculos das operações (RCB-12). Não faz parte de `rcb_bench.h` |
 
 ### Parâmetros
 
@@ -117,13 +119,14 @@ Dimensões e repetições vêm sempre daqui, nunca de constantes espalhadas pelo
   RESULT bench=<nome> variant=<ref|custom|rvv> <P>=<valor>... checksum=0x<16 hex> mismatches=<n>
   ```
 
-`variant` vem das flags de compilação:
+`variant` vem de `RCB_VARIANT_NAME`, que o Makefile das operações define a partir de `VARIANT` (o `benchmark.variant` do YAML). Assim a variante `custom` compilada com o modelo em C (`CNN_INSN=model`) também imprime `custom`. Sem essa macro, como nos benchmarks com Makefile próprio, `variant` é deduzida das flags:
 
 | Flag | `variant` |
 | --- | --- |
+| `-DRCB_VARIANT_NAME='"<v>"'` | `<v>` |
 | `-DCNN_INSN_HW` | `custom` |
 | `-march=rv64gcv`, que define `__riscv_vector` | `rvv` |
-| nenhuma das duas | `ref` |
+| nenhuma das anteriores | `ref` |
 
 | Código de saída | Significado |
 | --- | --- |

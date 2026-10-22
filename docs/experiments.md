@@ -1,6 +1,6 @@
 # Formato dos experimentos
 
-Um experimento é um arquivo YAML em `experiments/` que escolhe **o que** rodar (benchmark e flags), **em qual máquina** (CPU, caches, memória) e **onde** salvar.
+Um experimento é um arquivo YAML em `experiments/` que escolhe **o que** rodar (benchmark, variante do kernel e flags), **em qual máquina** (CPU, caches, memória) e **onde** salvar.
 
 Só `name` e `benchmark.name` são obrigatórios. Todo campo omitido usa um padrão que reproduz a configuração baseline de `configs/gem5/se_riscv.py`.
 
@@ -19,6 +19,7 @@ Para executar, veja [Executar um experimento](#executar-um-experimento).
 | [`smoke_test.yaml`](../experiments/smoke_test.yaml) | Mínimo: `hello_riscv` com todos os padrões. |
 | [`hello_param_minimal.yaml`](../experiments/hello_param_minimal.yaml) | Mínimo do benchmark parametrizável. |
 | [`hello_param_cache.yaml`](../experiments/hello_param_cache.yaml) | Variação com todos os campos anotados: CPU timing a 2GHz, L1/L2, DDR4 e flags próprias. |
+| [`conv3x3_direct_s_custom.yaml`](../experiments/conv3x3_direct_s_custom.yaml), [`conv3x3_direct_s_rvv.yaml`](../experiments/conv3x3_direct_s_rvv.yaml) | Mesma operação de `conv3x3_direct_s.yaml` nas variantes `custom` e `rvv`. |
 
 Configuração mínima:
 
@@ -36,13 +37,27 @@ benchmark:
 | `description` | vazio | Texto livre. |
 | `benchmark.name` | obrigatório | Pasta em `benchmarks/` que contém um `Makefile`. |
 | `benchmark.args` | `[]` | Lista de argumentos passados ao programa. Números são aceitos e convertidos em texto (`[65536, 2]` equivale a `["65536", "2"]`). |
-| `compiler.flags` | `["-O2"]` | Flags escolhidas pelo experimento. `-static -march=rv64gc -mabi=lp64d` são sempre adicionadas pelo Makefile do benchmark. |
+| `benchmark.variant` | `ref` | Implementação do kernel: `ref` (referência escalar), `custom` (instruções personalizadas, só no gem5 do fork) ou `rvv` (extensão V). As operações de CNN têm as três; os demais benchmarks, só `ref`. Ver [Variantes](#variantes). |
+| `compiler.flags` | `["-O2"]` | Flags escolhidas pelo experimento. `-static -march=<da variante> -mabi=lp64d` são sempre adicionadas pelo Makefile do benchmark, depois destas. |
 | `cpu.model` | `atomic` | `atomic`, `timing`, `minor` (in-order) ou `o3` (out-of-order). |
 | `cpu.clock` | `1GHz` | Número seguido de `MHz` ou `GHz`. |
+| `cpu.vlen` | `256` | VLEN da extensão V, em bits: `128`, `256`, `512` ou `1024`. Só a variante `rvv` usa registradores vetoriais. O padrão é o do gem5. |
 | `cache.l1i`, `cache.l1d`, `cache.l2` | sem cache | Cada nível tem `size` (`KiB`/`MiB`/`GiB`) e `assoc` (padrão 4). A L2 exige L1i e L1d. |
 | `memory.type` | `simple` | `simple` (latência fixa) ou `ddr4` (DDR4-2400 com controlador). |
 | `memory.size` | `512MiB` | `KiB`/`MiB`/`GiB`. |
 | `output.dir` | `results/<name>` | Pasta onde cada execução cria sua subpasta `<run_id>`. Caminho relativo parte da raiz do projeto. |
+
+### Variantes
+
+`benchmark.variant` vira `VARIANT=` no `make`. O `Makefile` comum das operações ([`benchmarks/common/kernel.mk`](../benchmarks/common/kernel.mk)) escolhe o arquivo do kernel e as flags:
+
+| Variante | Arquivo | Flags | Onde roda |
+| --- | --- | --- | --- |
+| `ref` | `kernel_ref.c` | `-march=rv64gc` | QEMU e qualquer gem5 |
+| `custom` | `kernel_custom.c` | `-march=rv64gc -DCNN_INSN_HW` | Só o gem5 do fork. Fora dele: `Unknown instruction` |
+| `rvv` | `kernel_rvv.c` | `-march=rv64gcv -fno-tree-vectorize` | QEMU com `-cpu rv64,v=true,vlen=256` e gem5 |
+
+As variantes disponíveis de um benchmark são `ref` mais uma por arquivo `kernel_<variante>.c` na pasta; pedir outra é erro de validação. A linha `RESULT` traz `variant=` igual ao YAML. Para validar a lógica do kernel `custom` sem o gem5, o Makefile aceita `CNN_INSN=model`, que troca as instruções pelo modelo em C (só por `make`, não pelo YAML). Detalhes em [kernels.md](kernels.md#variantes).
 
 ### Escolhendo a CPU
 
@@ -59,7 +74,7 @@ Para comparar caches ou memória, use `timing`, `minor` ou `o3`.
 | --- | --- | --- |
 | `hello_riscv` | nenhum | `RESULT sum=499500` |
 | `hello_riscv_param` | `[N, R]`: soma um vetor de `N` inteiros (`N*4` bytes) `R` vezes. Padrão `1024 1`. | `RESULT n=N repeat=R sum=R*N*(N-1)/2` |
-| `conv3x3_direct`, `conv3x3_im2col` | `[H, W, Cin, Cout, R]`. S: `16 16 8 16`; L: `32 32 16 32`. Mesma camada, mesmo checksum. | `RESULT bench=<op> variant=ref H=.. W=.. Cin=.. Cout=.. R=.. checksum=0x... mismatches=0` |
+| `conv3x3_direct`, `conv3x3_im2col` | `[H, W, Cin, Cout, R]`. S: `16 16 8 16`; L: `32 32 16 32`. Mesma camada, mesmo checksum. | `RESULT bench=<op> variant=<ref\|custom\|rvv> H=.. W=.. Cin=.. Cout=.. R=.. checksum=0x... mismatches=0` |
 | `depthwise3x3` | `[H, W, C, R]`. S: `16 16 32`; L: `32 32 64`. | idem, com `C=` |
 | `pointwise1x1` | `[H, W, Cin, Cout, R]`. S: `16 16 32 32`; L: `32 32 64 64`. | idem |
 | `maxpool2x2` | `[H, W, C, R]`, `H` e `W` pares. S: `32 32 16`; L: `64 64 32`. | idem |
@@ -68,7 +83,7 @@ Para comparar caches ou memória, use `timing`, `minor` ou `o3`.
 | `int8_base_example` | `[K, M, R]`: `M` produtos escalares int8 de tamanho `K` (múltiplo de 8) com requantização, repetidos `R` vezes na região de interesse. Padrão `64 16 1`. | `RESULT bench=int8_base_example variant=ref K=.. M=.. R=.. checksum=0x... mismatches=0` |
 | `cnn_insn_semantics` | nenhum. Com `compiler.flags: [-O2, -DCNN_INSN_HW]` usa as instruções personalizadas reais, que só existem no gem5 do fork (`third_party/gem5`). | `RESULT mode=model cases=39 failures=0` (ou `mode=hw`) |
 
-O `hello_riscv_param` existe para testar as opções. Com `N` maior que a L1 (por exemplo, `65536` = 256KiB), as faltas de cache e o tipo de memória passam a aparecer nas estatísticas. Os dois `hello_*` são de teste, não CNNs. As sete operações de CNN são descritas em [kernels.md](kernels.md); cada uma tem `experiments/<operação>_s.yaml` e `_l.yaml`. O `int8_base_example` exercita a base comum dos kernels e separa a região de interesse no `stats.txt` ([kernel_base.md](kernel_base.md)). O `cnn_insn_semantics` confere os casos de teste das instruções personalizadas, descritos em [custom_instructions.md](custom_instructions.md).
+O `hello_riscv_param` existe para testar as opções. Com `N` maior que a L1 (por exemplo, `65536` = 256KiB), as faltas de cache e o tipo de memória passam a aparecer nas estatísticas. Os dois `hello_*` são de teste, não CNNs. As sete operações de CNN são descritas em [kernels.md](kernels.md); cada uma tem `experiments/<operação>_s.yaml` e `_l.yaml` (variante `ref`; troque `benchmark.variant` para as outras), e as três variantes têm o mesmo checksum. O `int8_base_example` exercita a base comum dos kernels e separa a região de interesse no `stats.txt` ([kernel_base.md](kernel_base.md)). O `cnn_insn_semantics` confere os casos de teste das instruções personalizadas, descritos em [custom_instructions.md](custom_instructions.md).
 
 ## Como o YAML vira simulação
 
@@ -76,7 +91,7 @@ O formato corresponde a três peças:
 
 | Seção do YAML | Peça |
 | --- | --- |
-| `benchmark`, `compiler` | `make -C benchmarks/<name> FLAGS="<flags>"` |
+| `benchmark`, `compiler` | `make -C benchmarks/<name> FLAGS="<flags>" VARIANT=<variant>` |
 | `cpu`, `cache`, `memory`, `benchmark.args` | Argumentos de [`configs/gem5/se_riscv_configurable.py`](../configs/gem5/se_riscv_configurable.py), gerados por `Experiment.gem5_args()` |
 | `output` | `--results-dir` de `scripts/run-gem5.py` |
 
@@ -114,14 +129,14 @@ O gem5 padrão é `third_party/gem5/build/RISCV/gem5.opt` (ou `$GEM5_BIN`).
 O wrapper continua aceitando a chamada direta, sem build nem YAML. O equivalente de `hello_param_cache.yaml`, dentro do container, é:
 
 ```bash
-make -C benchmarks/hello_riscv_param FLAGS="-O3 -funroll-loops"
+make -C benchmarks/hello_riscv_param FLAGS="-O3 -funroll-loops" VARIANT=ref
 
 python3 scripts/run-gem5.py \
   --gem5 third_party/gem5/build/RISCV/gem5.opt \
   --binary build/benchmarks/hello_riscv_param \
   --config configs/gem5/se_riscv_configurable.py \
   --results-dir results/hello_param_cache \
-  -- --arg=65536 --arg=2 --cpu=timing --clock=2GHz \
+  -- --arg=65536 --arg=2 --cpu=timing --clock=2GHz --vlen=256 \
      --l1i-size=32KiB --l1i-assoc=4 --l1d-size=32KiB --l1d-assoc=4 \
      --l2-size=256KiB --l2-assoc=8 --mem-type=ddr4 --mem-size=512MiB
 ```
@@ -153,9 +168,10 @@ Além disso, são detectados:
 | Campo repetido | `campo repetido; só o último valor seria usado` |
 | Seção escrita como valor (`cpu: o3`) | `deve conter subcampos (um mapeamento YAML)` |
 | Benchmark inexistente | Lista os benchmarks disponíveis em `benchmarks/` |
+| Variante que o benchmark não tem | `o benchmark 'hello_riscv' não tem a variante 'rvv'; disponíveis: ref` |
 | L2 sem L1i/L1d | `cache.l2 requer cache.l1i e cache.l1d` |
 
-O benchmark só é procurado em `benchmarks/` quando o restante do arquivo está válido.
+O benchmark e suas variantes só são procurados em `benchmarks/` quando o restante do arquivo está válido.
 
 No código, `load_experiment()` levanta `ConfigError`, cujo atributo `problems` traz a lista de mensagens.
 

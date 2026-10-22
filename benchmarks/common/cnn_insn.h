@@ -21,6 +21,7 @@
 #define CNN_INSN_H
 
 #include <stdint.h>
+#include <string.h>
 
 /* Campos de codificação (ver tabela de codificação na especificação). */
 #define CNN_FUNCT7_DOT8 0x00 /* custom-0, funct3 = 0 */
@@ -39,6 +40,23 @@ static inline int32_t cnn_lane8(uint64_t reg, unsigned i)
 static inline uint64_t cnn_rqnt_params(int32_t m0, unsigned s)
 {
     return (uint64_t)(uint32_t)m0 | ((uint64_t)(s & 31u) << 32);
+}
+
+/*
+ * Carga e armazenamento de 8 bytes contíguos (um registrador empacotado). O
+ * endereço precisa estar alinhado a 8 (requisito dos kernels); com isso o
+ * GCC emite um único ld/sd, e o memcpy evita violar as regras de aliasing.
+ */
+static inline uint64_t cnn_ld8(const void *p)
+{
+    uint64_t v;
+    memcpy(&v, __builtin_assume_aligned(p, 8), sizeof v);
+    return v;
+}
+
+static inline void cnn_sd8(void *p, uint64_t v)
+{
+    memcpy(__builtin_assume_aligned(p, 8), &v, sizeof v);
 }
 
 /* ---------------------------------------------------------------------------
@@ -99,12 +117,17 @@ static inline int32_t cnn_rqnt_model(int32_t acc, uint64_t params, int relu)
 
 /* ---------------------------------------------------------------------------
  * Forma usada pelos kernels
+ *
+ * Os acumuladores de cnn_dot8 e cnn_rqnt* são int64_t, a largura do
+ * registrador: as instruções leem só os bits 31:0 e devolvem o resultado
+ * estendido com sinal. Com int32_t, o GCC estenderia o sinal de novo (sext.w)
+ * a cada chamada, uma instrução a mais por cnn.dot8 que não é da variante.
  * ------------------------------------------------------------------------- */
 
 #ifdef CNN_INSN_HW
 
-/* Instruções reais. Só executam no gem5 com as instruções da RCB-13. */
-static inline int32_t cnn_dot8(int32_t acc, uint64_t x, uint64_t w)
+/* Instruções reais. Só executam no gem5 do fork (RCB-13). */
+static inline int64_t cnn_dot8(int64_t acc, uint64_t x, uint64_t w)
 {
     __asm__(".insn r CUSTOM_0, 0, 0x00, %0, %1, %2" : "+r"(acc) : "r"(x), "r"(w));
     return acc;
@@ -123,16 +146,16 @@ static inline uint64_t cnn_max8(uint64_t a, uint64_t b)
             : "+r"(acc)                                                               \
             : "r"((uint64_t)(x)), "r"((uint64_t)(w)))
 
-static inline int32_t cnn_rqnt(int32_t acc, uint64_t params)
+static inline int64_t cnn_rqnt(int64_t acc, uint64_t params)
 {
-    int32_t out;
+    int64_t out;
     __asm__(".insn r CUSTOM_1, 0, 0x00, %0, %1, %2" : "=r"(out) : "r"(acc), "r"(params));
     return out;
 }
 
-static inline int32_t cnn_rqnt_relu(int32_t acc, uint64_t params)
+static inline int64_t cnn_rqnt_relu(int64_t acc, uint64_t params)
 {
-    int32_t out;
+    int64_t out;
     __asm__(".insn r CUSTOM_1, 0, 0x01, %0, %1, %2" : "=r"(out) : "r"(acc), "r"(params));
     return out;
 }
@@ -140,9 +163,9 @@ static inline int32_t cnn_rqnt_relu(int32_t acc, uint64_t params)
 #else
 
 /* Sem CNN_INSN_HW: mesmo código C dos kernels, executado pelo modelo. */
-static inline int32_t cnn_dot8(int32_t acc, uint64_t x, uint64_t w)
+static inline int64_t cnn_dot8(int64_t acc, uint64_t x, uint64_t w)
 {
-    return cnn_dot8_model(acc, x, w);
+    return cnn_dot8_model((int32_t)acc, x, w);
 }
 
 static inline uint64_t cnn_max8(uint64_t a, uint64_t b)
@@ -152,14 +175,14 @@ static inline uint64_t cnn_max8(uint64_t a, uint64_t b)
 
 #define CNN_DWMAC(acc, x, w, p) ((acc) = cnn_dwmac_model((acc), (x), (w), (p)))
 
-static inline int32_t cnn_rqnt(int32_t acc, uint64_t params)
+static inline int64_t cnn_rqnt(int64_t acc, uint64_t params)
 {
-    return cnn_rqnt_model(acc, params, 0);
+    return cnn_rqnt_model((int32_t)acc, params, 0);
 }
 
-static inline int32_t cnn_rqnt_relu(int32_t acc, uint64_t params)
+static inline int64_t cnn_rqnt_relu(int64_t acc, uint64_t params)
 {
-    return cnn_rqnt_model(acc, params, 1);
+    return cnn_rqnt_model((int32_t)acc, params, 1);
 }
 
 #endif /* CNN_INSN_HW */

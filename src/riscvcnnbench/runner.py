@@ -70,6 +70,7 @@ def build_command(experiment: Experiment, binary: Path) -> list[str]:
         f"OUT_DIR={binary.parent}",
         f"OUT={binary}",
         f"FLAGS={' '.join(experiment.compiler.flags)}",
+        f"VARIANT={experiment.benchmark.variant}",
     ]
 
 

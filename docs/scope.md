@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: os kernels de referência das sete operações existem (RCB-12, [kernels.md](kernels.md)); as variantes personalizada e RVV são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência formal (RCB-15) e as métricas (RCB-16+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -90,10 +90,11 @@ Viabilidade do RVV, verificada em 20/10/2026 com um produto escalar int8 (`vle8`
 - o QEMU executa com `-cpu rv64,v=true,vlen=256`;
 - o gem5 executa com resultado correto nas CPUs atomic, timing, minor e o3, e anuncia `RVV enabled, VLEN = 256 bits, ELEN = 64 bits`.
 
-Consequências para as próximas issues:
-- **VLEN:** é 256 bits, o padrão do gem5, e precisa ser registrada como parâmetro do experimento.
-- **Makefiles dos benchmarks:** hoje fixam `-march=rv64gc`; a variante RVV exige `-march=rv64gcv`.
-- **Contagem de instruções:** no gem5, uma instrução vetorial pode ser dividida em várias micro-operações, então `numInsts` e `numOps` passam a diferir. As duas devem ser registradas (a confirmar na RCB-16).
+Como ficou na RCB-14 ([kernels.md](kernels.md#variantes)):
+- **VLEN:** campo `cpu.vlen` do YAML (padrão 256, o do gem5), passado ao gem5 e registrado na configuração resolvida de cada execução.
+- **Seleção da variante:** campo `benchmark.variant` (`ref`, `custom`, `rvv`); o `kernel.mk` escolhe o arquivo do kernel e o `-march` (`rv64gcv` na RVV) depois das flags do experimento.
+- **Contagem de instruções:** confirmado no bloco da ROI que, na RVV, `numOps` > `numInsts` (instruções com LMUL > 1 viram vários micro-ops); nas variantes escalar e personalizada os dois são iguais. As duas métricas devem ser registradas (RCB-16).
+- **Limitação do gem5:** reduções RVV com LMUL > 1 podem dar resultado errado na O3CPU; os kernels reduzem em LMUL 1 ([kernels.md](kernels.md#limitação-do-gem5-reduções-rvv-na-o3cpu)).
 
 ## Modelos de CPU
 
@@ -167,16 +168,25 @@ Instruções da variante de referência, medidas em 20/10/2026 no gem5 atomic (R
 - **Pooling e requantização:** cerca de 6,9 instruções por elemento de entrada e 12,0 por elemento, respectivamente. A estimativa anterior supunha 4 e 10.
 - **Verificação:** o oráculo e a comparação rodam fora da ROI, mas também são simulados e custam cerca de tanto quanto o kernel. A inicialização dos dados, antes da ROI, também é simulada e não entra nesses números.
 
-Suposição restante: as variantes personalizada e RVV executam no máximo o mesmo que a referência na ROI, e a verificação é a mesma. Assim a estimativa é um teto.
+Variantes personalizada e RVV, medidas em 21/10/2026 no gem5 atomic (RCB-14; tabela em [kernels.md](kernels.md#três-variantes)). A verificação é a mesma nas três:
+
+| Variante | ROI S + L | Simulado (ROI + verificação) |
+| --- | --- | --- |
+| Referência | 123,0 M | 266,8 M |
+| Personalizada | 21,6 M | 165,5 M |
+| RVV (VLEN 256) | 18,9 M | 162,7 M |
+| **Três variantes** | **163,5 M** | **595,0 M** |
+
+As velocidades de simulação acima foram medidas com código escalar. Na atomic, a RVV simulou a uma taxa parecida (~1 M instruções por segundo). Nas CPUs detalhadas, ainda é preciso medir, porque cada instrução vetorial vira vários micro-ops.
 
 | Item | Valor |
 | --- | --- |
 | Binários | 7 operações × 2 tamanhos × 3 variantes = 42 |
 | Configurações | 4 cenários de memória (RCB-18) × 3 CPUs + atomic para validação = 13 |
-| Instruções simuladas por configuração | ≤ 3 × 266,8 M ≈ 800 M |
-| Tempo por cenário de memória | o3 ≈ 49 min, minor ≈ 43 min, timing ≈ 14 min (≈ 1,8 h) |
-| Total por passada da matriz | ≈ 7,1 h nos 4 cenários, mais ≈ 11 min de atomic (546 execuções) |
-| Total se a verificação não fosse simulada nas CPUs detalhadas | ≈ 3,3 h |
+| Instruções simuladas por configuração | 595,0 M (era ≤ 800 M na estimativa da RCB-12, que supunha as variantes iguais à referência) |
+| Tempo por cenário de memória | o3 ≈ 37 min, minor ≈ 32 min, timing ≈ 11 min (≈ 1,3 h) |
+| Total por passada da matriz | ≈ 5,3 h nos 4 cenários, mais ≈ 8 min de atomic (546 execuções) |
+| Total se a verificação não fosse simulada nas CPUs detalhadas | ≈ 1,5 h |
 | Maior execução isolada | Conv direta L, referência, em o3: ≈ 290 s |
 
 Formas de reduzir o tempo, a decidir nas RCB-18 e RCB-22:
