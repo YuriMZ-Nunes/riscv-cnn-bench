@@ -21,9 +21,10 @@ from pathlib import Path
 import pytest
 import yaml
 
+from riscvcnnbench.parser import read_region
+
 ROOT = Path(__file__).resolve().parents[1]
 GEM5 = ROOT / os.environ.get("GEM5_BIN", "third_party/gem5/build/RISCV/gem5.opt")
-BLOCK_HEADER = "---------- Begin Simulation Statistics ----------"
 QEMU = ["qemu-riscv64", "-cpu", "rv64,v=true,vlen=256,vext_spec=v1.0"]
 
 # Operação -> (nomes dos parâmetros, argumentos S, argumentos L, argumentos
@@ -124,14 +125,6 @@ def run_on_gem5(tmp_path: Path, op: str, **changes: object) -> tuple[Path, dict,
     return run_dir, metadata, stdout
 
 
-def roi_stat(stats: str, name: str) -> int:
-    """Valor de `name` no primeiro bloco do stats.txt, que é a ROI."""
-    roi = stats.split(BLOCK_HEADER)[1]
-    match = re.search(rf"^{re.escape(name)}\s+(\d+)", roi, re.MULTILINE)
-    assert match, name
-    return int(match.group(1))
-
-
 @pytest.mark.parametrize("variant", VARIANTS)
 @pytest.mark.parametrize("size", SIZES)
 @pytest.mark.parametrize("op", OPS)
@@ -149,17 +142,16 @@ def test_op_s_on_gem5_matches_qemu(binaries: dict, tmp_path: Path, op: str, vari
     args = OPS[op][1]
 
     run_dir, metadata, stdout = run_on_gem5(tmp_path, op, benchmark__variant=variant)
-    stats = (run_dir / "gem5/stats.txt").read_text(encoding="utf-8")
+    # Exige os 2 blocos (ROI e resto do programa) e lê o primeiro.
+    roi = read_region(run_dir / "gem5/stats.txt", has_roi=True)
     match = result_pattern(op, args, variant).search(stdout)
 
     assert metadata["experiment"]["resolved"]["benchmark"]["variant"] == variant
-    assert stats.count(BLOCK_HEADER) == 2
     assert match and match.group(2) == "0"
     # Mesmo checksum da referência no QEMU: a custom roda as instruções reais.
     assert match.group(1) == checksum_on_qemu(binaries, op, args)
 
-    insts = roi_stat(stats, "system.cpu.commitStats0.numInsts")
-    ops = roi_stat(stats, "system.cpu.commitStats0.numOps")
+    insts, ops = roi.metrics["insts"], roi.metrics["ops"]
     if variant == "rvv" and op != "maxpool2x2":
         # Instruções vetoriais com LMUL > 1 viram vários micro-ops no gem5.
         assert ops > insts

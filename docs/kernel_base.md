@@ -17,7 +17,7 @@ As operações, a quantização e as dimensões estão em [scope.md](scope.md). 
 | Benchmark de exemplo [int8_base_example](../benchmarks/int8_base_example/main.c) | Existente; roda no QEMU e no gem5, nas quatro CPUs |
 | ROI separada no `stats.txt` | Existente; verificado nas CPUs atomic, timing, minor e o3 |
 | Kernels das sete operações | Existente (RCB-12, [kernels.md](kernels.md)) |
-| Leitura automática do bloco da ROI | Planejado (RCB-16) |
+| Leitura automática do bloco da ROI | Existente (RCB-16): `riscvcnnbench stats`, ver [results.md](results.md#métricas) |
 
 ## Roteiro de um benchmark
 
@@ -159,7 +159,7 @@ No gem5, o `stats.txt` fica com dois blocos, cada um iniciado por `---------- Be
 | 1 | Só a ROI: o kernel com as suas `R` repetições |
 | 2 | Do fim da ROI ao fim do programa: oráculo, comparação, impressão e saída |
 
-A inicialização, que inclui a carga do programa, a alocação e o sorteio dos dados, fica antes do `m5_reset_stats` e não aparece em nenhum bloco. A RCB-16 vai ler o bloco 1.
+A inicialização, que inclui a carga do programa, a alocação e o sorteio dos dados, fica antes do `m5_reset_stats` e não aparece em nenhum bloco. O parser (RCB-16) lê o bloco 1 e recusa um `stats.txt` com outro número de blocos.
 
 ### Como funciona
 
@@ -191,7 +191,7 @@ Assim, o mesmo binário roda no QEMU e no gem5, com os mesmos dados e o mesmo ch
 
 - **Caches aquecidas.** A ROI começa com as caches no estado deixado pela inicialização, que acabou de escrever os tensores. Nos tamanhos S, os dados já estão na L1. Qual estado inicial usar é decisão em aberto para as RCB-18 e RCB-22, por exemplo varrer um buffer maior que a L2 antes da ROI.
 - **Repetições.** Com `R > 1`, as repetições depois da primeira encontram as caches aquecidas pela anterior. Métricas por execução do kernel exigem dividir o bloco por `R`, o que fica para a RCB-17.
-- **Um bloco de ROI por execução.** Mais regiões por programa exigiriam outro par `rcb_roi_begin`/`rcb_roi_end`, e o parser da RCB-16 teria que saber quantas são.
+- **Um bloco de ROI por execução.** Mais regiões por programa exigiriam outro par `rcb_roi_begin`/`rcb_roi_end`, e o parser teria que saber quantas são. Hoje ele espera 2 blocos em todo benchmark cujo fonte chama `rcb_roi_begin`.
 
 ## Benchmark de exemplo
 

@@ -1,0 +1,25 @@
+
+---------- Begin Simulation Statistics ----------
+simSeconds                                   0.000151                       # Number of seconds simulated (Second)
+simTicks                                    150901000                       # Number of ticks simulated (Tick)
+finalTick                                   150901000                       # Number of ticks from beginning of simulation (restored from checkpoints and never reset) (Tick)
+simFreq                                  1000000000000                       # The number of ticks per simulated second ((Tick/Second))
+hostSeconds                                      0.13                       # Real time elapsed on the host (Second)
+simInsts                                       127769                       # Number of instructions simulated (Count)
+simOps                                         127816                       # Number of ops (including micro ops) simulated (Count)
+system.cpu.numCycles                           150902                       # Number of cpu cycles simulated (Cycle)
+system.cpu.ipc                               0.846702                       # IPC: instructions per cycle (core level) ((Count/Cycle))
+system.cpu.commitStats0.numInsts               127769                       # Number of instructions committed (thread level) (Count)
+system.cpu.commitStats0.numOps                 127816                       # Number of ops (including micro ops) committed (thread level) (Count)
+system.cpu.commitStats0.numMemRefs              28805                       # Number of memory references committed (Count)
+system.cpu.commitStats0.numLoadInsts            21124                       # Number of load instructions (Count)
+system.cpu.commitStats0.numStoreInsts            7681                       # Number of store instructions (Count)
+system.cpu.commitStats0.committedInstType::IntAlu        98889     77.37%     77.43% # Class of committed instruction. (Count)
+system.memory.bytesRead::cpu.inst              603420                       # Number of bytes read from this memory (Byte)
+system.memory.bytesRead::cpu.data               98965                       # Number of bytes read from this memory (Byte)
+system.memory.bytesRead::total                 702385                       # Number of bytes read from this memory (Byte)
+system.memory.bytesWritten::total               56251                       # Number of bytes written to this memory (Byte)
+system.memory.numReads::total                  171979                       # Number of read requests responded to by this memory (Count)
+system.memory.numWrites::total                   7668                       # Number of write requests responded to by this memory (Count)
+
+---------- End Simulation Statistics   ----------

@@ -14,7 +14,7 @@ import pytest
 
 from riscvcnnbench.config import load_experiment
 from riscvcnnbench.runner import resolved_config
-from riscvcnnbench.runs import diagnose, load_run
+from riscvcnnbench.runs import diagnose, load_run, region_stats
 
 ROOT = Path(__file__).resolve().parents[1]
 GEM5 = ROOT / os.environ.get("GEM5_BIN", "third_party/gem5/build/RISCV/gem5.opt")
@@ -102,6 +102,12 @@ def test_run_executes_yaml(tmp_path: Path) -> None:
 
     assert run.stdout.startswith("Executando run_ok em ")
     assert f"Pasta:  {run_dir}\nStatus: completed\n" in run.stdout
+    # hello_riscv_param não marca ROI, e a atomic não modela tempo.
+    insts = region_stats(load_run(run_dir)).metrics["insts"]
+    assert run.stdout.splitlines()[-1] == (
+        f"Métricas: programa inteiro, {insts} instruções, sem ciclos (a CPU atomic não "
+        "modela tempo)"
+    )
     assert "Erro:" not in run.stderr
 
 
