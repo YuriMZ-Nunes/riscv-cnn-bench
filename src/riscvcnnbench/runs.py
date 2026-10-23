@@ -1,7 +1,7 @@
-"""Leitura das pastas de execução: listagem e diagnóstico de falhas.
+"""Leitura das pastas de execução: listagem, diagnóstico de falhas e métricas.
 
-Lê o `metadata.json` e os logs gravados por scripts/run-gem5.py; veja
-docs/results.md para o significado de cada campo.
+Lê o `metadata.json`, os logs e o `gem5/stats.txt` gravados por
+scripts/run-gem5.py; veja docs/results.md para o significado de cada campo.
 """
 
 import json
@@ -9,6 +9,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from riscvcnnbench.config import PROJECT_ROOT, uses_roi
+from riscvcnnbench.parser import RegionStats, StatsError, cpu_model, read_region
 
 UNKNOWN_INSTRUCTION = re.compile(r"panic: (Unknown|Illegal|Unimplemented) instruction.*")
 GEM5_ERROR = re.compile(r"\b(fatal|panic): .*")
@@ -33,20 +36,22 @@ class Run:
     metadata: dict[str, Any]
 
     @property
+    def resolved(self) -> dict[str, Any]:
+        """Configuração resolvida do YAML; vazia nas execuções sem YAML."""
+        return (self.metadata.get("experiment") or {}).get("resolved") or {}
+
+    @property
     def experiment(self) -> str:
-        resolved = (self.metadata.get("experiment") or {}).get("resolved") or {}
-        return resolved.get("name") or self.path.parent.name
+        return self.resolved.get("name") or self.path.parent.name
 
     @property
     def benchmark(self) -> str:
-        resolved = (self.metadata.get("experiment") or {}).get("resolved") or {}
-        name = (resolved.get("benchmark") or {}).get("name")
+        name = (self.resolved.get("benchmark") or {}).get("name")
         return name or Path(self.metadata.get("original_binary") or "?").name
 
     @property
     def cpu(self) -> str:
-        resolved = (self.metadata.get("experiment") or {}).get("resolved") or {}
-        cpu = resolved.get("cpu")
+        cpu = self.resolved.get("cpu")
         return f"{cpu['model']}@{cpu['clock']}" if cpu else "-"
 
 
@@ -90,6 +95,60 @@ def list_runs(root: Path) -> list[Run]:
         except (OSError, json.JSONDecodeError):
             continue
     return sorted(runs, key=lambda run: run.metadata.get("run_id") or run.path.name)
+
+
+def region_stats(run: Run) -> RegionStats:
+    """Métricas da ROI da execução, ou do programa inteiro se o benchmark não tem ROI.
+
+    O número de blocos esperado vem do fonte do benchmark (`uses_roi`) e o modelo da
+    CPU, do config.ini gravado pelo gem5. Erros saem como StatsError com o caminho.
+    """
+    stats = run.path / "gem5" / "stats.txt"
+    if not stats.is_file():
+        raise StatsError(f"{display(stats)} não existe: o gem5 não gravou estatísticas.")
+    benchmark_dir = PROJECT_ROOT / "benchmarks" / run.benchmark
+    has_roi = uses_roi(benchmark_dir) if benchmark_dir.is_dir() else None
+    cpu = cpu_model(stats.with_name("config.ini")) or (run.resolved.get("cpu") or {}).get("model")
+    try:
+        return read_region(stats, has_roi, cpu)
+    except StatsError as error:
+        raise StatsError(f"{display(stats)}: {error}.") from error
+
+
+def summary(stats: RegionStats) -> str:
+    """Resumo de uma linha: região, instruções, ciclos e IPC."""
+    metrics = stats.metrics
+    parts = [
+        "ROI" if stats.region == "roi" else "programa inteiro",
+        f"{metrics['insts']} instruções",
+    ]
+    if metrics["cycles"] is None:
+        parts.append(f"sem ciclos ({stats.missing['cycles']})")
+    else:
+        parts.append(f"{metrics['cycles']} ciclos")
+    if metrics["ipc"] is not None:
+        parts.append(f"IPC {metrics['ipc']:.3f}")
+    return ", ".join(parts)
+
+
+def metric_cells(run: Run) -> list[str]:
+    """INSTS, CICLOS e IPC de uma execução concluída para a tabela de `runs`.
+
+    `-` quando não há valor (execução não concluída, ciclos na atomic) e `?` quando
+    o stats.txt não pôde ser lido; o motivo aparece em `riscvcnnbench stats`.
+    """
+    if run.metadata.get("status") != "completed":
+        return ["-", "-", "-"]
+    try:
+        metrics = region_stats(run).metrics
+    except StatsError:
+        return ["?", "?", "?"]
+    cycles, ipc = metrics["cycles"], metrics["ipc"]
+    return [
+        str(metrics["insts"]),
+        "-" if cycles is None else str(cycles),
+        "-" if ipc is None else f"{ipc:.3f}",
+    ]
 
 
 def diagnose(run: Run) -> Diagnosis | None:

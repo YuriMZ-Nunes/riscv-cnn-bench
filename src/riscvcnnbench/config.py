@@ -260,6 +260,17 @@ def available_variants(benchmark_dir: Path) -> list[str]:
     return ["ref", *(v for v in ("custom", "rvv") if v in variants)]
 
 
+def uses_roi(benchmark_dir: Path) -> bool:
+    """O benchmark marca a região de interesse (rcb_roi_begin da base comum, RCB-11)?
+
+    Se marca, o stats.txt tem 2 blocos (ROI e resto do programa); se não, 1.
+    """
+    return any(
+        "rcb_roi_begin" in source.read_text(encoding="utf-8", errors="replace")
+        for source in benchmark_dir.glob("*.c")
+    )
+
+
 def load_experiment(path: Path) -> Experiment:
     """Lê e valida um experimento, reunindo todos os problemas em um ConfigError."""
     if not path.is_file():

@@ -11,13 +11,16 @@ Cada execução no gem5, por `riscvcnnbench run` ou `make hello-run-gem5`, cria 
 
 O `run_id` combina data e hora em UTC com um sufixo aleatório, por exemplo `20261020T005249.889088Z-194128aa`. Ordenar as pastas pelo nome as ordena por horário.
 
-O `riscvcnnbench run` informa a pasta no início e, ao final, a pasta, o status e, se falhou, a causa (ver [Diagnóstico](#diagnóstico)):
+O `riscvcnnbench run` informa a pasta no início e, ao final, a pasta, o status e, se falhou, a causa (ver [Diagnóstico](#diagnóstico)); se concluiu, um resumo das [métricas](#métricas):
 
 ```text
 Executando hello_param_cache em results/hello_param_cache/<run_id>
 Pasta:  results/hello_param_cache/<run_id>
 Status: completed
+Métricas: programa inteiro, 822504 instruções, 3730858 ciclos, IPC 0.220
 ```
+
+O `hello_riscv_param` não marca região de interesse, então o resumo é do programa inteiro; nos benchmarks de operação ele começa com `ROI`.
 
 O `make hello-run-gem5` chama o wrapper direto e imprime `Resultado da execução: ...`, `Status: ...` e `Logs: ...`, com caminhos que começam em `/workspace`, onde o container monta a raiz do projeto.
 
@@ -52,7 +55,7 @@ Em caso de falha, alguns arquivos podem faltar ou estar incompletos: por exemplo
 
 1. **`metadata.json` → `status`.** Se não for `completed`, veja `failed_step` e `error` (seção [Status e falhas](#status-e-falhas)).
 2. **`stdout.log`.** Confira a linha `RESULT` do benchmark e a linha `Simulação encerrada ... (code=0)`.
-3. **`gem5/stats.txt`.** Só depois que os dois passos anteriores estão corretos os números fazem sentido.
+3. **`gem5/stats.txt`.** Só depois que os dois passos anteriores estão corretos os números fazem sentido. `riscvcnnbench stats <pasta>` lê o bloco certo e mostra as métricas (seção [Métricas](#métricas)).
 
 ## Arquivos
 
@@ -152,7 +155,7 @@ Algumas estatísticas de `stats.txt` úteis para conferir uma execução:
 | --- | --- |
 | `simInsts` | Instruções executadas no bloco: o programa inteiro, ou só a região de interesse no primeiro bloco dos benchmarks que a marcam. |
 | `simTicks` | Tempo simulado, em ticks. |
-| `system.cpu.numCycles` | Ciclos da CPU. |
+| `system.cpu.numCycles` | Ciclos da CPU. Na atomic, é só `simTicks` dividido pelo período do clock. |
 | `system.cpu.dcache.overallMisses::total` | Faltas na L1 de dados (só com `cache.l1d`). |
 | `system.l2cache.overallMisses::total` | Faltas na L2 (só com `cache.l2`). |
 
@@ -165,7 +168,93 @@ Os benchmarks que usam a base comum marcam a região de interesse (ROI) com m5op
 | 1 | Só a ROI, isto é, o kernel com as suas repetições |
 | 2 | Do fim da ROI ao fim do programa: verificação, impressão e saída |
 
-A inicialização antes da ROI não aparece em nenhum bloco. Isso vale para o `int8_base_example` e para os sete benchmarks de operação ([kernels.md](kernels.md)). Os detalhes estão em [kernel_base.md](kernel_base.md#região-de-interesse). Ler os blocos automaticamente e calcular as métricas do TCC está planejado (RCB-16) e ainda não existe.
+A inicialização antes da ROI não aparece em nenhum bloco. Isso vale para o `int8_base_example` e para os sete benchmarks de operação ([kernels.md](kernels.md)). Os detalhes estão em [kernel_base.md](kernel_base.md#região-de-interesse). O framework escolhe o bloco e extrai as métricas sozinho; veja [Métricas](#métricas).
+
+## Métricas
+
+O framework lê o `gem5/stats.txt` de uma execução e extrai, do bloco da região de interesse, as métricas definidas em [scope.md](scope.md#métricas), sem alterar nenhum arquivo da pasta. O código está em `src/riscvcnnbench/parser.py`. Há três formas de ver as métricas:
+
+| Onde | O que mostra |
+| --- | --- |
+| Fim do `riscvcnnbench run` | Linha `Métricas: ROI, <N> instruções, <C> ciclos, IPC <x>`, só se a execução foi concluída |
+| `riscvcnnbench runs` | Colunas `INSTS`, `CICLOS` e `IPC` ([Listar execuções](#listar-execuções)) |
+| `riscvcnnbench stats <pasta>` ou `make stats RUN=<pasta>` | Todas as métricas, com unidade, estatística de origem e motivo das ausentes; `--json` para scripts |
+
+Nada é gravado na pasta: o `stats.txt` continua sendo a fonte, e as três formas funcionam também com pastas antigas e com as de `make hello-run-gem5`.
+
+### Qual bloco é lido
+
+| Benchmark | Blocos esperados | Bloco lido |
+| --- | --- | --- |
+| Marca a ROI, isto é, chama `rcb_roi_begin` em algum `.c` da pasta: as sete operações e o `int8_base_example` | 2 | O 1º, a ROI |
+| Não marca ROI: `hello_riscv`, `hello_riscv_param`, `cnn_insn_semantics` | 1 | O único, com o programa inteiro |
+
+Se o número de blocos for outro, o parser recusa o arquivo com uma mensagem como `1 bloco, mas o benchmark marca a região de interesse e deveria ter 2 (a ROI e o resto do programa)`, em vez de ler o bloco errado. Isso acontece, por exemplo, se o programa terminar dentro da ROI. Se o benchmark não existe mais em `benchmarks/`, um bloco é lido como programa inteiro e dois como ROI. Um bloco sem a linha `End Simulation Statistics`, de uma simulação interrompida, também é recusado.
+
+### Métricas extraídas
+
+Os nomes das estatísticas ficam num só lugar, a tabela `METRICS` de `parser.py`. A chave é o nome que o framework usa, por exemplo no JSON do `stats`.
+
+| Chave | Estatística do gem5 | Unidade | Ausente quando |
+| --- | --- | --- | --- |
+| `insts` | `system.cpu.commitStats0.numInsts` | instruções | Nunca |
+| `ops` | `system.cpu.commitStats0.numOps` | micro-ops | Nunca |
+| `cycles` | `system.cpu.numCycles` | ciclos | CPU atomic |
+| `ipc` | `system.cpu.ipc` | instruções/ciclo | CPU atomic |
+| `sim_ticks` | `simTicks` | ticks | CPU atomic |
+| `loads`, `stores`, `mem_refs` | `system.cpu.commitStats0.numLoadInsts`, `numStoreInsts`, `numMemRefs` | instruções | Nunca |
+| `branch_mispredicts` | `system.cpu.branchPred.condIncorrect` | desvios | CPUs atomic e timing, que não têm preditor |
+| `l1i_accesses`, `l1d_accesses`, `l2_accesses` | `system.cpu.icache.`, `system.cpu.dcache.`, `system.l2cache.` + `overallAccesses::total` | acessos | Nível de cache não configurado |
+| `l1i_misses`, `l1d_misses`, `l2_misses` | (mesmos prefixos) + `overallMisses::total` | faltas | Nível não configurado |
+| `l1i_miss_rate`, `l1d_miss_rate`, `l2_miss_rate` | (mesmos prefixos) + `overallMissRate::total` | razão | Nível não configurado; nenhum acesso (0/0) |
+| `l1i_avg_miss_latency`, `l1d_avg_miss_latency`, `l2_avg_miss_latency` | (mesmos prefixos) + `demandAvgMissLatency::total` | ticks | Nível não configurado; nenhuma falta; CPU atomic |
+| `dram_reads`, `dram_writes` | `system.mem_ctrl.readReqs`, `system.mem_ctrl.writeReqs` | requisições | Memória `simple` |
+| `dram_bandwidth` | `system.mem_ctrl.dram.bwTotal::total` | bytes/s | Memória `simple`; CPU atomic |
+| `dram_avg_latency` | `system.mem_ctrl.dram.avgMemAccLat` | ticks | Memória `simple`; nenhum acesso; CPU atomic |
+| `simple_bytes_read`, `simple_bytes_written` | `system.memory.bytesRead::total`, `system.memory.bytesWritten::total` | bytes | Memória `ddr4` |
+| `simple_reads`, `simple_writes` | `system.memory.numReads::total`, `system.memory.numWrites::total` | requisições | Memória `ddr4` |
+| `host_seconds` | `hostSeconds` | s | Nunca. É o tempo do host, não do sistema simulado, e varia entre execuções |
+
+Latências estão em ticks, como no gem5 (10¹² por segundo; com clock de 1GHz, 1000 ticks = 1 ciclo). As métricas derivadas (CPI, ciclos por MAC, comparação entre variantes) são da RCB-17.
+
+### Ausências e zeros omitidos
+
+Uma métrica que não se aplica fica **ausente**: `null` no JSON, `ausente` no `stats` (com o motivo), `-` no `runs`. Nunca vira zero. Para isso, o parser distingue três situações:
+
+- **O componente não existe.** Sem nenhuma linha `system.l2cache.*` no bloco, a configuração não tem L2, e as métricas da L2 ficam ausentes. Um objeto configurado sempre imprime algumas linhas, como `tags.*`, `replacements` e `power_state.*`, mesmo sem nenhum acesso.
+- **O gem5 omite zeros.** As estatísticas de cache e da memória `simple` usam as flags `nozero` e `nonan` do gem5, então valores 0 e NaN não são impressos. Com o componente presente, a linha que falta vale 0 nos contadores e 0 nas taxas de falta com acessos. Já taxas sem acessos e médias sem eventos, como `avg_miss_latency` sem faltas, ficam ausentes por serem 0/0. Esse caso é comum: na ROI dos tamanhos S, os dados já estão na L1d, e o `stats.txt` não tem a linha `system.cpu.dcache.overallMisses::total`, que vale 0.
+- **A CPU atomic não modela tempo.** O gem5 imprime `numCycles` e `ipc` na atomic, mas `numCycles` é só `simTicks` dividido pelo período. Por isso, na atomic ficam ausentes ciclos, IPC, ticks, latências e banda; as contagens de instruções e de acessos continuam valendo. O modelo da CPU vem do `gem5/config.ini` (`type=` da seção `[system.cpu]`) ou, se ele faltar, do `experiment.resolved`.
+
+Um `nan` impresso pelo gem5, como `avgMemAccLat` sem acessos à DRAM, também fica ausente. Já a falta de uma estatística da CPU (`numInsts`, `numCycles`...) é erro, porque indica que o nome mudou na versão do gem5.
+
+### `riscvcnnbench stats`
+
+```bash
+uv run riscvcnnbench stats results/fc_s/<run_id>
+uv run riscvcnnbench stats results/fc_s/<run_id> --json
+make stats RUN=results/fc_s/<run_id>        # fora do container
+```
+
+Trecho de uma saída real (fc S, referência, CPU atomic com L1, L2 e DDR4):
+
+```text
+Execução:  results/fc_s/<run_id>
+Benchmark: fc, CPU atomic, status completed
+Região:    ROI, bloco 1 de 2
+
+Centrais
+  insts                       115270  instruções   system.cpu.commitStats0.numInsts
+  ops                         115270  micro-ops    system.cpu.commitStats0.numOps
+  cycles                     ausente  ciclos       system.cpu.numCycles (a CPU atomic não modela tempo)
+...
+Caches
+  l1d_accesses                 32842  acessos      system.cpu.dcache.overallAccesses::total
+  l1d_misses                       0  faltas       system.cpu.dcache.overallMisses::total
+  l1d_miss_rate                    0  razão        system.cpu.dcache.overallMissRate::total
+  l1d_avg_miss_latency       ausente  ticks        system.cpu.dcache.demandAvgMissLatency::total (a CPU atomic não modela tempo)
+```
+
+O JSON tem `run_id`, `path`, `status`, `experiment`, `benchmark`, `variant`, `cpu`, `region` (`roi` ou `program`), `blocks`, `metrics` (chave → valor ou `null`) e `missing` (chave → motivo). Numa execução que não terminou como `completed`, o `stats` mostra as métricas, mas avisa no stderr que elas não valem como resultado. Sem `stats.txt`, ou com um número inesperado de blocos, sai com 1 e explica o problema.
 
 ## Status e falhas
 
@@ -248,13 +337,15 @@ uv run riscvcnnbench runs results/hello_param_cache
 
 Fora do container, o equivalente é `make runs` ou `make runs DIR=results/hello_param_cache`.
 
-Exemplo ilustrativo:
+Exemplo ilustrativo (a primeira linha é de uma execução real):
 
 ```text
-RUN_ID                            EXPERIMENTO        BENCHMARK          CPU          STATUS               PASTA
-20261020T005249.889088Z-194128aa  hello_param_cache  hello_riscv_param  timing@2GHz  completed            results/hello_param_cache/20261020T005249.889088Z-194128aa
-20261020T010519.345612Z-f9ab65c2  demo               hello_riscv_param  atomic@1GHz  failed (benchmark)   results/demo/20261020T010519.345612Z-f9ab65c2
+RUN_ID                            EXPERIMENTO        BENCHMARK          CPU          STATUS              INSTS   CICLOS   IPC    PASTA
+20261020T005249.889088Z-194128aa  hello_param_cache  hello_riscv_param  timing@2GHz  completed           822504  3730858  0.220  results/hello_param_cache/20261020T005249.889088Z-194128aa
+20261020T010519.345612Z-f9ab65c2  demo               hello_riscv_param  atomic@1GHz  failed (benchmark)  -       -        -      results/demo/20261020T010519.345612Z-f9ab65c2
 ```
+
+`INSTS`, `CICLOS` e `IPC` vêm da região de interesse, ou do programa inteiro nos benchmarks sem ROI (ver [Métricas](#métricas)). Ficam `-` em execuções não concluídas e, na CPU atomic, em `CICLOS` e `IPC`; ficam `?` se o `stats.txt` não pôde ser lido, e `riscvcnnbench stats <pasta>` mostra o motivo.
 
 As execuções aparecem das mais antigas para as mais recentes. Execuções de `make hello-run-gem5` (sem YAML) aparecem com o nome da pasta como experimento e `-` na CPU. Para a mensagem completa de uma falha, veja o `metadata.json` e os logs da pasta, conforme a tabela de [Diagnóstico](#diagnóstico).
 
@@ -269,6 +360,7 @@ cat $RUN/command.txt
 grep -E '^(Sistema|RESULT|Simulação)' $RUN/stdout.log
 grep -E 'fatal|panic' $RUN/stderr.log
 grep -E '^(simInsts|simTicks|system.cpu.numCycles) ' $RUN/gem5/stats.txt
+uv run riscvcnnbench stats $RUN            # métricas do bloco da ROI
 
 # O que mudou entre duas execuções
 diff $RUN_A/inputs/experiment.resolved.json $RUN_B/inputs/experiment.resolved.json

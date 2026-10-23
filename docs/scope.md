@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); as métricas (RCB-16+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse existe (RCB-16, [results.md](results.md#métricas)); as métricas derivadas e a comparação entre variantes (RCB-17+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -93,7 +93,7 @@ Viabilidade do RVV, verificada em 20/10/2026 com um produto escalar int8 (`vle8`
 Como ficou na RCB-14 ([kernels.md](kernels.md#variantes)):
 - **VLEN:** campo `cpu.vlen` do YAML (padrão 256, o do gem5), passado ao gem5 e registrado na configuração resolvida de cada execução.
 - **Seleção da variante:** campo `benchmark.variant` (`ref`, `custom`, `rvv`); o `kernel.mk` escolhe o arquivo do kernel e o `-march` (`rv64gcv` na RVV) depois das flags do experimento.
-- **Contagem de instruções:** confirmado no bloco da ROI que, na RVV, `numOps` > `numInsts` (instruções com LMUL > 1 viram vários micro-ops); nas variantes escalar e personalizada os dois são iguais. As duas métricas devem ser registradas (RCB-16).
+- **Contagem de instruções:** confirmado no bloco da ROI que, na RVV, `numOps` > `numInsts` (instruções com LMUL > 1 viram vários micro-ops); nas variantes escalar e personalizada os dois são iguais. As duas são extraídas da ROI (`insts` e `ops`, RCB-16).
 - **Limitação do gem5:** reduções RVV com LMUL > 1 podem dar resultado errado na O3CPU; os kernels reduzem em LMUL 1 ([kernels.md](kernels.md#limitação-do-gem5-reduções-rvv-na-o3cpu)).
 
 ## Modelos de CPU
@@ -107,9 +107,13 @@ Como ficou na RCB-14 ([kernels.md](kernels.md#variantes)):
 
 O clock fica em 1GHz, o padrão. Com o clock fixo, ciclos e tempo simulado são proporcionais, e a comparação usa ciclos.
 
+## Compilação
+
+Todas as variantes são compiladas com GCC 13.3 e `-O2`, o padrão de `compiler.flags`, para que as diferenças medidas venham das instruções e da memória, e não do compilador. O sumário executivo da proposta cita também "otimizações de compilador". Por isso, a matriz terá um **contraste mínimo `-O2` × `-O3`** com uma ou duas operações, ref e custom, em um cenário e uma CPU (decisão de 22/10/2026, **planejado** na RCB-22). O contraste mostra se a otimização do compilador muda a redução de instruções e o speedup. Na variante RVV, `-fno-tree-vectorize` vem depois das flags do experimento, então `-O3` não autovetoriza o código.
+
 ## Métricas
 
-Os nomes abaixo foram conferidos no `stats.txt` do gem5 do projeto (25.1.0.1, fork em `0c4d16f`) em 20/10/2026, com `hello_riscv_param` nas quatro CPUs. Estatísticas de cache só existem quando aquele nível está configurado. Hoje elas cobrem o programa inteiro; a medição por região de interesse (ROI), com `m5_reset_stats`/`m5_dump_stats`, é das RCB-11 e RCB-16 e gera um bloco de estatísticas por região.
+Os nomes abaixo foram conferidos no `stats.txt` do gem5 do projeto (25.1.0.1, fork em `0c4d16f`) em 20/10/2026, com `hello_riscv_param` nas quatro CPUs. Estatísticas de cache só existem quando aquele nível está configurado. Nos benchmarks com a base comum, o primeiro bloco do `stats.txt` cobre só a região de interesse (ROI, RCB-11). `riscvcnnbench stats` extrai as métricas abaixo desse bloco, com as chaves e as regras de valor ausente de [results.md](results.md#métricas) (RCB-16). O gem5 não imprime estatísticas de cache e de memória que valem zero, e o parser as trata como 0, e não como ausentes.
 
 ### Métricas centrais
 
@@ -117,7 +121,7 @@ Os nomes abaixo foram conferidos no `stats.txt` do gem5 do projeto (25.1.0.1, fo
 | --- | --- | --- | --- |
 | Instruções executadas | Quantas instruções cada variante executa? (OE3) | `system.cpu.commitStats0.numInsts` | Igual a `simInsts` em núcleo único. Uma instrução personalizada ou vetorial conta 1. |
 | Micro-operações | Quanto trabalho interno há por instrução? (OE3, RVV) | `system.cpu.commitStats0.numOps` / `simOps` | Diferem de `numInsts` em instruções divididas em micro-ops. |
-| Ciclos | A redução de instruções vira redução de ciclos? (OE3, OE4) | `system.cpu.numCycles` | Só timing, minor e o3. |
+| Ciclos | A redução de instruções vira redução de ciclos? (OE3, OE4) | `system.cpu.numCycles` | Só timing, minor e o3. A atomic também imprime `numCycles`, mas é só `simTicks` / período; o framework o deixa ausente. |
 | IPC | Quanto paralelismo o núcleo extrai? (OE3) | `system.cpu.ipc` | Conferir com `numInsts / numCycles`. |
 | Tempo simulado | Comparação com clocks diferentes, se houver | `simSeconds` / `simTicks` | Tick não é ciclo (10¹² ticks/s). |
 

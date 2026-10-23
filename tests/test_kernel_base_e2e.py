@@ -12,11 +12,12 @@ from pathlib import Path
 
 import pytest
 
+from riscvcnnbench.parser import extract, split_blocks
+
 ROOT = Path(__file__).resolve().parents[1]
 GEM5 = ROOT / os.environ.get("GEM5_BIN", "third_party/gem5/build/RISCV/gem5.opt")
 RISCV_PREFIX = os.environ.get("RISCV_PREFIX", "riscv64-linux-gnu-")
 BENCHMARK = ROOT / "benchmarks/int8_base_example"
-BLOCK_HEADER = "---------- Begin Simulation Statistics ----------"
 RESULT = re.compile(
     r"^RESULT bench=int8_base_example variant=ref data=random K=(\d+) M=(\d+) R=(\d+) "
     r"checksum=(0x[0-9a-f]{16}) mismatches=(\d+)$",
@@ -58,13 +59,12 @@ def run_gem5(tmp_path: Path, name: str, args: str) -> tuple[str, list[str]]:
     assert run.returncode == 0, f"{run.stdout}\n{run.stderr}"
     (run_dir,) = results.iterdir()
     stats = (run_dir / "gem5/stats.txt").read_text(encoding="utf-8")
-    return (run_dir / "stdout.log").read_text(encoding="utf-8"), stats.split(BLOCK_HEADER)[1:]
+    return (run_dir / "stdout.log").read_text(encoding="utf-8"), split_blocks(stats)
 
 
-def stat(block: str, name: str) -> int:
-    match = re.search(rf"^{re.escape(name)}\s+(\d+)", block, re.MULTILINE)
-    assert match, f"{name} não encontrado"
-    return int(match.group(1))
+def insts(block: dict[str, str]) -> int:
+    metrics, _ = extract(block)
+    return metrics["insts"]
 
 
 def test_example_runs_on_qemu_without_m5ops(tmp_path: Path) -> None:
@@ -85,12 +85,12 @@ def test_roi_isolates_the_kernel_and_data_is_deterministic(tmp_path: Path) -> No
 
     # Bloco 1: só a ROI. Bloco 2: do fim da ROI ao fim do programa.
     assert len(blocks_r1) == len(blocks_r2) == 2
-    roi_r1 = stat(blocks_r1[0], "simInsts")
-    roi_r2 = stat(blocks_r2[0], "simInsts")
+    roi_r1 = insts(blocks_r1[0])
+    roi_r2 = insts(blocks_r2[0])
     # Dobrar as repetições dobra a ROI (a menos das poucas instruções das m5ops)...
     assert abs(roi_r2 - 2 * roi_r1) < 0.01 * roi_r1
     # ...e não muda o que vem depois dela.
-    assert stat(blocks_r1[1], "simInsts") == stat(blocks_r2[1], "simInsts")
+    assert insts(blocks_r1[1]) == insts(blocks_r2[1])
 
     # Mesmos dados e mesmo resultado no QEMU e no gem5.
     gem5 = RESULT.search(stdout_r1)

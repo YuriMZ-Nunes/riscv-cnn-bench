@@ -20,7 +20,7 @@ def test_help_lists_main_commands() -> None:
     result = CliRunner().invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    for command in ("validate", "run", "runs", "version"):
+    for command in ("validate", "run", "runs", "stats", "version"):
         assert command in result.stdout
     assert "docs/experiments.md" in result.stdout
 
