@@ -373,8 +373,10 @@ def test_cli_stats(tmp_path: Path) -> None:
         "ticks",
         "system.cpu.dcache.demandAvgMissLatency::total (indefinida: média sem eventos (0/0))",
     ]
-    assert len(rows) == 30
-    assert "Caches" in lines and "Memória" in lines
+    # 30 métricas brutas e 13 derivadas (test_metric.py confere as derivadas).
+    assert len(rows) == 43
+    assert lines[3] == "Resultado: -"
+    assert "Caches" in lines and "Memória" in lines and "Derivadas" in lines
     assert result.stderr == ""
 
 
@@ -385,7 +387,12 @@ def test_cli_stats_json(tmp_path: Path) -> None:
     result = CliRunner().invoke(app, ["stats", RUN, "--json"])
 
     assert result.exit_code == 0, result.stderr
-    assert json.loads(result.stdout) == {
+    document = json.loads(result.stdout)
+    # Sem stdout.log com RESULT: sem trabalho (test_metric.py cobre a linha RESULT).
+    assert (document.pop("result"), document.pop("work_unit")) == (None, None)
+    assert document.pop("derived")["cpi"] == pytest.approx(66214 / 115270)
+    assert document.pop("derived_missing")["work"] == "o programa não imprimiu a linha RESULT"
+    assert document == {
         "run_id": "20261020T000000.000000Z-aaaaaaaa",
         "path": RUN,
         "status": "completed",

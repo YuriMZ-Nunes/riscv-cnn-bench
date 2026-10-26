@@ -180,7 +180,7 @@ Os MACs da tabela são os **nominais** de `scope.md`, que contam os 9 taps de ca
 | S | 91,8% | 9,23 | 14,40 |
 | L | 95,9% | 8,09 | 14,13 |
 
-As métricas por MAC da RCB-17 precisam declarar qual das duas definições usam.
+As métricas por MAC da RCB-17 (`insts_per_work`, `cycles_per_work`, `work_per_cycle`, ver [results.md](results.md#métricas-derivadas-e-comparações)) usam os MACs **nominais**, como as tabelas daqui.
 
 ### Três variantes
 
