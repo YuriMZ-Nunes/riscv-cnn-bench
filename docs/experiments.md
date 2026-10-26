@@ -120,7 +120,7 @@ O comando de build e o do gem5 ficam em `command.txt` e em `metadata.json` (camp
 
 Antes de criar a pasta, o `run` confere se o gem5, o compilador RISC-V (`$RISCV_PREFIX` + `gcc`) e o `make` existem; se faltar algum, sai com `1` e uma mensagem dizendo o que fazer. No fim, mostra a pasta e o status e, se a execução foi concluída, uma linha com instruções, ciclos e IPC da região de interesse (todas as métricas com `riscvcnnbench stats <pasta>`, ver [docs/results.md](results.md#métricas)). Se a execução falhou, explica a causa e aponta o log: build que não compila, benchmark que reporta erro, instrução que o gem5 não reconhece ou erro do próprio gem5. Os tipos de falha e os códigos de saída estão em [docs/results.md](results.md#diagnóstico). Como antes, `completed` significa retorno zero do gem5, que repassa o código do programa simulado.
 
-Para listar as execuções existentes, com instruções, ciclos e IPC: `make runs` (ou `make runs DIR=results/<name>`), ou `uv run riscvcnnbench runs` dentro do container. As métricas de uma execução: `make stats RUN=<pasta>` ou `uv run riscvcnnbench stats <pasta>`.
+Para listar as execuções existentes, com instruções, ciclos e IPC: `make runs` (ou `make runs DIR=results/<name>`), ou `uv run riscvcnnbench runs` dentro do container. As métricas de uma execução: `make stats RUN=<pasta>` ou `uv run riscvcnnbench stats <pasta>`. Para comparar variantes, rode o mesmo YAML mudando só `benchmark.variant` (ou só o `-O*` em `compiler.flags`) e use `make compare DIR=<pasta>` ou `uv run riscvcnnbench compare <pasta>`.
 
 O gem5 padrão é `third_party/gem5/build/RISCV/gem5.opt` (ou `$GEM5_BIN`).
 

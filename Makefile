@@ -20,7 +20,7 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
-	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats
+	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -71,7 +71,7 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
 
-e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes e a leitura do stats.txt nas quatro CPUs; ~5 min).
+e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes e a leitura do stats.txt nas quatro CPUs e as comparações entre variantes; ~5 min).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 validate: PODMAN_ARGS += $(if $(RCB_JOBS),-e RCB_JOBS=$(RCB_JOBS))
@@ -127,3 +127,6 @@ runs: ## Lista as execuções, o status e instruções/ciclos/IPC da ROI: make r
 stats: ## Mostra as métricas da ROI de uma execução: make stats RUN=results/<name>/<run_id>
 	@test -n "$(RUN)" || { echo "Informe RUN=<pasta da execução>"; exit 2; }
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench stats "$(RUN)"'
+
+compare: ## Compara execuções aos pares (variantes e -O2 × -O3): make compare [DIR=results/<name>]
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench compare "$(or $(DIR),results)"'

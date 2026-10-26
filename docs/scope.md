@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse existe (RCB-16, [results.md](results.md#métricas)); as métricas derivadas e a comparação entre variantes (RCB-17+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); cenários, execução em lote, CSV e a campanha (RCB-18+) são **planejados**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -140,14 +140,12 @@ Os nomes abaixo foram conferidos no `stats.txt` do gem5 do projeto (25.1.0.1, fo
 
 ### Métricas derivadas (RCB-17)
 
-Calculadas a partir das centrais, por operação, tamanho e configuração:
-- redução de instruções (`numInsts` ref / variante);
-- speedup em ciclos (`numCycles` ref / variante);
-- variação de IPC;
-- ciclos por MAC;
-- MACs por ciclo.
+Calculadas a partir das centrais (`metric.py`; fórmulas em [results.md](results.md#métricas-derivadas-e-comparações)):
+- por execução: CPI, faltas por mil instruções, valores por repetição (÷ `R`), instruções e ciclos por MAC e MACs por ciclo, com os MACs **nominais** da tabela de [Dimensões](#dimensões), calculados a partir dos parâmetros da linha `RESULT` (pooling e requantização por elemento);
+- por par de variantes no mesmo cenário (ref × custom, ref × rvv, custom × rvv): redução de instruções `R_I` (também em micro-ops), speedup em ciclos `S_C` e razão de IPC, com `S_C = R_I × IPC_b / IPC_a`;
+- contraste de compilador: o mesmo par com variante fixa, `-O2` × outro `-O*`.
 
-A pergunta da proposta (OE4) é respondida comparando a redução de instruções com o speedup em ciclos em cada cenário de memória.
+A pergunta da proposta (OE4) é respondida comparando a redução de instruções com o speedup em ciclos em cada cenário de memória: a razão de IPC diz quanto da economia de instruções se perde (ou se ganha) em ciclos. `riscvcnnbench compare` mostra os pares; o CSV fica para a RCB-20.
 
 ## Estimativa de tempo de simulação
 

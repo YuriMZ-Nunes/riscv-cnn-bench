@@ -20,13 +20,14 @@ Disponíveis:
 - **Base comum dos kernels int8:** headers em `benchmarks/common/` com parâmetros por argumento, dados determinísticos, requantização de referência, comparação com oráculo, checksum e região de interesse marcada com m5ops (o `stats.txt` separa o kernel do resto do programa); o mesmo binário roda no QEMU. Exemplo em `int8_base_example` (ver [docs/kernel_base.md](docs/kernel_base.md)).
 - **Kernels das operações de CNN em três variantes:** convolução 3×3 direta e por im2col + GEMM, depthwise 3×3, pointwise 1×1, max pooling 2×2, requantização com ReLU e totalmente conectada, em int8, com YAMLs para os tamanhos S e L. Cada operação tem a referência escalar, a variante com as instruções personalizadas e a variante RVV (intrínsecos, VLEN configurável), escolhidas por `benchmark.variant` no YAML. As três dão o mesmo resultado, conferido por `make validate`, inclusive com dados extremos (ver [docs/kernels.md](docs/kernels.md)).
 - **Métricas por região de interesse:** `riscvcnnbench stats <pasta>` lê o `stats.txt` de uma execução, escolhe o bloco da região de interesse e extrai instruções, micro-ops, ciclos, IPC, acessos e faltas nas caches, tráfego da memória e desvios mal previstos, deixando ausente, com o motivo, o que não se aplica (cache não configurada, ciclos na CPU atomic). O `run` termina com um resumo e o `runs` mostra instruções, ciclos e IPC de cada execução (ver [docs/results.md](docs/results.md#métricas)).
+- **Métricas derivadas e comparações:** CPI, faltas por mil instruções, instruções e ciclos por MAC e por repetição; `riscvcnnbench compare` forma os pares ref × custom, ref × rvv e custom × rvv no mesmo cenário, e `-O2` × `-O3`, com redução de instruções, speedup em ciclos e razão de IPC, rejeitando pares com checksum diferente (ver [docs/results.md](docs/results.md#métricas-derivadas-e-comparações)).
 - **Resultados por execução:** cada simulação gem5 gera uma pasta própria com logs, comando, cópias dos inputs e metadados de proveniência (ver [Resultados e reprodutibilidade](#resultados-e-reprodutibilidade)).
 
 Planejados (ainda não implementados):
 
 - Latência própria e configurável para as instruções personalizadas (hoje usam as unidades `IntMult`/`IntAlu` da CPU).
 - Cenários de hierarquia de memória e de CPU definidos para a campanha.
-- Métricas derivadas e comparação entre variantes (redução de instruções, speedup em ciclos, ciclos por MAC), exportação em tabela e gráficos.
+- Exportação dos resultados em tabela (CSV) e gráficos.
 - Varreduras de parâmetros (vários experimentos a partir de um arquivo).
 
 ---
@@ -63,7 +64,7 @@ riscv-cnn-bench/
 │   ├── parser.py             # Leitura do stats.txt: blocos, região de interesse e métricas
 │   ├── runner.py             # Execução de um experimento: build e gem5 pelo wrapper
 │   ├── runs.py               # Pastas de execução: listagem, diagnóstico e métricas
-│   ├── metric.py             # Planejado: métricas derivadas e comparação entre variantes (vazio)
+│   ├── metric.py             # Métricas derivadas e comparação entre variantes
 │   └── report.py             # Planejado: relatórios e consolidação (vazio)
 ├── tests/                    # Testes Python
 ├── third_party/gem5/         # Código-fonte do simulador gem5 (submódulo Git)
@@ -151,9 +152,10 @@ uv run riscvcnnbench validate experiments/hello_param_cache.yaml
 uv run riscvcnnbench run experiments/hello_param_cache.yaml
 uv run riscvcnnbench runs                 # lista as execuções, o status, instruções, ciclos e IPC
 uv run riscvcnnbench stats results/hello_param_cache/<run_id>   # todas as métricas de uma execução
+uv run riscvcnnbench compare results      # pares de variantes no mesmo cenário
 ```
 
-Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `make runs` e `make stats RUN=<pasta>`. O formato, os campos e a execução estão em [docs/experiments.md](docs/experiments.md).
+Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `make runs`, `make stats RUN=<pasta>` e `make compare`. O formato, os campos e a execução estão em [docs/experiments.md](docs/experiments.md).
 
 ---
 
@@ -169,7 +171,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
-| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`. |
+| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`, e as comparações entre variantes. |
 | `make validate` | Validação antes da campanha: e2e mais a equivalência das três variantes em S e L e com dados extremos, no QEMU e no gem5 (`RCB_JOBS=N` para o paralelismo). |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
@@ -183,7 +185,8 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make hello-run-gem5` | Compila e executa o `hello_riscv` no gem5, criando uma pasta por execução. |
 | `make run EXPERIMENT=<yaml>` | Compila e executa um experimento YAML no gem5, criando uma pasta por execução. |
 | `make runs [DIR=results/<name>]` | Lista as execuções existentes, o status e instruções, ciclos e IPC da região de interesse (padrão: `results/`). |
-| `make stats RUN=<pasta>` | Mostra as métricas da região de interesse de uma execução, com o motivo das ausentes. |
+| `make stats RUN=<pasta>` | Mostra as métricas da região de interesse de uma execução, brutas e derivadas, com o motivo das ausentes. |
+| `make compare [DIR=results/<name>]` | Compara as execuções aos pares (variantes e `-O2` × `-O3`): redução de instruções, speedup em ciclos e razão de IPC. |
 | `make smoke-test` | Sincroniza ambiente, testa CLI, executa Pytest e Ruff. |
 | `make clean-results` | Remove resultados gerados sob `results/`. |
 | `make clean` | Remove `.venv`, caches e artefatos gerados pelo framework. |

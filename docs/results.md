@@ -178,9 +178,10 @@ O framework lê o `gem5/stats.txt` de uma execução e extrai, do bloco da regi�
 | --- | --- |
 | Fim do `riscvcnnbench run` | Linha `Métricas: ROI, <N> instruções, <C> ciclos, IPC <x>`, só se a execução foi concluída |
 | `riscvcnnbench runs` | Colunas `INSTS`, `CICLOS` e `IPC` ([Listar execuções](#listar-execuções)) |
-| `riscvcnnbench stats <pasta>` ou `make stats RUN=<pasta>` | Todas as métricas, com unidade, estatística de origem e motivo das ausentes; `--json` para scripts |
+| `riscvcnnbench stats <pasta>` ou `make stats RUN=<pasta>` | Todas as métricas, brutas e [derivadas](#métricas-derivadas-e-comparações), com unidade, origem e motivo das ausentes; `--json` para scripts |
+| `riscvcnnbench compare <pasta>` ou `make compare DIR=<pasta>` | Pares de execuções: redução de instruções, speedup em ciclos e razão de IPC ([Comparações](#comparações)) |
 
-Nada é gravado na pasta: o `stats.txt` continua sendo a fonte, e as três formas funcionam também com pastas antigas e com as de `make hello-run-gem5`.
+Nada é gravado na pasta: o `stats.txt` e o `stdout.log` continuam sendo a fonte, e tudo funciona também com pastas antigas e com as de `make hello-run-gem5`.
 
 ### Qual bloco é lido
 
@@ -215,7 +216,7 @@ Os nomes das estatísticas ficam num só lugar, a tabela `METRICS` de `parser.py
 | `simple_reads`, `simple_writes` | `system.memory.numReads::total`, `system.memory.numWrites::total` | requisições | Memória `ddr4` |
 | `host_seconds` | `hostSeconds` | s | Nunca. É o tempo do host, não do sistema simulado, e varia entre execuções |
 
-Latências estão em ticks, como no gem5 (10¹² por segundo; com clock de 1GHz, 1000 ticks = 1 ciclo). As métricas derivadas (CPI, ciclos por MAC, comparação entre variantes) são da RCB-17.
+Latências estão em ticks, como no gem5 (10¹² por segundo; com clock de 1GHz, 1000 ticks = 1 ciclo). As métricas derivadas (CPI, ciclos por MAC) e as comparações estão em [Métricas derivadas e comparações](#métricas-derivadas-e-comparações).
 
 ### Ausências e zeros omitidos
 
@@ -254,7 +255,98 @@ Caches
   l1d_avg_miss_latency       ausente  ticks        system.cpu.dcache.demandAvgMissLatency::total (a CPU atomic não modela tempo)
 ```
 
-O JSON tem `run_id`, `path`, `status`, `experiment`, `benchmark`, `variant`, `cpu`, `region` (`roi` ou `program`), `blocks`, `metrics` (chave → valor ou `null`) e `missing` (chave → motivo). Numa execução que não terminou como `completed`, o `stats` mostra as métricas, mas avisa no stderr que elas não valem como resultado. Sem `stats.txt`, ou com um número inesperado de blocos, sai com 1 e explica o problema.
+Depois das brutas, o `stats` mostra a linha `RESULT` do programa (`Resultado:`) e o grupo `Derivadas` (seção seguinte).
+
+O JSON tem `run_id`, `path`, `status`, `experiment`, `benchmark`, `variant`, `cpu`, `region` (`roi` ou `program`), `blocks`, `metrics` (chave → valor ou `null`), `missing` (chave → motivo), `result` (campos da linha `RESULT`, ou `null`), `work_unit` (`MAC`, `elemento` ou `null`), `derived` e `derived_missing`. Numa execução que não terminou como `completed`, o `stats` mostra as métricas, mas avisa no stderr que elas não valem como resultado. Sem `stats.txt`, ou com um número inesperado de blocos, sai com 1 e explica o problema.
+
+## Métricas derivadas e comparações
+
+O código está em `src/riscvcnnbench/metric.py`. Ele parte das métricas brutas da ROI (seção anterior) e da linha `RESULT` que os benchmarks da base comum imprimem no `stdout.log`:
+
+```text
+RESULT bench=fc variant=custom data=random In=512 Out=32 R=1 checksum=0xae146a7bdb7dc885 mismatches=0
+```
+
+Da linha `RESULT` saem a operação (`bench`), a variante, o conjunto de dados (`data`), os parâmetros com os valores usados de fato (inclusive os padrões, quando o YAML não passa argumentos), o `checksum` e os `mismatches`. Vale a última linha `RESULT` do arquivo.
+
+### Trabalho de cada operação
+
+O trabalho de uma repetição (`work`) vem dos parâmetros da linha `RESULT`. Nas convoluções e na depthwise são os MACs **nominais**, com os 9 taps de cada saída, inclusive os que caem no padding. É a mesma conta de [scope.md](scope.md#dimensões) e de [kernels.md](kernels.md#instruções-medidas); os efetivos são 91,8% dos nominais em S e 95,9% em L, e as razões entre variantes não mudam. No pooling e na requantização, o trabalho é contado em elementos, e as unidades com "MAC" viram "elemento".
+
+| Operação | `work` por repetição | Unidade |
+| --- | --- | --- |
+| `conv3x3_direct`, `conv3x3_im2col` | `H · W · 9 · Cin · Cout` | MAC |
+| `depthwise3x3` | `H · W · 9 · C` | MAC |
+| `pointwise1x1` | `H · W · Cin · Cout` | MAC |
+| `fc` | `In · Out` | MAC |
+| `int8_base_example` | `K · M` | MAC |
+| `maxpool2x2` | `H · W · C` (elementos de entrada) | elemento |
+| `requant_relu` | `N` | elemento |
+
+### Por execução
+
+| Chave | Fórmula | Unidade |
+| --- | --- | --- |
+| `repetitions` | `R` da linha `RESULT` | repetições |
+| `work` | Tabela acima | MACs |
+| `work_total` | `work · repetitions`, o trabalho da ROI inteira | MACs |
+| `cpi` | `cycles / insts` | ciclos/instrução |
+| `l1i_mpki`, `l1d_mpki`, `l2_mpki` | `1000 · <nível>_misses / insts` | faltas por mil instruções |
+| `insts_per_rep`, `ops_per_rep`, `cycles_per_rep` | `insts`, `ops`, `cycles` divididos por `repetitions` | por repetição |
+| `insts_per_work` | `insts / work_total` | instruções/MAC |
+| `cycles_per_work` | `cycles / work_total` | ciclos/MAC |
+| `work_per_cycle` | `work_total / cycles` | MACs/ciclo |
+
+Uma derivada fica ausente quando falta um operando, com o mesmo motivo do operando. Por exemplo, na CPU atomic, `cpi` e `cycles_per_work` ficam ausentes com "a CPU atomic não modela tempo". Também fica ausente quando o denominador é zero (`indefinida: insts = 0`). Benchmarks sem a base comum (`hello_riscv_param`, `cnn_insn_semantics`) têm `cpi` e MPKI, mas não têm trabalho nem repetições.
+
+### Comparações
+
+Um par compara a execução `a` (a base) com `b`:
+
+| Chave | Fórmula | Pergunta |
+| --- | --- | --- |
+| `r_i` | `insts_a / insts_b` | Quantas vezes menos instruções `b` executa? (redução de instruções, `R_I`) |
+| `r_i_ops` | `ops_a / ops_b` | A mesma razão em micro-operações (difere na RVV) |
+| `s_c` | `cycles_a / cycles_b` | Quantas vezes menos ciclos? (speedup em ciclos, `S_C`) |
+| `ipc_ratio` | `s_c / r_i` = `IPC_b / IPC_a` | O IPC de `b` subiu ou caiu? |
+
+Como `cycles = insts / IPC`, vale a identidade **`S_C = R_I × IPC_b / IPC_a`**. Ela responde diretamente quando menos instruções viram menos ciclos (objetivo específico 4): com `ipc_ratio` < 1, `b` perde parte da economia de instruções por latência ou espera pela memória, e o speedup fica abaixo da redução. Com `ipc_ratio` > 1, o speedup supera a redução. `ipc_ratio` é calculado com `insts` e `cycles`, e não com o `ipc` arredondado que o gem5 imprime, para a identidade valer exatamente. Na atomic, `r_i` vale (as instruções da ROI são as mesmas nas quatro CPUs), mas `s_c` e `ipc_ratio` ficam ausentes.
+
+Há dois tipos de par:
+
+| Tipo | Rótulo | `a` × `b` |
+| --- | --- | --- |
+| `variante` | `ref→custom`, `ref→rvv`, `custom→rvv` | Mesmo cenário, variantes diferentes. Com outro nível de otimização, o rótulo ganha o nível, como `ref→custom(-O3)`; com VLEN diferente de 256, a RVV aparece como `rvv@vlen512` |
+| `compilador` | `ref(-O2→-O3)` | Mesma variante e cenário; `a` com `-O2`, a base de todos os experimentos, e `b` com outro `-O*`. As outras flags, como `-DRCB_DATA`, têm de ser iguais |
+
+**O que precisa ser igual num par.** A operação e os parâmetros (da linha `RESULT`, incluindo `R`), o conjunto de dados, as flags de compilação, a CPU (modelo e clock), as caches, a memória e o executável do gem5 (`gem5_sha256`). Ficam de fora o nome do experimento, a pasta de saída e o campo comparado. Campos que não afetam uma variante também ficam de fora para ela. Hoje é só a VLEN, que não muda a ref nem a custom. Uma ref pareia, assim, com a RVV de qualquer VLEN. Quando a RCB-18 criar a latência das instruções personalizadas, ela entra nessa lista para a ref e a rvv.
+
+**Execuções que não entram.** Uma execução fica fora da comparação, com o motivo, quando não está `completed`, não tem `stats.txt` legível, não imprimiu a linha `RESULT` da base comum ou tem `mismatches` > 0. Execuções repetidas, com a mesma identidade, valem pela mais recente (`run_id`), e as outras são listadas como substituídas.
+
+**Pares rejeitados.** Se `a` e `b` têm checksums diferentes, calcularam resultados diferentes, e o par é rejeitado sem valores: `checksums diferentes: 0x… (ref -O2) × 0x… (custom -O2)`.
+
+### `riscvcnnbench compare`
+
+```bash
+uv run riscvcnnbench compare results                # todas as execuções sob results/
+uv run riscvcnnbench compare results --json
+make compare DIR=results/<campanha>                  # fora do container
+```
+
+Exemplo real (fc S, L1 de 32KiB e memória simple, 6 execuções: as três variantes na minor, a ref com `-O3` na minor e ref e custom na atomic; só ilustração, não é resultado da campanha):
+
+```text
+OPERAÇÃO  PARÂMETROS         CPU          CENÁRIO                     PAR           R_I     R_I_OPS  S_C     IPC_RATIO
+fc        In=512,Out=32,R=1  atomic@1GHz  l1i=32KiB,l1d=32KiB,simple  ref→custom    9.118   9.118    -       -
+fc        In=512,Out=32,R=1  minor@1GHz   l1i=32KiB,l1d=32KiB,simple  custom→rvv    1.676   1.117    0.986   0.588
+fc        In=512,Out=32,R=1  minor@1GHz   l1i=32KiB,l1d=32KiB,simple  ref→custom    9.118   9.118    11.294  1.239
+fc        In=512,Out=32,R=1  minor@1GHz   l1i=32KiB,l1d=32KiB,simple  ref→rvv       15.286  10.183   11.138  0.729
+fc        In=512,Out=32,R=1  minor@1GHz   l1i=32KiB,l1d=32KiB,simple  ref(-O2→-O3)  1.000   1.000    0.998   0.998
+
+5 par(es) aceito(s), 0 rejeitado(s). ...
+```
+
+Depois da tabela vêm, se houver, os pares rejeitados, as execuções fora da comparação e as substituídas, cada uma com o caminho e o motivo. O JSON tem `pairs` (com `kind`, `label`, `a`, `b`, `scenario`, `values`, `missing` e `problem`), `excluded` e `superseded`. A exportação em CSV fica para a RCB-20.
 
 ## Status e falhas
 
@@ -361,6 +453,7 @@ grep -E '^(Sistema|RESULT|Simulação)' $RUN/stdout.log
 grep -E 'fatal|panic' $RUN/stderr.log
 grep -E '^(simInsts|simTicks|system.cpu.numCycles) ' $RUN/gem5/stats.txt
 uv run riscvcnnbench stats $RUN            # métricas do bloco da ROI
+uv run riscvcnnbench compare results       # pares de variantes e de compilador
 
 # O que mudou entre duas execuções
 diff $RUN_A/inputs/experiment.resolved.json $RUN_B/inputs/experiment.resolved.json
