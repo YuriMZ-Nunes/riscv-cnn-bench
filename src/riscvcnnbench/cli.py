@@ -13,7 +13,8 @@ app = typer.Typer(
         "Fluxo: escreva um experimento YAML (veja docs/experiments.md), confira com "
         "`validate` e execute com `run`. Cada execução cria uma pasta própria "
         "(veja docs/results.md); `runs` lista as existentes, `stats` mostra as "
-        "métricas da região de interesse de uma delas e `compare` compara as variantes. "
+        "métricas da região de interesse de uma delas, `compare` compara as variantes e "
+        "`report` exporta tudo em CSV. "
         "`campaign` executa uma matriz de experimentos em lote (veja docs/campaigns.md)."
     ),
     epilog=(
@@ -373,6 +374,45 @@ def compare(
         typer.echo("\nRepetidas, substituídas pela execução mais recente:")
         for path in comparison.superseded:
             typer.echo(f"  {display(path)}")
+
+
+@app.command()
+def report(
+    root: Annotated[
+        Path,
+        typer.Argument(help="Pasta com as execuções, como results/ ou uma campanha."),
+    ] = Path("results"),
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Pasta dos CSVs. Padrão: <pasta>/report/."),
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Regrava runs.csv e pairs.csv se já existirem.")
+    ] = False,
+) -> None:
+    """Exporta as execuções em CSV: runs.csv (uma linha por execução) e pairs.csv.
+
+    runs.csv traz identificação, configuração, linha RESULT, métricas brutas e
+    derivadas da região de interesse e proveniência; pairs.csv, os pares do
+    `compare`. Nada é descartado: falhas, resultados inválidos, checksums
+    diferentes e execuções substituídas ficam marcados. Valor ausente é célula
+    vazia. Colunas em docs/report.md.
+    """
+    from riscvcnnbench.report import ReportError, write_report
+    from riscvcnnbench.runs import display
+
+    if not root.is_dir():
+        _fail(f"pasta não encontrada: {root}")
+    try:
+        written = write_report(root, output, force)
+    except ReportError as error:
+        _fail(str(error))
+    typer.echo(f"Gravado em {display(written.output)}:")
+    typer.echo(
+        f"  runs.csv: {written.runs} execução(ões), {written.valid} válida(s), "
+        f"{written.current} valendo (current), {written.inconsistent} com checksum divergente"
+    )
+    typer.echo(f"  pairs.csv: {written.pairs} par(es), {written.rejected} rejeitado(s)")
 
 
 MatrixArg = Annotated[Path, typer.Argument(help="Matriz da campanha (campaigns/<nome>.yaml).")]

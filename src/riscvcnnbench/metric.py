@@ -97,6 +97,35 @@ WORK: dict[str, tuple[str, Callable[[dict[str, int]], int]]] = {
 }
 
 
+_CONV = {
+    "S": {"H": 16, "W": 16, "Cin": 8, "Cout": 16},
+    "L": {"H": 32, "W": 32, "Cin": 16, "Cout": 32},
+}
+# Formas S e L de docs/scope.md, pelos parâmetros da linha RESULT (R não entra):
+# os mesmos argumentos de experiments/<operação>_{s,l}.yaml.
+SIZES: dict[str, dict[str, dict[str, int]]] = {
+    "conv3x3_direct": _CONV,
+    "conv3x3_im2col": _CONV,
+    "depthwise3x3": {"S": {"H": 16, "W": 16, "C": 32}, "L": {"H": 32, "W": 32, "C": 64}},
+    "pointwise1x1": {
+        "S": {"H": 16, "W": 16, "Cin": 32, "Cout": 32},
+        "L": {"H": 32, "W": 32, "Cin": 64, "Cout": 64},
+    },
+    "maxpool2x2": {"S": {"H": 32, "W": 32, "C": 16}, "L": {"H": 64, "W": 64, "C": 32}},
+    "requant_relu": {"S": {"N": 4096}, "L": {"N": 32768}},
+    "fc": {"S": {"In": 512, "Out": 32}, "L": {"In": 1024, "Out": 512}},
+}
+
+
+def size_of(bench: str | None, params: dict[str, int]) -> str | None:
+    """S ou L, se os parâmetros (sem R) são uma das formas do escopo; senão None."""
+    shape = {key: value for key, value in params.items() if key != "R"}
+    for size, expected in SIZES.get(bench or "", {}).items():
+        if shape == expected:
+            return size
+    return None
+
+
 @dataclass(frozen=True)
 class Ratio:
     """Métrica `scale · numerator / denominator`.
