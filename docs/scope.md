@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); os cenários de CPU e memória, a latência configurável das instruções personalizadas e as caches frias opcionais existem (RCB-18, [scenarios.md](scenarios.md)); a execução em lote existe (RCB-19, [campaigns.md](campaigns.md)); a matriz final, CSV e a campanha (RCB-20+) são **planejados**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); os cenários de CPU e memória, a latência configurável das instruções personalizadas e as caches frias opcionais existem (RCB-18, [scenarios.md](scenarios.md)); a execução em lote (RCB-19, [campaigns.md](campaigns.md)) e as tabelas em CSV (RCB-20, [report.md](report.md)) existem; os gráficos, a matriz final e a campanha (RCB-21+) são **planejados**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -148,7 +148,7 @@ Calculadas a partir das centrais (`metric.py`; fórmulas em [results.md](results
 - por par de variantes no mesmo cenário (ref × custom, ref × rvv, custom × rvv): redução de instruções `R_I` (também em micro-ops), speedup em ciclos `S_C` e razão de IPC, com `S_C = R_I × IPC_b / IPC_a`;
 - contraste de compilador: o mesmo par com variante fixa, `-O2` × outro `-O*`.
 
-A pergunta da proposta (OE4) é respondida comparando a redução de instruções com o speedup em ciclos em cada cenário de memória: a razão de IPC diz quanto da economia de instruções se perde (ou se ganha) em ciclos. `riscvcnnbench compare` mostra os pares; o CSV fica para a RCB-20.
+A pergunta da proposta (OE4) é respondida comparando a redução de instruções com o speedup em ciclos em cada cenário de memória: a razão de IPC diz quanto da economia de instruções se perde (ou se ganha) em ciclos. `riscvcnnbench compare` mostra os pares, e `riscvcnnbench report` os grava em `pairs.csv` ([report.md](report.md)).
 
 ## Estimativa de tempo de simulação
 

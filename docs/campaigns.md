@@ -8,7 +8,7 @@ Uma campanha executa uma matriz de experimentos sem montar cada YAML à mão (RC
 | Matriz de exemplo [`campaigns/exemplo.yaml`](../campaigns/exemplo.yaml) | Existente |
 | Matriz final da campanha | Planejado (RCB-22) |
 | Estimativa de tempo por combinação | Planejado (RCB-22, com o piloto da RCB-23) |
-| Exportação em CSV | Planejado (RCB-20) |
+| Exportação em CSV: `riscvcnnbench report <pasta da campanha>` | Existente (RCB-20, [report.md](report.md)); com colunas `campaign` e `groups` |
 
 ## Comandos
 
@@ -29,7 +29,7 @@ Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [J
 | `--output <pasta>` | todos | Pasta da campanha. Padrão: `output.dir` da matriz ou `results/campaigns/<name>` |
 | `--json` | `plan`, `status` | Saída em JSON |
 
-`campaign status` aceita a matriz ou a pasta da campanha. `riscvcnnbench runs <pasta>`, `stats` e `compare <pasta>` também funcionam sobre a pasta de uma campanha, porque ela só contém execuções normais.
+`campaign status` aceita a matriz ou a pasta da campanha. `riscvcnnbench runs <pasta>`, `stats`, `compare <pasta>` e `report <pasta>` ([report.md](report.md)) também funcionam sobre a pasta de uma campanha, porque ela só contém execuções normais.
 
 ## Matriz
 

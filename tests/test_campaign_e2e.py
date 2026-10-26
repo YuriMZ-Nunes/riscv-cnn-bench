@@ -5,10 +5,11 @@ pois precisa da toolchain RISC-V e do gem5 do fork compilado.
 
 Roda pela CLI uma matriz pequena (fc S, ref e custom, atomic e timing) com um
 grupo que falha de propósito (argumento inválido), confere o estado de cada
-combinação, a retomada sem repetir as concluídas e os pares do compare sobre a
-pasta da campanha.
+combinação, a retomada sem repetir as concluídas, os pares do compare e os CSVs
+do report (RCB-20) sobre a pasta da campanha.
 """
 
+import csv
 import json
 import os
 import subprocess
@@ -88,3 +89,25 @@ groups:
     compare = cli("compare", str(root), "--json")
     labels = sorted(pair["label"] for pair in json.loads(compare.stdout)["pairs"])
     assert labels == ["ref→custom", "ref→custom"]
+
+    report = cli("report", str(root))
+    assert report.returncode == 0, report.stderr
+    with (root / "report" / "runs.csv").open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    # 4 concluídas e as 2 tentativas da que falha, marcadas; só a mais recente vale.
+    assert len(rows) == 6
+    failed = [row for row in rows if row["experiment"] == failing]
+    assert [row["diagnosis"] for row in failed] == ["benchmark", "benchmark"]
+    assert [row["current"] for row in failed] == ["false", "true"]
+    fc = [row for row in rows if row["bench"] == "fc"]
+    assert {(row["size"], row["campaign"], row["groups"], row["problem"]) for row in fc} == {
+        ("S", "e2e", "variantes", "")
+    }
+    assert all(row["insts"] and row["checksum_consistent"] == "true" for row in fc)
+    with (root / "report" / "pairs.csv").open(encoding="utf-8") as handle:
+        pairs = list(csv.DictReader(handle))
+    assert sorted((pair["pair"], pair["cpu"]) for pair in pairs) == [
+        ("ref→custom", "atomic"),
+        ("ref→custom", "timing"),
+    ]
+    assert all(float(pair["r_i"]) > 1 for pair in pairs)
