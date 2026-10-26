@@ -139,7 +139,9 @@ Os intrínsecos são independentes da VLEN: há um `vsetvl` por bloco, e a cauda
 
 Um `vredsum.vs` com LMUL > 1 vira, no gem5, vários micro-ops que encadeiam o parcial pelo registrador de destino, um registrador "fixado" (`VPinVdMicroInst`). A O3CPU só marca esse registrador como pronto depois da última escrita, então não há dependência entre os micro-ops da cadeia, e um deles pode executar antes do anterior. Observado em 21/10/2026 na `fc` e na `pointwise1x1` S: a primeira saída saiu errada só na O3. A atomic, a timing e a minor estavam corretas. No trace `Exec`, o micro-op do segundo registrador do grupo leu `~0`, deixado pelo `vpinvd`, em vez do parcial do micro-op anterior.
 
-Contorno, em `rcb_rvv_reduce`: o acumulador m4 é somado em m1 com 3 `vadd.vv` e só então reduzido por um `vredsum` em LMUL 1, que é um único micro-op. O custo é de 3 instruções vetoriais a mais por saída. As outras instruções com destino fixado que os kernels usam, como os estreitamentos (`vnsra`, `vncvt`) e as cargas com passo, não leem o próprio destino entre micro-ops, e todas as operações passam na O3.
+Contorno, em `rcb_rvv_reduce`: o acumulador m4 é somado em m1 com 3 `vadd.vv` e só então reduzido por um `vredsum` em LMUL 1, que é um único micro-op. O custo é de 3 instruções vetoriais a mais por saída. Os estreitamentos (`vnsra`, `vncvt`) também têm destino fixado, mas não leem o próprio destino entre micro-ops.
+
+**Segunda ocorrência (26/10/2026, RCB-18).** Na CPU `o3-edge`, que tem uma só unidade SIMD ([scenarios.md](scenarios.md#o3-de-borda-o3-edge)), a `pointwise1x1` e a `conv3x3_im2col` RVV deram saídas erradas (3.565 e 1.797 em S); com 2 ou mais unidades SIMD, e na O3 padrão, que tem 4, estavam corretas. O valor inicial do `vredsum` era o bias, e o GCC transformava `vmv.s.x` de um valor lido da memória num `vlse32` com passo zero. No gem5, esse `vlse32` vira dois micro-ops sobre o mesmo registrador fixado: um `vpinvd`, que o enche de uns, e a carga. No trace `Exec`, o `vredsum` leu o registrador entre os dois, com `-1` no lugar do bias: a soma errada difere da certa em exatamente `-1 - bias`. Contorno: o `vredsum` começa de zero e o bias é somado no escalar, depois da redução (módulo 2^32, como no vetor). Os binários RVV não têm mais `vlse`, e as sete operações passam na `o3-edge` com uma unidade SIMD em S e, nas quatro afetadas, também em L. A RVV dessas quatro operações ficou com cerca de 2 instruções a menos por saída. Nenhum dos dois defeitos foi reportado ao gem5 oficial.
 
 ## Oráculos
 
@@ -184,26 +186,26 @@ As métricas por MAC da RCB-17 (`insts_per_work`, `cycles_per_work`, `work_per_c
 
 ### Três variantes
 
-Medição de 21/10/2026, no gem5 atomic, `-O2`, GCC 13.3 e VLEN 256. A tabela mostra o `numInsts` da ROI (bloco 1 do `stats.txt`) e, na RVV, também o `numOps`. Nas variantes `ref` e `custom`, `numOps` = `numInsts`. As razões dividem as instruções da referência pelas da variante. As colunas "por MAC" usam os MACs nominais, e no pooling e na requantização contam por elemento.
+Medição de 21/10/2026, no gem5 atomic, `-O2`, GCC 13.3 e VLEN 256; a coluna `rvv` das quatro operações com `rcb_rvv_reduce` (conv direta, im2col, pointwise e FC) foi medida de novo em 26/10/2026, depois do segundo contorno da [limitação do gem5](#limitação-do-gem5-reduções-rvv-na-o3cpu) (RCB-18). A tabela mostra o `numInsts` da ROI (bloco 1 do `stats.txt`) e, na RVV, também o `numOps`. Nas variantes `ref` e `custom`, `numOps` = `numInsts`. As razões dividem as instruções da referência pelas da variante. As colunas "por MAC" usam os MACs nominais, e no pooling e na requantização contam por elemento.
 
-Isto é **contagem de instruções**, não desempenho: a CPU atomic não modela latência, e uma instrução RVV com LMUL 4 faz o trabalho de várias. Ciclos e IPC serão medidos nas CPUs detalhadas (RCB-18 em diante).
+Isto é **contagem de instruções**, não desempenho: a CPU atomic não modela latência, e uma instrução RVV com LMUL 4 faz o trabalho de várias. Ciclos e IPC são medidos nas CPUs detalhadas, nos cenários de [scenarios.md](scenarios.md) (RCB-18); a campanha é das RCB-19 em diante.
 
 | Operação | Tamanho | `ref` | `custom` | `rvv` | `rvv` `numOps` | `ref`/`custom` | `ref`/`rvv` | `custom` por MAC | `rvv` por MAC |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `conv3x3_direct` | S | 2.499.690 | 719.552 | 1.017.131 | 1.143.278 | 3,5× | 2,5× | 2,44 | 3,45 |
-| | L | 36.586.544 | 7.886.016 | 8.372.129 | 9.699.748 | 4,6× | 4,4× | 1,67 | 1,77 |
-| `conv3x3_im2col` | S | 2.324.694 | 489.465 | 468.967 | 563.178 | 4,7× | 5,0× | 1,66 | 1,59 |
-| | L | 34.938.815 | 5.809.561 | 4.496.336 | 5.741.523 | 6,0× | 7,8× | 1,23 | 0,95 |
+| `conv3x3_direct` | S | 2.499.690 | 719.552 | 1.008.941 | 1.130.992 | 3,5× | 2,5× | 2,44 | 3,42 |
+| | L | 36.586.544 | 7.886.016 | 8.306.595 | 9.601.446 | 4,6× | 4,4× | 1,67 | 1,76 |
+| `conv3x3_im2col` | S | 2.324.694 | 489.465 | 460.777 | 550.892 | 4,7× | 5,0× | 1,66 | 1,56 |
+| | L | 34.938.815 | 5.809.561 | 4.430.802 | 5.643.221 | 6,0× | 7,9× | 1,23 | 0,94 |
 | `depthwise3x3` | S | 975.113 | 160.373 | 45.146 | 71.222 | 6,1× | 21,6× | 2,18 | 0,61 |
 | | L | 7.992.565 | 1.283.237 | 339.430 | 553.246 | 6,2× | 23,5× | 2,18 | 0,58 |
-| `pointwise1x1` | S | 1.976.613 | 305.198 | 329.781 | 436.280 | 6,5× | 6,0× | 1,16 | 1,26 |
-| | L | 30.480.778 | 4.268.078 | 3.544.474 | 4.855.197 | 7,1× | 8,6× | 1,02 | 0,85 |
+| `pointwise1x1` | S | 1.976.613 | 305.198 | 313.399 | 411.706 | 6,5× | 6,3× | 1,16 | 1,20 |
+| | L | 30.480.778 | 4.268.078 | 3.413.404 | 4.658.591 | 7,1× | 8,9× | 1,02 | 0,81 |
 | `maxpool2x2` | S | 113.898 | 10.221 | 6.857 | 6.857 | 11,1× | 16,6× | 0,62 por elemento | 0,42 por elemento |
 | | L | 898.931 | 71.069 | 26.953 | 26.953 | 12,6× | 33,4× | 0,54 por elemento | 0,21 por elemento |
 | `requant_relu` | S | 49.182 | 24.603 | 2.602 | 8.234 | 2,0× | 18,9× | 6,01 por elemento | 0,64 por elemento |
 | | L | 393.246 | 196.635 | 20.522 | 65.578 | 2,0× | 19,2× | 6,00 por elemento | 0,63 por elemento |
-| `fc` | S | 115.270 | 12.642 | 7.541 | 11.320 | 9,1× | 15,3× | 0,77 | 0,46 |
-| | L | 3.678.746 | 398.370 | 226.345 | 344.108 | 9,2× | 16,3× | 0,76 | 0,43 |
+| `fc` | S | 115.270 | 12.642 | 7.479 | 11.226 | 9,1× | 15,4× | 0,77 | 0,46 |
+| | L | 3.678.746 | 398.370 | 225.323 | 342.574 | 9,2× | 16,3× | 0,76 | 0,43 |
 
 Leitura da tabela:
 
@@ -279,7 +281,7 @@ Os tamanhos L no gem5 e os tamanhos S nas CPUs detalhadas não entram no e2e, pe
 
 - **Qualidade das implementações.** As três são razoáveis, mas não ajustadas ao máximo: nenhuma desenrola laços à mão, e a RVV requantiza as operações de produto escalar no escalar. As conclusões valem para estas implementações. O ganho das variantes é medido contra a referência. Outra versão do GCC ou outro nível de otimização mudam as contagens; a proveniência de cada execução registra a toolchain.
 - **Oráculo simulado.** A verificação custa cerca de tanto quanto o kernel no gem5, e é mantida em todas as CPUs para que cada execução da campanha confira a própria saída (decisão em [scope.md](scope.md#estimativa-de-tempo-de-simulação)).
-- **Caches no início da ROI.** A ROI começa com as caches aquecidas pela inicialização ([kernel_base.md](kernel_base.md#cuidados)), e a decisão fica para a RCB-18.
+- **Caches no início da ROI.** A ROI começa com as caches aquecidas pela inicialização ([kernel_base.md](kernel_base.md#cuidados)); `benchmark.cache_state: cold` as esvazia antes ([scenarios.md](scenarios.md#estado-das-caches-no-início-da-roi), RCB-18).
 - **im2col escalar nas três variantes.** A montagem do buffer é a mesma em todas, e só a GEMM muda. Uma RVV completa também vetorizaria a cópia.
 - **Contorno no gem5.** A redução RVV em LMUL 1 contorna a [limitação da O3](#limitação-do-gem5-reduções-rvv-na-o3cpu), com 3 instruções a mais por saída nas operações de produto escalar.
 - **Erro comum.** Kernel e oráculo compartilham `rcb_requantize`. A fórmula é conferida pelos 39 casos de [custom_instructions.md](custom_instructions.md).

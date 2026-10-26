@@ -1,7 +1,7 @@
 # Requantização int32 -> int8 com ReLU, tamanho L (dados excedem a L1 e cabem na L2 de 256KiB).
 # args: [N, R]. Formas em docs/scope.md; kernels em docs/kernels.md.
-# CPU atomic (padrão): validação funcional. Os cenários de medição ficam
-# para a RCB-18.
+# CPU atomic (padrão): validação funcional. Para medir, escolha CPU e cenário
+# de memória (scenario:), como em fc_s_cenario.yaml; docs/scenarios.md.
 name: requant_relu_l
 benchmark:
   name: requant_relu

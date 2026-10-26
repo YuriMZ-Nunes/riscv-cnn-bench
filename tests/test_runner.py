@@ -23,9 +23,10 @@ def test_resolved_config_fills_defaults(tmp_path: Path) -> None:
     assert resolved_config(experiment) == {
         "name": "x",
         "description": "",
-        "benchmark": {"name": "hello_riscv", "args": [], "variant": "ref"},
+        "scenario": None,
+        "benchmark": {"name": "hello_riscv", "args": [], "variant": "ref", "cache_state": "warm"},
         "compiler": {"flags": ["-O2"]},
-        "cpu": {"model": "atomic", "clock": "1GHz", "vlen": 256},
+        "cpu": {"model": "atomic", "clock": "1GHz", "vlen": 256, "custom_latency": 3},
         "cache": {"l1i": None, "l1d": None, "l2": None},
         "memory": {"type": "simple", "size": "512MiB"},
         "output": {"dir": str(PROJECT_ROOT / "results" / "x")},

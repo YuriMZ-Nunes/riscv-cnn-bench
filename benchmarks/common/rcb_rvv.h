@@ -52,6 +52,14 @@ static inline vint32m4_t rcb_rvv_mac(vint32m4_t acc, const int8_t *a, const int8
  * dependência entre eles, e a O3 pode executar um micro-op antes do anterior
  * (resultado errado, observado na fc e na pointwise). Com LMUL 1 o vredsum é
  * um único micro-op. Ver docs/kernels.md.
+ *
+ * Segundo contorno, da mesma limitação (RCB-18): init entra no escalar, depois
+ * da redução. Com init no valor inicial do vredsum (vmv.s.x de um valor lido
+ * da memória), o GCC emite vlse32 com passo zero, que no gem5 são dois
+ * micro-ops sobre o mesmo registrador (vpinvd, que o enche de uns, e a carga),
+ * e a O3 com uma só unidade SIMD deixava o vredsum ler o registrador entre os
+ * dois (resultado errado na pointwise e na im2col, na CPU o3-edge). A soma é
+ * módulo 2^32, como no vetor.
  */
 static inline int32_t rcb_rvv_reduce(vint32m4_t acc, int32_t init)
 {
@@ -60,9 +68,9 @@ static inline int32_t rcb_rvv_reduce(vint32m4_t acc, int32_t init)
                                             __riscv_vget_v_i32m4_i32m1(acc, 1), vl);
     part = __riscv_vadd_vv_i32m1(part, __riscv_vget_v_i32m4_i32m1(acc, 2), vl);
     part = __riscv_vadd_vv_i32m1(part, __riscv_vget_v_i32m4_i32m1(acc, 3), vl);
-    vint32m1_t sum = __riscv_vmv_s_x_i32m1(init, 1);
+    vint32m1_t sum = __riscv_vmv_s_x_i32m1(0, 1);
     sum = __riscv_vredsum_vs_i32m1_i32m1(part, sum, vl);
-    return __riscv_vmv_x_s_i32m1_i32(sum);
+    return (int32_t)((uint32_t)__riscv_vmv_x_s_i32m1_i32(sum) + (uint32_t)init);
 }
 
 /*

@@ -13,6 +13,7 @@ from riscvcnnbench.metric import (
     compare,
     derive,
     parse_result,
+    scenario_label,
 )
 from riscvcnnbench.parser import METRICS, RegionStats
 from riscvcnnbench.runs import Run
@@ -49,13 +50,16 @@ def measured(
     data: str = "random",
     gem5: str = "hash",
     bench: str | None = "fc",
+    latency: int = 3,
+    cache_state: str = "warm",
 ) -> RunMetrics:
     """Execução sintética: fc 512×32 R=1 com as métricas e o cenário dados."""
     resolved = {
         "name": f"fc_{variant}",
-        "benchmark": {"name": "fc", "args": [], "variant": variant},
+        "scenario": None,
+        "benchmark": {"name": "fc", "args": [], "variant": variant, "cache_state": cache_state},
         "compiler": {"flags": list(flags)},
-        "cpu": {"model": cpu, "clock": "1GHz", "vlen": vlen},
+        "cpu": {"model": cpu, "clock": "1GHz", "vlen": vlen, "custom_latency": latency},
         "cache": {"l1i": None, "l1d": {"size": "32KiB", "assoc": 4}, "l2": None},
         "memory": {"type": memory, "size": "512MiB"},
         "output": {"dir": f"/x/{variant}"},
@@ -254,6 +258,53 @@ def test_vlen_only_matters_for_rvv() -> None:
         "ref→rvv@vlen512",
     ]
     assert all(pair.a.run is not old_ref.run for pair in comparison.pairs)
+
+
+def test_latency_only_matters_for_custom() -> None:
+    old_ref = measured("ref", latency=6, run_id="20261023T000001.000000Z-aaaaaaaa")
+    ref = measured("ref", run_id="20261023T000002.000000Z-bbbbbbbb")
+    custom = measured("custom", insts=200, cycles=800)
+    custom6 = measured("custom", latency=6, insts=200, cycles=1000)
+    rvv6 = measured("rvv", latency=6, insts=250, cycles=500)
+
+    comparison = compare([old_ref, ref, custom, custom6, rvv6])
+
+    # Uma ref serve para as custom de todas as latências, e a rvv também.
+    assert comparison.superseded == [old_ref.run.path]
+    labels = {pair.label: pair.values["s_c"] for pair in comparison.pairs}
+    assert labels == {
+        "ref→custom": 2.5,
+        "ref→custom@lat6": 2.0,
+        "ref→rvv": 4.0,
+        "custom→rvv": 1.6,
+        "custom@lat6→rvv": 2.0,
+    }
+
+
+def test_cold_and_warm_caches_do_not_mix() -> None:
+    warm = measured("ref", run_id="20261023T000001.000000Z-aaaaaaaa")
+    cold = measured("ref", cycles=3000, cache_state="cold", run_id="20261023T000002.000000Z-b")
+    custom_cold = measured("custom", insts=200, cycles=1500, cache_state="cold")
+
+    comparison = compare([warm, cold, custom_cold])
+
+    # Não são repetições uma da outra, e a custom fria só pareia com a ref fria.
+    assert comparison.superseded == []
+    (pair,) = comparison.pairs
+    assert (pair.a.run, pair.values["s_c"]) == (cold.run, 2.0)
+
+
+def test_scenario_label() -> None:
+    resolved = {
+        "benchmark": {"cache_state": "warm"},
+        "cache": {"l1i": {"size": "32KiB"}, "l1d": {"size": "4KiB"}, "l2": None},
+        "memory": {"type": "ddr4"},
+    }
+    assert scenario_label(resolved) == "l1i=32KiB,l1d=4KiB,ddr4"
+    assert scenario_label({**resolved, "scenario": "reduzido"}) == "reduzido"
+    cold = {**resolved, "scenario": "l1-l2", "benchmark": {"cache_state": "cold"}}
+    assert scenario_label(cold) == "l1-l2,cold"
+    assert scenario_label({"memory": {"type": "simple"}}) == "sem-cache,simple"
 
 
 def test_compiler_pairs_keep_the_other_flags() -> None:

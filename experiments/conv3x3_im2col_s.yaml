@@ -1,7 +1,7 @@
 # Convolução 3x3 por im2col + GEMM (mesma camada da direta), tamanho S (dados cabem na L1 de 32KiB).
 # args: [H, W, Cin, Cout, R]. Formas em docs/scope.md; kernels em docs/kernels.md.
-# CPU atomic (padrão): validação funcional. Os cenários de medição ficam
-# para a RCB-18.
+# CPU atomic (padrão): validação funcional. Para medir, escolha CPU e cenário
+# de memória (scenario:), como em fc_s_cenario.yaml; docs/scenarios.md.
 name: conv3x3_im2col_s
 benchmark:
   name: conv3x3_im2col

@@ -1,6 +1,6 @@
 # Formato dos experimentos
 
-Um experimento é um arquivo YAML em `experiments/` que escolhe **o que** rodar (benchmark, variante do kernel e flags), **em qual máquina** (CPU, caches, memória) e **onde** salvar.
+Um experimento é um arquivo YAML em `experiments/` que escolhe **o que** rodar (benchmark, variante do kernel e flags), **em qual máquina** (CPU, caches, memória) e **onde** salvar. Caches e memória podem vir de um cenário nomeado (`scenario`), descrito em [scenarios.md](scenarios.md).
 
 Só `name` e `benchmark.name` são obrigatórios. Todo campo omitido usa um padrão que reproduz a configuração baseline de `configs/gem5/se_riscv.py`.
 
@@ -20,6 +20,8 @@ Para executar, veja [Executar um experimento](#executar-um-experimento).
 | [`hello_param_minimal.yaml`](../experiments/hello_param_minimal.yaml) | Mínimo do benchmark parametrizável. |
 | [`hello_param_cache.yaml`](../experiments/hello_param_cache.yaml) | Variação com todos os campos anotados: CPU timing a 2GHz, L1/L2, DDR4 e flags próprias. |
 | [`conv3x3_direct_s_custom.yaml`](../experiments/conv3x3_direct_s_custom.yaml), [`conv3x3_direct_s_rvv.yaml`](../experiments/conv3x3_direct_s_rvv.yaml) | Mesma operação de `conv3x3_direct_s.yaml` nas variantes `custom` e `rvv`. |
+| [`fc_s_cenario.yaml`](../experiments/fc_s_cenario.yaml) | Medição num cenário: `scenario`, CPU `o3-edge`, latência das instruções personalizadas e caches frias. |
+| [`insn_latency.yaml`](../experiments/insn_latency.yaml) | Cadeia dependente de uma instrução, para ver a latência (`cpu.custom_latency`) nos ciclos. |
 
 Configuração mínima:
 
@@ -35,13 +37,16 @@ benchmark:
 | --- | --- | --- |
 | `name` | obrigatório | Letras, números, `_` e `-`. Identifica o experimento e a pasta de saída. |
 | `description` | vazio | Texto livre. |
+| `scenario` | nenhum | Cenário de memória de [`configs/scenarios.yaml`](../configs/scenarios.yaml): `sem-cache`, `l1`, `l1-l2` ou `reduzido`. Preenche `cache` e `memory`, que então não podem aparecer no arquivo. Ver [scenarios.md](scenarios.md#cenários-de-memória). |
 | `benchmark.name` | obrigatório | Pasta em `benchmarks/` que contém um `Makefile`. |
 | `benchmark.args` | `[]` | Lista de argumentos passados ao programa. Números são aceitos e convertidos em texto (`[65536, 2]` equivale a `["65536", "2"]`). |
 | `benchmark.variant` | `ref` | Implementação do kernel: `ref` (referência escalar), `custom` (instruções personalizadas, só no gem5 do fork) ou `rvv` (extensão V). As operações de CNN têm as três; os demais benchmarks, só `ref`. Ver [Variantes](#variantes). |
+| `benchmark.cache_state` | `warm` | Caches no início da região de interesse: `warm` (aquecidas pela inicialização dos dados) ou `cold` (o gem5 as esvazia logo antes da ROI). `cold` exige caches e um benchmark que marque a ROI. Ver [scenarios.md](scenarios.md#estado-das-caches-no-início-da-roi). |
 | `compiler.flags` | `["-O2"]` | Flags escolhidas pelo experimento. `-static -march=<da variante> -mabi=lp64d` são sempre adicionadas pelo Makefile do benchmark, depois destas. |
-| `cpu.model` | `atomic` | `atomic`, `timing`, `minor` (in-order) ou `o3` (out-of-order). |
+| `cpu.model` | `atomic` | `atomic`, `timing`, `minor` (in-order), `o3` (out-of-order, padrão do gem5) ou `o3-edge` (out-of-order estreita, de borda). Ver [Escolhendo a CPU](#escolhendo-a-cpu). |
 | `cpu.clock` | `1GHz` | Número seguido de `MHz` ou `GHz`. |
 | `cpu.vlen` | `256` | VLEN da extensão V, em bits: `128`, `256`, `512` ou `1024`. Só a variante `rvv` usa registradores vetoriais. O padrão é o do gem5. |
+| `cpu.custom_latency` | `3` | Latência, em ciclos (1 a 64), de `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` nas CPUs `minor`, `o3` e `o3-edge`. O padrão é a do `mul`. Nas `atomic` e `timing`, que não modelam a latência das unidades, só o padrão é aceito. Ver [scenarios.md](scenarios.md#latência-das-instruções-personalizadas). |
 | `cache.l1i`, `cache.l1d`, `cache.l2` | sem cache | Cada nível tem `size` (`KiB`/`MiB`/`GiB`) e `assoc` (padrão 4). A L2 exige L1i e L1d. |
 | `memory.type` | `simple` | `simple` (latência fixa) ou `ddr4` (DDR4-2400 com controlador). |
 | `memory.size` | `512MiB` | `KiB`/`MiB`/`GiB`. |
@@ -63,10 +68,11 @@ As variantes disponíveis de um benchmark são `ref` mais uma por arquivo `kerne
 
 - `atomic`: acessos instantâneos, sem modelo de tempo. É o mais rápido de simular e serve para **validação funcional**. Ticks e ciclos dessa CPU não medem desempenho real.
 - `timing`: CPU simples, mas com tempo de acesso à memória e caches modelado.
-- `minor`: pipeline in-order.
-- `o3`: pipeline out-of-order, o mais detalhado e o mais lento de simular.
+- `minor`: pipeline in-order de dupla emissão (o padrão do gem5).
+- `o3-edge`: pipeline out-of-order estreita, com larguras e filas de um núcleo de borda (MediumBOOM). É a out-of-order da campanha.
+- `o3`: a out-of-order padrão do gem5, de 8 instruções por ciclo, larga demais para a borda. Fica como contraste.
 
-Para comparar caches ou memória, use `timing`, `minor` ou `o3`.
+Para comparar caches ou memória, use `timing`, `minor` ou `o3-edge`. Os parâmetros de cada CPU e a escolha estão em [scenarios.md](scenarios.md#cpus).
 
 ## Benchmarks disponíveis
 
@@ -82,6 +88,7 @@ Para comparar caches ou memória, use `timing`, `minor` ou `o3`.
 | `fc` | `[In, Out, R]`. S: `512 32`; L: `1024 512`. | idem, com `In=` e `Out=` |
 | `int8_base_example` | `[K, M, R]`: `M` produtos escalares int8 de tamanho `K` (múltiplo de 8) com requantização, repetidos `R` vezes na região de interesse. Padrão `64 16 1`. | `RESULT bench=int8_base_example variant=ref data=random K=.. M=.. R=.. checksum=0x... mismatches=0` |
 | `cnn_insn_semantics` | nenhum. Com `compiler.flags: [-O2, -DCNN_INSN_HW]` usa as instruções personalizadas reais, que só existem no gem5 do fork (`third_party/gem5`). | `RESULT mode=model cases=39 failures=0` (ou `mode=hw`) |
+| `insn_latency` | `[OP, N]`: `N` iterações de 8 instruções `OP` em cadeia dependente (0 `mul`, 1 `cnn.dot8`, 2 `cnn.dwmac`, 3 `cnn.rqnt`, 4 `cnn.max8`), conferidas com o modelo em C. Padrão `1 2000`. Só no gem5 do fork. | `RESULT bench=insn_latency variant=custom data=random OP=.. N=.. checksum=0x... mismatches=0` |
 
 O `hello_riscv_param` existe para testar as opções. Com `N` maior que a L1 (por exemplo, `65536` = 256KiB), as faltas de cache e o tipo de memória passam a aparecer nas estatísticas. Os dois `hello_*` são de teste, não CNNs. As sete operações de CNN são descritas em [kernels.md](kernels.md); cada uma tem `experiments/<operação>_s.yaml` e `_l.yaml` (variante `ref`; troque `benchmark.variant` para as outras), e as três variantes têm o mesmo checksum. Para os conjuntos de dados extremos da validação, acrescente `-DRCB_DATA=1` (`satpos`) ou `-DRCB_DATA=2` (`satneg`) em `compiler.flags` ([kernel_base.md](kernel_base.md#dados-determinísticos)); a linha `RESULT` mostra `data=`. O `int8_base_example` exercita a base comum dos kernels e separa a região de interesse no `stats.txt` ([kernel_base.md](kernel_base.md)). O `cnn_insn_semantics` confere os casos de teste das instruções personalizadas, descritos em [custom_instructions.md](custom_instructions.md).
 
@@ -92,7 +99,7 @@ O formato corresponde a três peças:
 | Seção do YAML | Peça |
 | --- | --- |
 | `benchmark`, `compiler` | `make -C benchmarks/<name> FLAGS="<flags>" VARIANT=<variant>` |
-| `cpu`, `cache`, `memory`, `benchmark.args` | Argumentos de [`configs/gem5/se_riscv_configurable.py`](../configs/gem5/se_riscv_configurable.py), gerados por `Experiment.gem5_args()` |
+| `cpu`, `cache`, `memory`, `benchmark.args`, `benchmark.cache_state` | Argumentos de [`configs/gem5/se_riscv_configurable.py`](../configs/gem5/se_riscv_configurable.py), gerados por `Experiment.gem5_args()` (`scenario` já chega expandido em `cache` e `memory`) |
 | `output` | `--results-dir` de `scripts/run-gem5.py` |
 
 A configuração baseline `se_riscv.py` continua intacta, e `make hello-run-gem5` segue usando-a.
@@ -153,7 +160,7 @@ Erro: experiments/meu.yaml tem 7 problemas:
   linha 2: benchmark.name: campo obrigatório ausente
   linha 3: benchmark.args: deve ser uma lista, como ["a", "b"], mas recebeu 4096
   linha 4: cahce: campo desconhecido; você quis dizer 'cache'?
-  linha 8: cpu.model: valor 'pentium' inválido; use 'atomic', 'timing', 'minor' ou 'o3'
+  linha 8: cpu.model: valor 'pentium' inválido; use 'atomic', 'timing', 'minor', 'o3' ou 'o3-edge'
   linha 9: cpu.clock: deve ser texto, mas recebeu 2; use uma frequência como 800MHz ou 2GHz
   linha 11: memory.size: deve ser texto, mas recebeu 512; use um tamanho como 32KiB, 512MiB ou 1GiB
 ```
@@ -170,13 +177,17 @@ Além disso, são detectados:
 | Benchmark inexistente | Lista os benchmarks disponíveis em `benchmarks/` |
 | Variante que o benchmark não tem | `o benchmark 'hello_riscv' não tem a variante 'rvv'; disponíveis: ref` |
 | L2 sem L1i/L1d | `cache.l2 requer cache.l1i e cache.l1d` |
+| Cenário inexistente | `cenário 'l1l2' não existe em configs/scenarios.yaml; você quis dizer 'l1-l2'?` |
+| `scenario` junto com `cache` ou `memory` | `não use junto com scenario (l1), que já define cache e memory; tire um dos dois` |
+| Latência própria na atomic ou timing | `cpu.custom_latency só tem efeito nas CPUs minor, o3 e o3-edge; ...` |
+| `cache_state: cold` sem caches ou sem ROI | `'cold' esvazia as caches no início da ROI, mas o experimento não tem caches; ...` e `'cold' exige um benchmark que marque a região de interesse (rcb_roi_begin); ...` |
 
-O benchmark e suas variantes só são procurados em `benchmarks/` quando o restante do arquivo está válido.
+O benchmark, suas variantes e a ROI (para `cache_state: cold`) só são procurados em `benchmarks/` quando o restante do arquivo está válido.
 
 No código, `load_experiment()` levanta `ConfigError`, cujo atributo `problems` traz a lista de mensagens.
 
 ## Limitações
 
-- Um experimento descreve **uma** execução; varreduras (vários tamanhos de cache, por exemplo) ainda não fazem parte do formato.
-- Latências de cache, MSHRs e parâmetros internos de CPU usam valores fixos da configuração gem5, não configuráveis pelo YAML.
-- Os YAMLs das operações (`experiments/<operação>_{s,l}.yaml`) usam a CPU atomic, para validação funcional. Os cenários de medição ficam para a RCB-18.
+- Um experimento descreve **uma** execução; varreduras (vários tamanhos de cache, por exemplo) ainda não fazem parte do formato (RCB-19).
+- Latências de cache, MSHRs e parâmetros internos de CPU, fora a latência das instruções personalizadas, usam valores fixos da configuração gem5, não configuráveis pelo YAML ([scenarios.md](scenarios.md#parâmetros-fixos)).
+- Os YAMLs das operações (`experiments/<operação>_{s,l}.yaml`) usam a CPU atomic, para validação funcional. Para medir, escolha a CPU e um `scenario`, como em `fc_s_cenario.yaml`.

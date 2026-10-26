@@ -8,18 +8,18 @@ Referência técnica das instruções RISC-V personalizadas do framework: codifi
 | Header [benchmarks/common/cnn_insn.h](../benchmarks/common/cnn_insn.h): macros `.insn` e modelo em C | Existente |
 | Benchmark [cnn_insn_semantics](../benchmarks/cnn_insn_semantics/main.c) com os casos de teste | Existente; o modo modelo roda no QEMU e em qualquer gem5, o modo `hw` no gem5 do fork |
 | Instruções no decodificador do gem5 (fork `YuriMZ-Nunes/gem5`, branch `riscv-cnn-bench`) | Existente (RCB-13), nas CPUs atomic, timing, minor e o3. Ver [Implementação no gem5](#implementação-no-gem5) |
-| Latência própria e configurável das instruções | Planejado. Hoje usam as unidades `IntMult` e `IntAlu` de cada CPU |
+| Latência própria e configurável das instruções | Existente (RCB-18): classe `CnnMult` no fork e campo `cpu.custom_latency` no YAML. Ver [Latência configurável](#latência-configurável) |
 | Kernels que usam as instruções (`kernel_custom.c` das sete operações) | Existente (RCB-14), ver [kernels.md](kernels.md#instruções-personalizadas-kernel_customc) |
 
 ## Resumo
 
 | Instrução | Faz | Operações | Classe no gem5 |
 | --- | --- | --- | --- |
-| `cnn.dot8 rd, rs1, rs2` | Produto escalar de 8 pares int8, acumulado no int32 de `rd` | Conv 3×3 direta, im2col+GEMM, pointwise, FC | `IntMult` |
-| `cnn.dwmac rd, rs1, rs2, p` | 2 MACs int8 faixa a faixa em 2 acumuladores int32 de `rd`; `p` escolhe o par de bytes | Depthwise 3×3 | `IntMult` |
+| `cnn.dot8 rd, rs1, rs2` | Produto escalar de 8 pares int8, acumulado no int32 de `rd` | Conv 3×3 direta, im2col+GEMM, pointwise, FC | `CnnMult` |
+| `cnn.dwmac rd, rs1, rs2, p` | 2 MACs int8 faixa a faixa em 2 acumuladores int32 de `rd`; `p` escolhe o par de bytes | Depthwise 3×3 | `CnnMult` |
 | `cnn.max8 rd, rs1, rs2` | Máximo com sinal de 8 int8, byte a byte | Max pooling 2×2 | `IntAlu` |
-| `cnn.rqnt rd, rs1, rs2` | Requantização int32 → int8 com saturação | Requantização e fim das convoluções e da FC | `IntMult` |
-| `cnn.rqnt.relu rd, rs1, rs2` | Idem, com ReLU | Idem | `IntMult` |
+| `cnn.rqnt rd, rs1, rs2` | Requantização int32 → int8 com saturação | Requantização e fim das convoluções e da FC | `CnnMult` |
+| `cnn.rqnt.relu rd, rs1, rs2` | Idem, com ReLU | Idem | `CnnMult` |
 
 Regras comuns:
 
@@ -244,7 +244,7 @@ A saída é `RESULT mode=<model|hw> cases=39 failures=0`, com código de saída 
 
 ## Implementação no gem5
 
-As instruções estão no fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nunes/gem5), branch `riscv-cnn-bench`, que é o submódulo `third_party/gem5` (RCB-13). É a única mudança do fork em relação ao gem5 oficial, e fica restrita a `src/arch/riscv/`:
+As instruções estão no fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nunes/gem5), branch `riscv-cnn-bench`, que é o submódulo `third_party/gem5` (RCB-13). São as únicas mudanças do fork em relação ao gem5 oficial: o decodificador em `src/arch/riscv/` e, desde a RCB-18, a classe de operação `CnnMult` em `src/cpu/`:
 
 | Arquivo do fork | Conteúdo |
 | --- | --- |
@@ -253,16 +253,18 @@ As instruções estão no fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nun
 | `src/arch/riscv/isa/formats/cnn.isa` | Formato `CnnOp` do parser do ISA |
 | `src/arch/riscv/isa/decoder.isa` | Casos `0x02` (custom-0) e `0x0a` (custom-1) no `decode OPCODE5`, dentro de `decode RVTYPE` (só RV64) |
 | `src/arch/riscv/insts/SConscript`, `isa/includes.isa`, `isa/formats/formats.isa` | Registro dos arquivos novos |
+| `src/cpu/FuncUnit.py`, `src/cpu/op_class.hh` | Classe de operação `CnnMult` (`CnnMultOp` em C++), a última da enumeração `OpClass` (RCB-18) |
+| `src/cpu/o3/FuncUnitConfig.py`, `src/cpu/minor/BaseMinorCPU.py` | `CnnMult` nas unidades de multiplicação padrão (`IntMultDiv` da O3 e `MinorDefaultIntMulFU`), com a latência do `mul` (3) |
 
 - **Decodificação.** Segue a tabela de codificação. As combinações reservadas e qualquer uso em RV32 caem no `Unknown instruction` padrão do decodificador.
 - **Fontes e destino.** `cnn.dot8` e `cnn.dwmac` leem `Rd` além de `Rs1` e `Rs2`. O parser do ISA marca `Rd` como fonte e destino porque ele aparece dos dois lados da atribuição. Isso cria a dependência pelo acumulador nas CPUs minor e o3.
-- **Classe de operação.** `IntMultOp` para `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt*`, como no `mul`. `cnn.max8` usa a classe padrão, `IntAluOp`. As instruções contam em `commitStats0.committedInstType::IntMult` e `::IntAlu`.
+- **Classe de operação.** `CnnMultOp` para `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt*` (até a RCB-17 era `IntMultOp`, a do `mul`). `cnn.max8` usa a classe padrão, `IntAluOp`. As instruções contam em `commitStats0.committedInstType::CnnMult` e `::IntAlu`.
 - **Contagem.** Cada instrução é uma só, sem micro-operações, e conta 1 em `numInsts` e `numOps`.
 - **Nomes no gem5.** No trace (`--debug-flags=Exec`), os mnemônicos usam `_` no lugar do ponto: `cnn_dot8 a6, a1, a2`, `cnn_dwmac a6, a1, a2, 3`, `cnn_max8`, `cnn_rqnt` e `cnn_rqnt_relu`. No `cnn.dwmac`, o último campo é `p`.
 
 ### Latência por CPU
 
-A latência é a da classe de operação no pool de unidades funcionais de cada CPU. Valores padrão do gem5 do projeto, lidos em `src/cpu/minor/BaseMinorCPU.py` e `src/cpu/o3/FuncUnitConfig.py`:
+A latência é a da classe de operação no pool de unidades funcionais de cada CPU. Valores padrão do gem5 do projeto, lidos em `src/cpu/minor/BaseMinorCPU.py` e `src/cpu/o3/FuncUnitConfig.py`. Nas unidades padrão do fork, `CnnMult` está na mesma unidade do `IntMult`, com a mesma latência; a configuração do projeto muda isso como descrito em [Latência configurável](#latência-configurável):
 
 | Classe | MinorCPU | O3CPU |
 | --- | --- | --- |
@@ -272,7 +274,7 @@ A latência é a da classe de operação no pool de unidades funcionais de cada 
 
 As CPUs atomic e timing ignoram a classe de operação: em `src/cpu/simple/base.cc`, ela só alimenta a estatística `issuedInstType`.
 
-Confirmação medida em 21/10/2026, com um microbenchmark temporário que não faz parte do repositório:
+Confirmação medida em 21/10/2026 (RCB-13, ainda com `IntMult`), com um microbenchmark temporário que não faz parte do repositório; o `insn_latency` da RCB-18 é a versão versionada dele:
 - 2000 iterações de 8 instruções iguais, ou seja, 16000 instruções medidas e ~20 mil no total da ROI;
 - compilado com `-march=rv64g`, sem instruções comprimidas, para que nenhuma instrução de 4 bytes fique desalinhada;
 - L1I e L1D de 32KiB, 1GHz.
@@ -299,7 +301,15 @@ Leitura da tabela:
 
 Em resumo, nas CPUs detalhadas as instruções novas custam o mesmo que um `mul` ou um `add`. Supor que 8 multiplicações cabem na latência de um `mul` é uma hipótese otimista, discutida em [Decisões de projeto](#decisões-de-projeto).
 
-**Limitação: latência própria.** Como `IntMult` é compartilhada com `mul`/`mulw`, mudar a latência dessa classe muda também a referência. Uma latência só das instruções exige uma classe de operação nova no gem5, registrada nas unidades da MinorCPU e da O3CPU. Isso fica para a análise de sensibilidade (RCB-18).
+### Latência configurável
+
+Desde a RCB-18, `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` têm a classe própria `CnnMult`, e a latência dela vem do campo `cpu.custom_latency` do YAML (padrão 3, a do `mul`), sem mudar a do `mul` da referência. A configuração gem5 (`configs/gem5/se_riscv_configurable.py`) aplica o valor assim:
+
+- **O3 (`o3` e `o3-edge`).** `CnnMult` tem um `OpDesc` próprio, com a latência pedida, na mesma unidade `IntMultDiv` do `mul`, com pipeline.
+- **Minor.** Uma unidade da Minor tem uma latência só, e o scoreboard libera o destino no commit, no fim da unidade (um `extraAssumedLat` não teria efeito). Por isso `CnnMult` tem uma unidade só dela, com pipeline e `opLat` igual à latência pedida, ao lado da de multiplicação. Isso vale também com 3, para que só a latência mude entre os valores da matriz.
+- **atomic e timing.** Não modelam a latência das unidades; o YAML só aceita o padrão nelas.
+
+`cnn.max8` continua em `IntAlu`: é um máximo byte a byte, do custo de um `add`. A escolha dos valores da matriz (3 e 6) e a medição com o benchmark `insn_latency` estão em [scenarios.md](scenarios.md#latência-das-instruções-personalizadas).
 
 **Alinhamento em atomic e timing.** Com `-march=rv64gc`, uma instrução de 4 bytes pode começar num endereço 2 mod 4, depois de instruções comprimidas, e então a CPU precisa de duas buscas. No mesmo microbenchmark compilado com `rv64gc` e sem caches, as cadeias de instruções personalizadas ficaram desalinhadas e custaram, por instrução, +1 ciclo na atomic e ~+40 na timing, em relação ao `mul` alinhado. O efeito vale para qualquer instrução de 4 bytes, não só para as personalizadas. Ele deve ser lembrado ao comparar `numCycles` de variantes nessas CPUs.
 
@@ -376,7 +386,7 @@ Resumo das decisões tomadas na RCB-10:
 | Decisão | Motivo |
 | --- | --- |
 | Um acumulador int32 no `cnn.dot8` | Uma saída por registrador e nenhuma redução final. `2^24` cabe em 32 bits |
-| `IntMult` para dot8, dwmac e rqnt; `IntAlu` para max8 | São instruções de multiplicador ou só de comparação. `IntMult` tem latência 3 tanto na Minor quanto na O3, e as classes `Simd*` têm 6 e 1. Supor que 8 multiplicações cabem na latência de um `mul` é hipótese |
+| `IntMult` para dot8, dwmac e rqnt; `IntAlu` para max8 | São instruções de multiplicador ou só de comparação. `IntMult` tem latência 3 tanto na Minor quanto na O3, e as classes `Simd*` têm 6 e 1. Supor que 8 multiplicações cabem na latência de um `mul` é hipótese. Na RCB-18, dot8, dwmac e rqnt passaram para a classe própria `CnnMult`, na mesma unidade, com latência configurável |
 | Instrução própria para a depthwise | Em NHWC os taps de um canal não são contíguos, e acumuladores de 16 bits transbordariam com 9 taps. Por isso são 2 faixas int32 por registrador |
 | Header, modelo em C e benchmark nesta issue | Oráculo para a RCB-15, kernels validáveis antes do gem5 e teste pronto para a RCB-13 |
 | custom-0 e custom-1 | custom-3 é das m5ops e custom-2 é reservado ao RV128 |

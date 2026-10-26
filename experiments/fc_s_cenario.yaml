@@ -1,0 +1,14 @@
+# FC S na variante custom num cenário de medição (RCB-18): CPU o3-edge, cenário
+# de memória "reduzido" (L1d de 4KiB e L2 de 32KiB, ver configs/scenarios.yaml),
+# instruções personalizadas com latência 6 e caches esvaziadas no início da ROI.
+# Cenários, CPUs e estado das caches em docs/scenarios.md.
+name: fc_s_cenario
+scenario: reduzido
+benchmark:
+  name: fc
+  args: [512, 32, 1]
+  variant: custom
+  cache_state: cold
+cpu:
+  model: o3-edge
+  custom_latency: 6

@@ -8,6 +8,11 @@ name: hello_param_cache
 # Texto livre para lembrar o objetivo. Padrão: vazio.
 description: Vetor de 256KiB percorrido 2 vezes, maior que a L1 e igual à L2.
 
+# Cenário de memória nomeado de configs/scenarios.yaml (sem-cache | l1 | l1-l2
+# | reduzido), que preenche cache e memory; não use junto com essas seções.
+# Este exemplo define cache e memory à mão. Padrão: nenhum.
+# scenario: l1-l2
+
 benchmark:
   # Pasta em benchmarks/ com main.c e Makefile. Obrigatório.
   name: hello_riscv_param
@@ -18,6 +23,10 @@ benchmark:
   # personalizadas, só no gem5 do fork) | rvv (extensão V). Só as operações de
   # CNN têm custom e rvv; hello_riscv_param tem apenas ref. Padrão: ref.
   variant: ref
+  # Caches no início da região de interesse: warm (aquecidas pela
+  # inicialização dos dados) | cold (o gem5 as esvazia antes da ROI). cold
+  # exige caches e um benchmark com ROI; hello_riscv_param não tem. Padrão: warm.
+  cache_state: warm
 
 compiler:
   # Flags escolhidas pelo experimento. -static, -march e -mabi são sempre
@@ -26,7 +35,8 @@ compiler:
   flags: ["-O3", "-funroll-loops"]
 
 cpu:
-  # atomic | timing | minor (in-order) | o3 (out-of-order). Padrão: atomic.
+  # atomic | timing | minor (in-order) | o3 (out-of-order, padrão do gem5) |
+  # o3-edge (out-of-order estreita, de borda). Padrão: atomic.
   # atomic serve para validação funcional; os demais modelam tempo.
   model: timing
   # Frequência da CPU, em MHz ou GHz. Padrão: 1GHz.
@@ -34,6 +44,10 @@ cpu:
   # VLEN da extensão V, em bits: 128 | 256 | 512 | 1024. Só afeta a variante
   # rvv. Padrão: 256 (o do gem5).
   vlen: 256
+  # Latência, em ciclos, de cnn.dot8, cnn.dwmac e cnn.rqnt[.relu]. Só afeta a
+  # variante custom nas CPUs minor, o3 e o3-edge; nas atomic e timing, só o
+  # padrão é aceito. Padrão: 3 (a do mul).
+  custom_latency: 3
 
 # Cada nível é opcional; omitido = sem aquele cache. Padrão: sem caches.
 # size em KiB/MiB/GiB; assoc = associatividade (vias). Padrão de assoc: 4.

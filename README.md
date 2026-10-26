@@ -12,8 +12,9 @@ Disponíveis:
 - **Dependências Python travadas:** `uv` e `uv.lock` fixam as versões das dependências Python.
 - **gem5 para RISC-V:** compilação do simulador e configuração em modo Syscall Emulation (SE) com `AtomicSimpleCPU`, usada para validação funcional.
 - **Benchmarks de teste `hello_riscv` e `hello_riscv_param`:** validam a compilação cruzada e a execução no QEMU e no gem5; o segundo tem tamanho de vetor e repetições configuráveis. Não são CNNs.
-- **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
+- **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`/`o3-edge`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
+- **Cenários de CPU e memória:** quatro cenários de memória nomeados (`sem-cache`, `l1`, `l1-l2`, `reduzido`, em `configs/scenarios.yaml`, escolhidos por `scenario` no YAML), uma O3 estreita de borda (`o3-edge`), latência configurável das instruções personalizadas (`cpu.custom_latency`, classe `CnnMult` no fork do gem5) e caches aquecidas ou esvaziadas no início da região de interesse (`benchmark.cache_state`), com a tabela do que cabe em cada nível (ver [docs/scenarios.md](docs/scenarios.md)).
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5.
 - **Instruções personalizadas no gem5:** o submódulo `third_party/gem5` aponta para o fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nunes/gem5), branch `riscv-cnn-bench`, que tem código próprio: as cinco instruções no decodificador RISC-V. Um binário compilado com `-DCNN_INSN_HW` roda nas CPUs atomic, timing, minor e o3.
@@ -25,8 +26,7 @@ Disponíveis:
 
 Planejados (ainda não implementados):
 
-- Latência própria e configurável para as instruções personalizadas (hoje usam as unidades `IntMult`/`IntAlu` da CPU).
-- Cenários de hierarquia de memória e de CPU definidos para a campanha.
+- Execução em lote da matriz de experimentos (operações × variantes × CPUs × cenários).
 - Exportação dos resultados em tabela (CSV) e gráficos.
 - Varreduras de parâmetros (vários experimentos a partir de um arquivo).
 
@@ -42,6 +42,7 @@ riscv-cnn-bench/
 ├── uv.lock                   # Trava de versões de dependências Python
 ├── configs/                  # Arquivos de configuração do simulador e experimentos
 │   ├── defaults.yaml         # Placeholder (vazio)
+│   ├── scenarios.yaml        # Cenários de memória nomeados (campo scenario do YAML)
 │   └── gem5/
 │       ├── se_riscv.py              # Configuração baseline do gem5 (SysCall Emulation)
 │       └── se_riscv_configurable.py # CPU, caches e memória configuráveis
@@ -137,7 +138,7 @@ make hello-build      # Compila o benchmark
 make hello-run        # Executa no QEMU
 make hello-run-gem5   # Executa no gem5 e salva a execução em results/hello_riscv/<run_id>/
 make e2e-test         # Teste de ponta a ponta: compila, executa no gem5 e verifica log, retorno e stats
-make validate         # e2e + equivalência das variantes (S/L, dados extremos) antes da campanha
+make validate         # e2e + equivalência das variantes (S/L, dados extremos, CPUs com tempo) antes da campanha
 ```
 
 O `make e2e-test` requer o gem5 compilado (`make gem5-build`). Ele usa pastas temporárias e não altera `build/` nem `results/`.
@@ -171,8 +172,8 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
-| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`, e as comparações entre variantes. |
-| `make validate` | Validação antes da campanha: e2e mais a equivalência das três variantes em S e L e com dados extremos, no QEMU e no gem5 (`RCB_JOBS=N` para o paralelismo). |
+| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`, as comparações entre variantes e os cenários (latência das instruções personalizadas, os quatro cenários de memória, caches frias e a `o3-edge`). |
+| `make validate` | Validação antes da campanha: e2e mais a equivalência das três variantes em S e L e com dados extremos, no QEMU e no gem5, e as três variantes em S nas CPUs timing, minor e o3-edge (`RCB_JOBS=N` para o paralelismo). |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
 | `make format` | Formata apenas o código próprio em `src/` e `tests/`. |
@@ -198,7 +199,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 
 O gem5 fica em `third_party/gem5/`, um submódulo que aponta para o fork [YuriMZ-Nunes/gem5](https://github.com/YuriMZ-Nunes/gem5), branch `riscv-cnn-bench`, construído sobre o gem5 oficial. Variar CPU, cache, memória ou workload não exige alterar o gem5: as configurações próprias ficam em `configs/gem5/`, e os scripts Python, YAMLs, benchmarks e o parser de estatísticas ficam fora do submódulo.
 
-O fork tem código próprio só para as instruções personalizadas: `src/arch/riscv/insts/cnn.{hh,cc}`, `src/arch/riscv/isa/formats/cnn.isa` e o decodificador (ver [docs/custom_instructions.md](docs/custom_instructions.md#implementação-no-gem5)). Uma mudança no gem5 segue este fluxo:
+O fork tem código próprio só para as instruções personalizadas: `src/arch/riscv/insts/cnn.{hh,cc}`, `src/arch/riscv/isa/formats/cnn.isa`, o decodificador e a classe de operação `CnnMult` em `src/cpu/` (ver [docs/custom_instructions.md](docs/custom_instructions.md#implementação-no-gem5)). Uma mudança no gem5 segue este fluxo:
 
 1. commit na branch `riscv-cnn-bench` do fork;
 2. `make gem5-build`, que recompila e registra o commit, a branch e a URL do build;
@@ -258,5 +259,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Instruções personalizadas: especificação e casos de teste](docs/custom_instructions.md)
 - [Base comum dos kernels int8 e região de interesse](docs/kernel_base.md)
 - [Kernels das operações: formas, referência, oráculos e instruções medidas](docs/kernels.md)
+- [Cenários de CPU e memória, latência das instruções e estado das caches](docs/scenarios.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

@@ -1,13 +1,18 @@
 /*
  * Região de interesse (ROI) com m5ops do gem5 (RCB-11).
  *
- *     rcb_roi_begin();   // m5_reset_stats: zera as estatísticas
+ *     rcb_roi_begin();   // m5_work_begin e m5_reset_stats: zera as estatísticas
  *     kernel(...);       // só isto entra no primeiro bloco do stats.txt
  *     rcb_roi_end();     // m5_dump_reset_stats: grava o bloco e zera de novo
  *
  * No gem5, o stats.txt fica com dois blocos: o primeiro só com a ROI e o
  * segundo do fim da ROI até o fim do programa. A inicialização antes da ROI
  * não aparece em nenhum bloco.
+ *
+ * O m5_work_begin antes do m5_reset_stats marca o início da ROI para a
+ * configuração do gem5: com caches frias (benchmark.cache_state: cold), o gem5
+ * para nele e esvazia as caches; com caches aquecidas (padrão), ele não faz
+ * nada. Fica fora da ROI, porque as estatísticas só são zeradas depois.
  *
  * As m5ops do RISC-V usam o opcode custom-3 (0x7B) com a função nos bits
  * 31:25 e argumentos em a0/a1. Fora do gem5 (por exemplo, no QEMU) elas são
@@ -27,6 +32,7 @@
 #define RCB_M5OP_OPCODE 0x7bu
 #define RCB_M5OP_RESET_STATS 0x40u /* include/gem5/asm/generic/m5ops.h */
 #define RCB_M5OP_DUMP_RESET_STATS 0x42u
+#define RCB_M5OP_WORK_BEGIN 0x5au
 
 /* 1 quando uma m5op foi pulada por não haver gem5. */
 static volatile sig_atomic_t rcb_m5ops_missing = 0;
@@ -83,10 +89,12 @@ static inline void rcb_install_sigill_handler(void)
  * funções de m5ops.h. */
 _Static_assert(RCB_M5OP_WORD(RCB_M5OP_RESET_STATS) == 0x8000007bu, "m5_reset_stats");
 _Static_assert(RCB_M5OP_WORD(RCB_M5OP_DUMP_RESET_STATS) == 0x8400007bu, "m5_dump_reset_stats");
+_Static_assert(RCB_M5OP_WORD(RCB_M5OP_WORK_BEGIN) == 0xb400007bu, "m5_work_begin");
 
 static inline void rcb_roi_begin(void)
 {
     rcb_install_sigill_handler();
+    RCB_M5OP(0xb400007b); /* RCB_M5OP_WORD(RCB_M5OP_WORK_BEGIN), work id 0 */
     RCB_M5OP(0x8000007b); /* RCB_M5OP_WORD(RCB_M5OP_RESET_STATS) */
 }
 

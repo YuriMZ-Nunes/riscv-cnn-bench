@@ -14,6 +14,10 @@ checksum nos dois. A matriz:
 - variantes ref, custom em modo modelo (QEMU e gem5), custom com as instruções
   reais (só gem5) e rvv (VLEN 256).
 
+Além disso, as três variantes em S (aleatório), com as instruções reais, rodam
+nas CPUs com tempo (timing, minor e o3-edge) no cenário de memória l1-l2
+(RCB-18): passam e dão o checksum da atomic.
+
 As simulações rodam em paralelo (RCB_JOBS, padrão: número de CPUs).
 """
 
@@ -26,6 +30,7 @@ from pathlib import Path
 
 import pytest
 
+from riscvcnnbench.config import Experiment
 from test_kernels_e2e import GEM5, OPS, QEMU, ROOT, SIZES, result_pattern
 
 DATASETS = {"random": 0, "satpos": 1, "satneg": 2}
@@ -50,6 +55,10 @@ OUTPUT_BYTES_S = {
 }
 # Valor de toda a saída nos conjuntos extremos: 127 (satura) ou 0 (ReLU).
 SATURATED = {"satpos": 127, "satneg": 0}
+# CPUs com tempo, modos e cenário de memória da validação nas CPUs detalhadas.
+DETAILED_CPUS = ("timing", "minor", "o3-edge")
+DETAILED_MODES = ("ref", "custom", "rvv")
+DETAILED_SCENARIO = "l1-l2"
 JOBS = int(os.environ.get("RCB_JOBS", os.cpu_count() or 1))
 
 pytestmark = pytest.mark.validation
@@ -90,8 +99,21 @@ def run_qemu(binary: Path, args: str) -> tuple[int, str]:
     return run.returncode, run.stdout
 
 
-def run_gem5(binary: Path, args: str, results: Path) -> tuple[int, str]:
-    """Executa pelo wrapper (uma pasta por execução) e devolve o código do programa e o stdout."""
+def system_args(cpu: str) -> list[str]:
+    """Argumentos do gem5 para a CPU no cenário de memória da validação detalhada."""
+    experiment = Experiment(
+        name="validacao", scenario=DETAILED_SCENARIO, benchmark={"name": "fc"}, cpu={"model": cpu}
+    )
+    return experiment.gem5_args()
+
+
+def run_gem5(
+    binary: Path, args: str, results: Path, system: tuple[str, ...] | list[str] = ()
+) -> tuple[int, str]:
+    """Executa pelo wrapper (uma pasta por execução) e devolve o código do programa e o stdout.
+
+    Sem `system`, o sistema padrão da configuração: atomic, sem caches.
+    """
     subprocess.run(
         [
             sys.executable,
@@ -107,6 +129,7 @@ def run_gem5(binary: Path, args: str, results: Path) -> tuple[int, str]:
             "--quiet",
             "--",
             *(f"--arg={arg}" for arg in args.split()),
+            *system,
         ],
         capture_output=True,
         check=False,
@@ -147,15 +170,27 @@ def runs(tmp_path_factory: pytest.TempPathFactory) -> dict[Key, tuple[int, str]]
                     jobs["gem5", op, size, mode, data] = pool.submit(
                         run_gem5, binary, args, results
                     )
+            for mode in DETAILED_MODES:
+                for cpu in DETAILED_CPUS:
+                    results = root / "results" / f"{op}_S_{mode}_random_{cpu}"
+                    jobs[f"gem5-{cpu}", op, "S", mode, "random"] = pool.submit(
+                        run_gem5,
+                        binaries[op, mode, "random"],
+                        OPS[op][SIZES["S"]],
+                        results,
+                        system_args(cpu),
+                    )
         return {key: future.result() for key, future in jobs.items()}
 
 
-def checksums(runs: dict, op: str, size: str, data: str) -> dict[tuple[str, str], str]:
+def checksums(
+    runs: dict, op: str, size: str, data: str, platforms: tuple[str, ...] = ("qemu", "gem5")
+) -> dict[tuple[str, str], str]:
     """Checksum de cada (plataforma, modo), conferindo saída 0 e mismatches=0."""
     args = OPS[op][SIZES[size]]
     found = {}
     for (platform, run_op, run_size, mode, run_data), (code, stdout) in runs.items():
-        if (run_op, run_size, run_data) != (op, size, data):
+        if (run_op, run_size, run_data) != (op, size, data) or platform not in platforms:
             continue
         match = result_pattern(op, args, MODES[mode][0], data).search(stdout)
         assert code == 0 and match, f"{platform} {mode}: código {code}\n{stdout}"
@@ -185,3 +220,15 @@ def test_extreme_data_saturates_every_output(runs: dict, op: str, data: str) -> 
     found = checksums(runs, op, "S", data)
 
     assert set(found.values()) == {expected}
+
+
+@pytest.mark.parametrize("op", OPS)
+def test_variants_pass_on_detailed_cpus(runs: dict, op: str) -> None:
+    """As três variantes em S, com as instruções reais, passam nas CPUs com tempo."""
+    platforms = tuple(f"gem5-{cpu}" for cpu in DETAILED_CPUS)
+
+    found = checksums(runs, op, "S", "random", platforms)
+
+    assert len(found) == len(DETAILED_CPUS) * len(DETAILED_MODES), sorted(found)
+    reference = checksums(runs, op, "S", "random", ("gem5",))["gem5", "ref"]
+    assert set(found.values()) == {reference}, found

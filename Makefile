@@ -71,11 +71,11 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
 
-e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes e a leitura do stats.txt nas quatro CPUs e as comparações entre variantes; ~5 min).
+e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes, a leitura do stats.txt nas quatro CPUs, as comparações entre variantes e os cenários de CPU e memória; ~7 min).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 validate: PODMAN_ARGS += $(if $(RCB_JOBS),-e RCB_JOBS=$(RCB_JOBS))
-validate: ## Validação completa antes da campanha: e2e + equivalência das variantes (S e L, dados extremos) no QEMU e no gem5. Use RCB_JOBS=N para o paralelismo.
+validate: ## Validação completa antes da campanha: e2e + equivalência das variantes (S e L, dados extremos) no QEMU e no gem5, e as três variantes em S nas CPUs timing, minor e o3-edge. Use RCB_JOBS=N para o paralelismo.
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m "e2e or validation" -v'
 
 clean-results: ## Remove resultados gerados pelo framework.

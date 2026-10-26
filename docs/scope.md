@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); cenários, execução em lote, CSV e a campanha (RCB-18+) são **planejados**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); os cenários de CPU e memória, a latência configurável das instruções personalizadas e as caches frias opcionais existem (RCB-18, [scenarios.md](scenarios.md)); execução em lote, CSV e a campanha (RCB-19+) são **planejados**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -72,7 +72,7 @@ As formas seguem camadas de modelos de Edge AI de referência do MLPerf Tiny: Re
 | FC | S | 512 | 32 | 32×512 | 16.384 | 17 KiB |
 | | L | 1.024 | 512 | 512×1.024 | 524.288 | 515 KiB |
 
-"Dados" soma entrada, pesos, bias, saída e buffers, e não conta pilha nem código. As caches de referência são as do exemplo `hello_param_cache.yaml`: L1 de 32KiB e L2 de 256KiB. Os cenários de memória finais ficam para a RCB-18.
+"Dados" soma entrada, pesos, bias, saída e buffers, e não conta pilha nem código. As caches de referência são as do cenário `l1-l2`: L1 de 32KiB e L2 de 256KiB. Os quatro cenários de memória, com o que cabe em cada nível, estão em [scenarios.md](scenarios.md#o-que-cabe-em-cada-nível) (RCB-18).
 
 ## Variantes de implementação
 
@@ -102,8 +102,11 @@ Como ficou na RCB-14 ([kernels.md](kernels.md#variantes)):
 | --- | --- | --- |
 | atomic | Só validação funcional (equivalência, `RESULT`) | Não modela tempo; seus "ciclos" não são medida de desempenho. |
 | timing | Medição: CPU simples sem pipeline | Isola o efeito da memória: cada acesso espera a hierarquia. |
-| minor | Medição: em ordem com pipeline | Núcleo embarcado típico. |
-| o3 | Medição: fora de ordem | Mostra quanto a execução fora de ordem esconde da latência da memória. |
+| minor | Medição: em ordem com pipeline | Núcleo embarcado típico, de dupla emissão. |
+| o3-edge | Medição: fora de ordem, estreita | Mostra quanto a execução fora de ordem esconde da latência da memória, num núcleo de borda (larguras e filas do MediumBOOM). |
+| o3 | Só contraste | A O3 padrão do gem5, de 8 instruções por ciclo, é larga demais para a borda. |
+
+Parâmetros e justificativa de cada CPU, e a latência configurável das instruções personalizadas, em [scenarios.md](scenarios.md#cpus) (RCB-18).
 
 O clock fica em 1GHz, o padrão. Com o clock fixo, ciclos e tempo simulado são proporcionais, e a comparação usa ciclos.
 
@@ -170,22 +173,22 @@ Instruções da variante de referência, medidas em 20/10/2026 no gem5 atomic (R
 - **Pooling e requantização:** cerca de 6,9 instruções por elemento de entrada e 12,0 por elemento, respectivamente. A estimativa anterior supunha 4 e 10.
 - **Verificação:** o oráculo e a comparação rodam fora da ROI, mas também são simulados e custam cerca de tanto quanto o kernel. A inicialização dos dados, antes da ROI, também é simulada e não entra nesses números.
 
-Variantes personalizada e RVV, medidas em 21/10/2026 no gem5 atomic (RCB-14; tabela em [kernels.md](kernels.md#três-variantes)). A verificação é a mesma nas três:
+Variantes personalizada e RVV, medidas em 21/10/2026 no gem5 atomic (RCB-14; tabela em [kernels.md](kernels.md#três-variantes)); a RVV foi medida de novo em 26/10/2026, depois do contorno da RCB-18 em `rcb_rvv_reduce`. A verificação é a mesma nas três:
 
 | Variante | ROI S + L | Simulado (ROI + verificação) |
 | --- | --- | --- |
 | Referência | 123,0 M | 266,8 M |
 | Personalizada | 21,6 M | 165,5 M |
-| RVV (VLEN 256) | 18,9 M | 162,7 M |
-| **Três variantes** | **163,5 M** | **595,0 M** |
+| RVV (VLEN 256) | 18,6 M | 162,4 M |
+| **Três variantes** | **163,2 M** | **594,7 M** |
 
 As velocidades de simulação acima foram medidas com código escalar. Na atomic, a RVV simulou a uma taxa parecida (~1 M instruções por segundo). Nas CPUs detalhadas, ainda é preciso medir, porque cada instrução vetorial vira vários micro-ops.
 
 | Item | Valor |
 | --- | --- |
 | Binários | 7 operações × 2 tamanhos × 3 variantes = 42 |
-| Configurações | 4 cenários de memória (RCB-18) × 3 CPUs + atomic para validação = 13 |
-| Instruções simuladas por configuração | 595,0 M (era ≤ 800 M na estimativa da RCB-12, que supunha as variantes iguais à referência) |
+| Configurações | 4 cenários de memória ([scenarios.md](scenarios.md)) × 3 CPUs (timing, minor, o3-edge) + atomic para validação = 13 |
+| Instruções simuladas por configuração | 594,7 M (era ≤ 800 M na estimativa da RCB-12, que supunha as variantes iguais à referência) |
 | Tempo por cenário de memória | o3 ≈ 37 min, minor ≈ 32 min, timing ≈ 11 min (≈ 1,3 h) |
 | Total por passada da matriz | ≈ 5,3 h nos 4 cenários, mais ≈ 8 min de atomic (546 execuções) |
 | Maior execução isolada | Conv direta L, referência, em o3: ≈ 290 s |

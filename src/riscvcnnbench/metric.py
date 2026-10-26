@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from riscvcnnbench.config import CompilerConfig
+from riscvcnnbench.config import MUL_LATENCY, CompilerConfig
 from riscvcnnbench.parser import RegionStats, StatsError, Value
 from riscvcnnbench.runs import Run, list_runs, read_text, region_stats
 
@@ -24,12 +24,12 @@ BASE_OPTIMIZATION = "-O2"
 DEFAULT_VLEN = 256
 VARIANT_PAIRS = (("ref", "custom"), ("ref", "rvv"), ("custom", "rvv"))
 # Campos da configuração resolvida que não mudam o binário nem a simulação de uma
-# variante: a VLEN só vale para a RVV. A latência das instruções personalizadas
-# (RCB-18) entra aqui para ref e rvv quando o campo existir.
+# variante: a VLEN só vale para a RVV, e a latência das instruções
+# personalizadas (RCB-18), só para a custom.
 IRRELEVANT: dict[str, set[tuple[str, str]]] = {
-    "ref": {("cpu", "vlen")},
+    "ref": {("cpu", "vlen"), ("cpu", "custom_latency")},
     "custom": {("cpu", "vlen")},
-    "rvv": set(),
+    "rvv": {("cpu", "custom_latency")},
 }
 
 
@@ -269,6 +269,7 @@ class RunMetrics:
             "cpu": dict(resolved.get("cpu") or {}),
             "cache": resolved.get("cache"),
             "memory": resolved.get("memory"),
+            "cache_state": (resolved.get("benchmark") or {}).get("cache_state", "warm"),
             "gem5": self.run.metadata.get("gem5_sha256"),
         }
 
@@ -312,9 +313,15 @@ class Pair:
             return f"{self.a.variant}({self.a.optimization}→{self.b.optimization})"
         sides = []
         for item in (self.a, self.b):
-            vlen = (item.run.resolved.get("cpu") or {}).get("vlen", DEFAULT_VLEN)
-            show_vlen = item.variant == "rvv" and vlen != DEFAULT_VLEN
-            sides.append(f"{item.variant}@vlen{vlen}" if show_vlen else item.variant)
+            cpu = item.run.resolved.get("cpu") or {}
+            vlen = cpu.get("vlen", DEFAULT_VLEN)
+            latency = cpu.get("custom_latency", MUL_LATENCY)
+            if item.variant == "rvv" and vlen != DEFAULT_VLEN:
+                sides.append(f"rvv@vlen{vlen}")
+            elif item.variant == "custom" and latency != MUL_LATENCY:
+                sides.append(f"custom@lat{latency}")
+            else:
+                sides.append(item.variant)
         optimization = self.a.optimization
         suffix = f"({optimization})" if optimization != BASE_OPTIMIZATION else ""
         return "→".join(sides) + suffix
@@ -422,10 +429,16 @@ def parameters_label(item: RunMetrics) -> str:
 
 
 def scenario_label(resolved: dict) -> str:
-    """Caches e memória numa palavra só, por exemplo l1i=32KiB,l1d=32KiB,ddr4."""
-    cache = resolved.get("cache") or {}
-    levels = [
-        f"{level}={cache[level]['size']}" for level in ("l1i", "l1d", "l2") if cache.get(level)
-    ]
-    memory = (resolved.get("memory") or {}).get("type", "?")
-    return ",".join([*(levels or ["sem-cache"]), memory])
+    """Caches e memória numa palavra só: o nome do cenário, como l1-l2, ou os
+    tamanhos, como l1i=32KiB,l1d=32KiB,ddr4; com caches frias, mais ",cold"."""
+    if resolved.get("scenario"):
+        label = resolved["scenario"]
+    else:
+        cache = resolved.get("cache") or {}
+        levels = [
+            f"{level}={cache[level]['size']}" for level in ("l1i", "l1d", "l2") if cache.get(level)
+        ]
+        memory = (resolved.get("memory") or {}).get("type", "?")
+        label = ",".join([*(levels or ["sem-cache"]), memory])
+    cold = (resolved.get("benchmark") or {}).get("cache_state") == "cold"
+    return label + (",cold" if cold else "")

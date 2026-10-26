@@ -1,0 +1,46 @@
+# Cenários de memória da campanha (RCB-18). Um experimento escolhe um deles com
+# `scenario: <nome>`, que preenche as seções cache e memory (não use as duas
+# coisas juntas). O que cabe em cada nível, por operação e tamanho, e o que fica
+# fixo (latências das caches e da DRAM, MSHRs): docs/scenarios.md.
+#
+# Todos usam DDR4 e, quando têm caches, a mesma L1i de 32KiB: o que muda de um
+# cenário para outro é a hierarquia de dados.
+
+sem-cache:
+  description: >-
+    Sem caches: instruções e dados vêm direto da DDR4. Caso-limite do objetivo
+    específico 4 (Aquino et al., 2025); a redução de instruções também diminui
+    as buscas de instrução na DRAM.
+  memory:
+    type: ddr4
+
+l1:
+  description: >-
+    L1i e L1d de 32KiB, sem L2. Os dados S cabem na L1d; os L vêm da DDR4.
+  cache:
+    l1i: {size: 32KiB, assoc: 4}
+    l1d: {size: 32KiB, assoc: 4}
+  memory:
+    type: ddr4
+
+l1-l2:
+  description: >-
+    L1i e L1d de 32KiB e L2 de 256KiB, as caches de referência dos tamanhos S e
+    L (scope.md): S cabe na L1d e L na L2, menos a FC L.
+  cache:
+    l1i: {size: 32KiB, assoc: 4}
+    l1d: {size: 32KiB, assoc: 4}
+    l2: {size: 256KiB, assoc: 8}
+  memory:
+    type: ddr4
+
+reduzido:
+  description: >-
+    L1i de 32KiB, L1d de 4KiB e L2 de 32KiB: os dados S não cabem na L1d, mas
+    cabem na L2; os dados L não cabem na L2.
+  cache:
+    l1i: {size: 32KiB, assoc: 4}
+    l1d: {size: 4KiB, assoc: 4}
+    l2: {size: 32KiB, assoc: 8}
+  memory:
+    type: ddr4
