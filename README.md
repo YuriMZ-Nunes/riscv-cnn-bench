@@ -14,6 +14,7 @@ Disponíveis:
 - **Benchmarks de teste `hello_riscv` e `hello_riscv_param`:** validam a compilação cruzada e a execução no QEMU e no gem5; o segundo tem tamanho de vetor e repetições configuráveis. Não são CNNs.
 - **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`/`o3-edge`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
+- **Campanhas (execução em lote):** uma matriz em `campaigns/*.yaml`, com grupos de produtos cartesianos sobre os experimentos de `experiments/`, vira execuções normais agrupadas numa pasta; `riscvcnnbench campaign plan|run|status` mostra o plano, executa em paralelo num só container, retoma sem repetir o que terminou e mostra o estado com o diagnóstico de cada falha, com validação de equivalência opcional antes (ver [docs/campaigns.md](docs/campaigns.md)).
 - **Cenários de CPU e memória:** quatro cenários de memória nomeados (`sem-cache`, `l1`, `l1-l2`, `reduzido`, em `configs/scenarios.yaml`, escolhidos por `scenario` no YAML), uma O3 estreita de borda (`o3-edge`), latência configurável das instruções personalizadas (`cpu.custom_latency`, classe `CnnMult` no fork do gem5) e caches aquecidas ou esvaziadas no início da região de interesse (`benchmark.cache_state`), com a tabela do que cabe em cada nível (ver [docs/scenarios.md](docs/scenarios.md)).
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5.
@@ -26,9 +27,8 @@ Disponíveis:
 
 Planejados (ainda não implementados):
 
-- Execução em lote da matriz de experimentos (operações × variantes × CPUs × cenários).
+- Matriz final da campanha e estimativa de tempo (RCB-22).
 - Exportação dos resultados em tabela (CSV) e gráficos.
-- Varreduras de parâmetros (vários experimentos a partir de um arquivo).
 
 ---
 
@@ -48,6 +48,7 @@ riscv-cnn-bench/
 │       └── se_riscv_configurable.py # CPU, caches e memória configuráveis
 ├── docs/                     # Documentação técnica de suporte
 ├── experiments/              # Experimentos em YAML (formato em docs/experiments.md)
+├── campaigns/                # Matrizes de campanha (formato em docs/campaigns.md)
 ├── benchmarks/
 │   ├── hello_riscv/          # Benchmark funcional RISC-V em C
 │   ├── hello_riscv_param/    # Variante com tamanho e repetições configuráveis
@@ -154,6 +155,7 @@ uv run riscvcnnbench run experiments/hello_param_cache.yaml
 uv run riscvcnnbench runs                 # lista as execuções, o status, instruções, ciclos e IPC
 uv run riscvcnnbench stats results/hello_param_cache/<run_id>   # todas as métricas de uma execução
 uv run riscvcnnbench compare results      # pares de variantes no mesmo cenário
+uv run riscvcnnbench campaign run campaigns/exemplo.yaml --jobs 4   # matriz em lote
 ```
 
 Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `make runs`, `make stats RUN=<pasta>` e `make compare`. O formato, os campos e a execução estão em [docs/experiments.md](docs/experiments.md).
@@ -172,7 +174,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
-| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`, as comparações entre variantes e os cenários (latência das instruções personalizadas, os quatro cenários de memória, caches frias e a `o3-edge`). |
+| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`, as comparações entre variantes, os cenários (latência das instruções personalizadas, os quatro cenários de memória, caches frias e a `o3-edge`) e uma campanha pequena com falha proposital e retomada. |
 | `make validate` | Validação antes da campanha: e2e mais a equivalência das três variantes em S e L e com dados extremos, no QEMU e no gem5, e as três variantes em S nas CPUs timing, minor e o3-edge (`RCB_JOBS=N` para o paralelismo). |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
@@ -187,6 +189,9 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make run EXPERIMENT=<yaml>` | Compila e executa um experimento YAML no gem5, criando uma pasta por execução. |
 | `make runs [DIR=results/<name>]` | Lista as execuções existentes, o status e instruções, ciclos e IPC da região de interesse (padrão: `results/`). |
 | `make stats RUN=<pasta>` | Mostra as métricas da região de interesse de uma execução, brutas e derivadas, com o motivo das ausentes. |
+| `make campaign-plan MATRIX=<yaml>` | Mostra as combinações de uma campanha, sem executar. |
+| `make campaign MATRIX=<yaml> [JOBS=N] [VALIDATE=1]` | Executa ou retoma uma campanha num só container, `JOBS` simulações em paralelo. |
+| `make campaign-status MATRIX=<yaml>` | Estado de cada combinação, com o diagnóstico das falhas e instruções/ciclos/IPC. |
 | `make compare [DIR=results/<name>]` | Compara as execuções aos pares (variantes e `-O2` × `-O3`): redução de instruções, speedup em ciclos e razão de IPC. |
 | `make smoke-test` | Sincroniza ambiente, testa CLI, executa Pytest e Ruff. |
 | `make clean-results` | Remove resultados gerados sob `results/`. |
@@ -260,5 +265,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Base comum dos kernels int8 e região de interesse](docs/kernel_base.md)
 - [Kernels das operações: formas, referência, oráculos e instruções medidas](docs/kernels.md)
 - [Cenários de CPU e memória, latência das instruções e estado das caches](docs/scenarios.md)
+- [Campanhas: execução em lote de uma matriz](docs/campaigns.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

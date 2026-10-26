@@ -1,0 +1,38 @@
+# Matriz pequena de exemplo (RCB-19): a fc S nas três variantes, em duas CPUs e
+# no cenário de memória de referência, a custom com as duas latências, e um
+# grupo de contraste -O2 × -O3. Formato e regras em docs/campaigns.md.
+#
+#   uv run riscvcnnbench campaign plan campaigns/exemplo.yaml
+#   uv run riscvcnnbench campaign run campaigns/exemplo.yaml --jobs 4
+#   uv run riscvcnnbench campaign status campaigns/exemplo.yaml
+
+# Identificador da campanha; a pasta padrão é results/campaigns/<name>.
+name: exemplo
+description: fc S nas três variantes, timing e minor, cenário l1-l2.
+
+# true: roda pytest -m validation antes de começar (mais de 10 min). Padrão: false.
+validate: false
+
+# Campos fixos de todas as combinações, em notação com pontos.
+set:
+  scenario: l1-l2
+
+groups:
+  - name: variantes
+    # Experimentos base em experiments/ (definem a operação e os argumentos).
+    experiments: [fc_s]
+    # Produto cartesiano dos valores. A latência só vale para a custom nas
+    # CPUs minor e o3: nas outras combinações ela é ignorada, e a combinação
+    # repetida roda uma vez só.
+    vary:
+      benchmark.variant: [ref, custom, rvv]
+      cpu.model: [timing, minor]
+      cpu.custom_latency: [3, 6]
+
+  - name: compilador
+    experiments: [fc_s]
+    set:
+      cpu.model: minor
+    vary:
+      benchmark.variant: [ref, custom]
+      compiler.flags: [[-O2], [-O3]]

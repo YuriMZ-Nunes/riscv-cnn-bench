@@ -1,7 +1,10 @@
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, NoReturn
 
 import typer
+
+if TYPE_CHECKING:
+    from riscvcnnbench.campaign import Plan
 
 app = typer.Typer(
     name="riscvcnnbench",
@@ -10,17 +13,27 @@ app = typer.Typer(
         "Fluxo: escreva um experimento YAML (veja docs/experiments.md), confira com "
         "`validate` e execute com `run`. Cada execução cria uma pasta própria "
         "(veja docs/results.md); `runs` lista as existentes, `stats` mostra as "
-        "métricas da região de interesse de uma delas e `compare` compara as variantes."
+        "métricas da região de interesse de uma delas e `compare` compara as variantes. "
+        "`campaign` executa uma matriz de experimentos em lote (veja docs/campaigns.md)."
     ),
     epilog=(
         "Exemplos: riscvcnnbench validate experiments/smoke_test.yaml · "
         "riscvcnnbench run experiments/hello_param_cache.yaml · "
         "riscvcnnbench runs results/hello_param_cache · "
         "riscvcnnbench stats results/fc_s/<run_id> · "
-        "riscvcnnbench compare results"
+        "riscvcnnbench compare results · "
+        "riscvcnnbench campaign run campaigns/exemplo.yaml"
     ),
     no_args_is_help=True,
 )
+campaign_app = typer.Typer(
+    help=(
+        "Executa em lote uma matriz de experimentos (campaigns/*.yaml): `plan` mostra as "
+        "combinações, `run` executa e retoma, `status` mostra o estado. Veja docs/campaigns.md."
+    ),
+    no_args_is_help=True,
+)
+app.add_typer(campaign_app, name="campaign")
 
 
 @app.command()
@@ -360,6 +373,218 @@ def compare(
         typer.echo("\nRepetidas, substituídas pela execução mais recente:")
         for path in comparison.superseded:
             typer.echo(f"  {display(path)}")
+
+
+MatrixArg = Annotated[Path, typer.Argument(help="Matriz da campanha (campaigns/<nome>.yaml).")]
+OutputOption = Annotated[
+    Path | None,
+    typer.Option("--output", help="Pasta da campanha. Padrão: results/campaigns/<name>."),
+]
+
+
+def _fail(message: str) -> NoReturn:
+    typer.echo(f"Erro: {message}", err=True)
+    raise typer.Exit(code=1)
+
+
+def _plan_or_exit(target: Path, output: Path | None) -> "Plan":
+    from riscvcnnbench.campaign import CampaignError, load_plan_from
+    from riscvcnnbench.config import ConfigError
+
+    try:
+        return load_plan_from(target, output.resolve() if output else None)
+    except (ConfigError, CampaignError) as error:
+        _fail(str(error))
+
+
+@campaign_app.command("plan")
+def campaign_plan(
+    matrix: MatrixArg,
+    output: OutputOption = None,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Imprime o plano em JSON, para uso em scripts.")
+    ] = False,
+) -> None:
+    """Mostra as combinações da matriz, sem executar nada.
+
+    Lista as execuções únicas, as repetidas (iguais a outra depois de ignorar os
+    campos que não afetam a variante ou a CPU) e as inválidas, com o motivo.
+    """
+    import json
+    import math
+
+    from riscvcnnbench.runs import display
+
+    plan = _plan_or_exit(matrix, output)
+    if as_json:
+        typer.echo(json.dumps(plan.document(), indent=2, ensure_ascii=False))
+        return
+
+    typer.echo(f"Campanha {plan.campaign.name}: {len(plan.runs)} execução(ões) únicas")
+    typer.echo(f"Pasta: {display(plan.root)}")
+    for group in plan.campaign.groups:
+        size = len(group.experiments) * math.prod(len(v) for v in group.vary.values())
+        first = sum(1 for run in plan.runs if run.groups[0] == group.name)
+        typer.echo(f"  grupo {group.name}: {size} combinação(ões), {first} nova(s)")
+    if plan.runs:
+        typer.echo("")
+        rows = [["NOME", "GRUPOS"]] + [[run.name, ",".join(run.groups)] for run in plan.runs]
+        width = max(len(row[0]) for row in rows)
+        for name, groups in rows:
+            typer.echo(f"{name.ljust(width)}  {groups}")
+    if plan.duplicates:
+        typer.echo(
+            f"\n{len(plan.duplicates)} combinação(ões) repetida(s), iguais a outra depois de "
+            "ignorar os campos que não as afetam (rodam uma vez)."
+        )
+    if plan.invalid:
+        typer.echo(f"\n{len(plan.invalid)} combinação(ões) inválida(s), que não serão executadas:")
+        for item in plan.invalid:
+            values = ", ".join(f"{k}={v}" for k, v in item["values"].items())
+            typer.echo(f"  {item['base']} [{item['group']}] {values}:")
+            for problem in item["problems"]:
+                typer.echo(f"    {problem}")
+
+
+@campaign_app.command("run")
+def campaign_run(
+    matrix: MatrixArg,
+    jobs: Annotated[
+        int | None,
+        typer.Option("--jobs", "-j", min=1, help="Simulações em paralelo. Padrão: número de CPUs."),
+    ] = None,
+    validate_first: Annotated[
+        bool,
+        typer.Option("--validate", help="Roda pytest -m validation antes (como validate: true)."),
+    ] = False,
+    update: Annotated[
+        bool, typer.Option("--update", help="Aceita uma matriz diferente da já usada na pasta.")
+    ] = False,
+    gem5: Annotated[
+        Path | None,
+        typer.Option(help="Executável do gem5. Padrão: $GEM5_BIN ou o build do submódulo."),
+    ] = None,
+    output: OutputOption = None,
+) -> None:
+    """Executa a campanha, ou continua uma interrompida, sem refazer o que já terminou.
+
+    Cada combinação roda como um `riscvcnnbench run`, com a própria pasta em
+    <campanha>/runs/<nome>/. Pula as já concluídas com o mesmo gem5 e refaz as que
+    falharam, foram interrompidas ou nunca rodaram. Uma falha não para as outras.
+    Saída 0 se todas estão concluídas, 1 se alguma falhou e 130 se interrompida.
+    """
+    import os
+
+    from riscvcnnbench.campaign import CampaignError, run_campaign
+    from riscvcnnbench.config import ConfigError
+    from riscvcnnbench.runner import RunError, default_gem5
+
+    gem5_path = (gem5 or default_gem5()).resolve()
+    workers = jobs or os.cpu_count() or 1
+    try:
+        outcome = run_campaign(
+            matrix,
+            gem5_path,
+            workers,
+            typer.echo,
+            output=output.resolve() if output else None,
+            validate=validate_first,
+            update=update,
+        )
+    except (ConfigError, CampaignError, RunError) as error:
+        _fail(str(error))
+
+    target = output or matrix
+    if outcome.interrupted:
+        typer.echo(
+            f"\nInterrompida. Retome com o mesmo comando; o estado está em "
+            f"`riscvcnnbench campaign status {target}`.",
+            err=True,
+        )
+        raise typer.Exit(code=130)
+    done = len(outcome.executed) - len(outcome.failed)
+    typer.echo(
+        f"\nSessão: {outcome.skipped} já concluída(s), {len(outcome.executed)} executada(s), "
+        f"{done} concluída(s), {len(outcome.failed)} com problema."
+    )
+    if outcome.failed:
+        typer.echo(
+            f"Veja as causas em `riscvcnnbench campaign status {target}`; rodar de novo refaz "
+            "só as que não terminaram.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
+@campaign_app.command("status")
+def campaign_status(
+    target: Annotated[
+        Path, typer.Argument(help="Matriz da campanha (.yaml) ou a pasta da campanha.")
+    ],
+    gem5: Annotated[
+        Path | None,
+        typer.Option(help="gem5 de referência para 'concluída'. Padrão: o de `campaign run`."),
+    ] = None,
+    output: OutputOption = None,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Imprime em JSON, para uso em scripts.")
+    ] = False,
+) -> None:
+    """Mostra o estado de cada combinação da campanha, com o diagnóstico das falhas.
+
+    O estado vem das pastas das execuções: concluída (com este gem5), falhou,
+    interrompida, incompleta, desatualizada (concluída com outro gem5) ou pendente.
+    Para as concluídas, instruções, ciclos e IPC da região de interesse.
+    """
+    import json
+
+    from riscvcnnbench.campaign import count_by, file_sha256, states
+    from riscvcnnbench.runner import default_gem5
+    from riscvcnnbench.runs import diagnose, display
+
+    plan = _plan_or_exit(target, output)
+    found = states(plan, file_sha256((gem5 or default_gem5()).resolve()))
+
+    if as_json:
+        document = []
+        for state in found:
+            problem = diagnose(state.run) if state.run and not state.done else None
+            insts, cycles, ipc = state.cells()
+            document.append(
+                {
+                    "name": state.planned.name,
+                    "groups": state.planned.groups,
+                    "status": state.status,
+                    "diagnosis": problem.kind if problem else None,
+                    "message": problem.message if problem else None,
+                    "run": display(state.run.path) if state.run else None,
+                    "attempts": state.attempts,
+                    "insts": insts,
+                    "cycles": cycles,
+                    "ipc": ipc,
+                }
+            )
+        typer.echo(json.dumps(document, indent=2, ensure_ascii=False))
+        return
+
+    typer.echo(f"Campanha {plan.campaign.name} em {display(plan.root)}")
+    header = ["NOME", "STATUS", "INSTS", "CICLOS", "IPC", "TENTATIVAS"]
+    rows = [header] + [
+        [state.planned.name, state.label(), *state.cells(), str(state.attempts)] for state in found
+    ]
+    widths = [max(len(row[i]) for row in rows) for i in range(len(header))]
+    for row in rows:
+        typer.echo("  ".join(cell.ljust(w) for cell, w in zip(row, widths, strict=True)).rstrip())
+    counts = count_by(state.status for state in found)
+    summary = ", ".join(f"{status}: {count}" for status, count in counts.items())
+    typer.echo(f"\n{len(found)} combinação(ões): {summary}.")
+    problems = [state for state in found if state.run and not state.done]
+    if problems:
+        typer.echo("\nSem conclusão:")
+        for state in problems:
+            problem = diagnose(state.run) if state.run else None
+            reason = problem.message if problem else "concluída com outro executável do gem5"
+            typer.echo(f"  {state.planned.name}: {reason} ({display(state.run.path)})")
 
 
 if __name__ == "__main__":
