@@ -1,0 +1,13 @@
+# Latência de uma instrução medida por uma cadeia dependente (RCB-18).
+# args: [OP, N] = instrução (0 mul, 1 cnn.dot8, 2 cnn.dwmac, 3 cnn.rqnt,
+# 4 cnn.max8) e iterações de 8 instruções. Só roda no gem5 do fork. Compare os
+# ciclos da ROI (riscvcnnbench stats) mudando cpu.custom_latency: mudam os do
+# cnn.dot8, não os do mul. Ver docs/scenarios.md.
+name: insn_latency
+scenario: l1-l2
+benchmark:
+  name: insn_latency
+  args: [1, 2000]
+cpu:
+  model: minor
+  custom_latency: 3

@@ -147,7 +147,7 @@ Dimensões e repetições vêm sempre daqui, nunca de constantes espalhadas pelo
 ## Região de interesse
 
 ```c
-rcb_roi_begin();   /* m5_reset_stats(0, 0): zera as estatísticas */
+rcb_roi_begin();   /* m5_work_begin(0, 0) e m5_reset_stats(0, 0): zera as estatísticas */
 kernel(...);
 rcb_roi_end();     /* m5_dump_reset_stats(0, 0): grava um bloco e zera de novo */
 ```
@@ -161,6 +161,8 @@ No gem5, o `stats.txt` fica com dois blocos, cada um iniciado por `---------- Be
 
 A inicialização, que inclui a carga do programa, a alocação e o sorteio dos dados, fica antes do `m5_reset_stats` e não aparece em nenhum bloco. O parser (RCB-16) lê o bloco 1 e recusa um `stats.txt` com outro número de blocos.
 
+O `m5_work_begin`, logo antes do `m5_reset_stats` e portanto fora da ROI, avisa a configuração do gem5 que a ROI vai começar. Com `benchmark.cache_state: cold`, o gem5 para nele, esvazia as caches e continua; com `warm`, o padrão, ele não faz nada ([scenarios.md](scenarios.md#estado-das-caches-no-início-da-roi)). O mesmo binário serve aos dois estados.
+
 ### Como funciona
 
 - **Codificação:** as m5ops do RISC-V são instruções no opcode custom-3 (`0x7B`), com a função nos bits 31:25 e os argumentos em `a0` e `a1`. Foi conferido em `util/m5/src/abi/riscv/m5op.S` e `include/gem5/asm/generic/m5ops.h`. O header emite as palavras direto com `.word`, sem precisar da `libm5`:
@@ -169,6 +171,7 @@ A inicialização, que inclui a carga do programa, a alocação e o sorteio dos 
   | --- | --- | --- |
   | `m5_reset_stats` | `0x40` | `0x8000007b` |
   | `m5_dump_reset_stats` | `0x42` | `0x8400007b` |
+  | `m5_work_begin` | `0x5a` | `0xb400007b` |
 
 - **Barreira do compilador:** o `asm volatile` com o clobber `"memory"` impede que o compilador mova acessos à memória para dentro ou para fora da ROI. O kernel precisa escrever o resultado na memória. Um cálculo que só fique em registradores poderia ser movido.
 - **Custo fixo:** com `K=64` e `M=16`, a ROI tem 7.458 instruções com `R=1` e 14.903 com `R=2`. O custo fixo fica em torno de 13 instruções, desprezível frente aos kernels do escopo.
@@ -189,7 +192,7 @@ Assim, o mesmo binário roda no QEMU e no gem5, com os mesmos dados e o mesmo ch
 
 ### Cuidados
 
-- **Caches aquecidas.** A ROI começa com as caches no estado deixado pela inicialização, que acabou de escrever os tensores. Nos tamanhos S, os dados já estão na L1. Qual estado inicial usar é decisão em aberto para as RCB-18 e RCB-22, por exemplo varrer um buffer maior que a L2 antes da ROI.
+- **Caches aquecidas, por padrão.** A ROI começa com as caches no estado deixado pela inicialização, que acabou de escrever os tensores. Nos tamanhos S, com L1 de 32KiB, os dados já estão na L1. O código do kernel, que só roda na ROI, não está. A alternativa é `benchmark.cache_state: cold`, e a escolha está justificada em [scenarios.md](scenarios.md#estado-das-caches-no-início-da-roi) (RCB-18).
 - **Repetições.** Com `R > 1`, as repetições depois da primeira encontram as caches aquecidas pela anterior. Métricas por execução do kernel exigem dividir o bloco por `R`, o que fica para a RCB-17.
 - **Um bloco de ROI por execução.** Mais regiões por programa exigiriam outro par `rcb_roi_begin`/`rcb_roi_end`, e o parser teria que saber quantas são. Hoje ele espera 2 blocos em todo benchmark cujo fonte chama `rcb_roi_begin`.
 

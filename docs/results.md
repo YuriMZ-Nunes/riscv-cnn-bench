@@ -91,7 +91,7 @@ Saída do gem5 misturada com a do programa simulado. Exemplo real (`hello_param_
 
 ```text
 Executando: .../inputs/hello_riscv_param 65536 2
-Sistema: cpu=timing clock=2GHz vlen=256 l1i=32KiB l1d=32KiB l2=256KiB memória=ddr4/512MiB
+Sistema: cpu=timing clock=2GHz vlen=256 custom_latency=3 l1i=32KiB l1d=32KiB l2=256KiB memória=ddr4/512MiB caches_roi=warm
 RESULT n=65536 repeat=2 sum=4294901760
 Simulação encerrada no tick 1865429000: exiting with last active thread context (code=0)
 ```
@@ -101,6 +101,7 @@ Simulação encerrada no tick 1865429000: exiting with last active thread contex
 | Cabeçalho (`gem5 version`, `command line`...) | gem5 | Versão e comando efetivo. |
 | `Executando:` | config gem5 | Binário e argumentos passados ao programa. |
 | `Sistema:` | `se_riscv_configurable.py` | Máquina montada; confira se bate com o YAML. Não aparece com `se_riscv.py`. |
+| `Caches esvaziadas antes da ROI no tick N` | `se_riscv_configurable.py` | Só com `benchmark.cache_state: cold`: o gem5 esvaziou as caches no início da ROI ([scenarios.md](scenarios.md#estado-das-caches-no-início-da-roi)). |
 | `RESULT ...` | programa simulado | Resultado calculado pelo benchmark. |
 | `Simulação encerrada no tick N: <causa> (code=C)` | config gem5 | `C` é o código de saída do programa. A causa normal é `exiting with last active thread context`. |
 
@@ -316,10 +317,10 @@ Há dois tipos de par:
 
 | Tipo | Rótulo | `a` × `b` |
 | --- | --- | --- |
-| `variante` | `ref→custom`, `ref→rvv`, `custom→rvv` | Mesmo cenário, variantes diferentes. Com outro nível de otimização, o rótulo ganha o nível, como `ref→custom(-O3)`; com VLEN diferente de 256, a RVV aparece como `rvv@vlen512` |
+| `variante` | `ref→custom`, `ref→rvv`, `custom→rvv` | Mesmo cenário, variantes diferentes. Com outro nível de otimização, o rótulo ganha o nível, como `ref→custom(-O3)`; com VLEN diferente de 256, a RVV aparece como `rvv@vlen512`; com `cpu.custom_latency` diferente de 3, a custom aparece como `custom@lat6` |
 | `compilador` | `ref(-O2→-O3)` | Mesma variante e cenário; `a` com `-O2`, a base de todos os experimentos, e `b` com outro `-O*`. As outras flags, como `-DRCB_DATA`, têm de ser iguais |
 
-**O que precisa ser igual num par.** A operação e os parâmetros (da linha `RESULT`, incluindo `R`), o conjunto de dados, as flags de compilação, a CPU (modelo e clock), as caches, a memória e o executável do gem5 (`gem5_sha256`). Ficam de fora o nome do experimento, a pasta de saída e o campo comparado. Campos que não afetam uma variante também ficam de fora para ela. Hoje é só a VLEN, que não muda a ref nem a custom. Uma ref pareia, assim, com a RVV de qualquer VLEN. Quando a RCB-18 criar a latência das instruções personalizadas, ela entra nessa lista para a ref e a rvv.
+**O que precisa ser igual num par.** A operação e os parâmetros (da linha `RESULT`, incluindo `R`), o conjunto de dados, as flags de compilação, a CPU (modelo e clock), as caches, a memória e o executável do gem5 (`gem5_sha256`). Ficam de fora o nome do experimento, a pasta de saída e o campo comparado. O estado das caches no início da ROI (`benchmark.cache_state`) também precisa ser igual. Campos que não afetam uma variante ficam de fora para ela: a VLEN, que não muda a ref nem a custom, e a latência das instruções personalizadas (`cpu.custom_latency`, RCB-18), que não muda a ref nem a rvv. Uma ref pareia, assim, com a RVV de qualquer VLEN e com a custom de qualquer latência, sem precisar ser repetida.
 
 **Execuções que não entram.** Uma execução fica fora da comparação, com o motivo, quando não está `completed`, não tem `stats.txt` legível, não imprimiu a linha `RESULT` da base comum ou tem `mismatches` > 0. Execuções repetidas, com a mesma identidade, valem pela mais recente (`run_id`), e as outras são listadas como substituídas.
 
@@ -346,7 +347,7 @@ fc        In=512,Out=32,R=1  minor@1GHz   l1i=32KiB,l1d=32KiB,simple  ref(-O2→
 5 par(es) aceito(s), 0 rejeitado(s). ...
 ```
 
-Depois da tabela vêm, se houver, os pares rejeitados, as execuções fora da comparação e as substituídas, cada uma com o caminho e o motivo. O JSON tem `pairs` (com `kind`, `label`, `a`, `b`, `scenario`, `values`, `missing` e `problem`), `excluded` e `superseded`. A exportação em CSV fica para a RCB-20.
+A coluna `CENÁRIO` mostra o nome do cenário quando o YAML usa `scenario` (por exemplo `l1-l2`), ou os tamanhos das caches e o tipo de memória, como acima; com caches frias, acrescenta `,cold`. Depois da tabela vêm, se houver, os pares rejeitados, as execuções fora da comparação e as substituídas, cada uma com o caminho e o motivo. O JSON tem `pairs` (com `kind`, `label`, `a`, `b`, `scenario`, `values`, `missing` e `problem`), `excluded` e `superseded`. A exportação em CSV fica para a RCB-20.
 
 ## Status e falhas
 

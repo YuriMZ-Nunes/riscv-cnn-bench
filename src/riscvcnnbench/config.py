@@ -2,10 +2,12 @@
 
 Um experimento escolhe benchmark (e variante do kernel), flags de compilação,
 CPU, caches, memória e pasta de saída. Só `name` e `benchmark.name` são obrigatórios; os demais campos
-têm padrões equivalentes a configs/gem5/se_riscv.py. Veja docs/experiments.md.
+têm padrões equivalentes a configs/gem5/se_riscv.py. Caches e memória podem vir de um cenário
+nomeado de configs/scenarios.yaml (`scenario`). Veja docs/experiments.md e docs/scenarios.md.
 """
 
 import difflib
+import functools
 from pathlib import Path
 from typing import Any, Literal, get_args
 
@@ -15,11 +17,13 @@ from pydantic import (
     ConfigDict,
     Field,
     ValidationError,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SCENARIOS_PATH = PROJECT_ROOT / "configs" / "scenarios.yaml"
 
 # Tamanhos e frequências no formato aceito pelo gem5, por exemplo 32KiB e 1GHz.
 SIZE_PATTERN = r"^[1-9][0-9]*(KiB|MiB|GiB)$"
@@ -63,6 +67,10 @@ class BenchmarkConfig(StrictModel):
         default="ref",
         description="Implementação do kernel: referência, instruções personalizadas ou RVV.",
     )
+    cache_state: Literal["warm", "cold"] = Field(
+        default="warm",
+        description="Caches no início da ROI: aquecidas pela inicialização ou esvaziadas pelo gem5.",
+    )
 
     @field_validator("args", mode="before")
     @classmethod
@@ -83,12 +91,32 @@ class CompilerConfig(StrictModel):
     )
 
 
+# Latência do mul nas unidades padrão da Minor e da O3; padrão de cpu.custom_latency.
+MUL_LATENCY = 3
+
+
 class CpuConfig(StrictModel):
-    model: Literal["atomic", "timing", "minor", "o3"] = "atomic"
+    model: Literal["atomic", "timing", "minor", "o3", "o3-edge"] = "atomic"
     clock: str = Field(default="1GHz", pattern=CLOCK_PATTERN)
     vlen: Literal[128, 256, 512, 1024] = Field(
         default=256, description="VLEN da extensão V, em bits (padrão do gem5)."
     )
+    custom_latency: int = Field(
+        default=MUL_LATENCY,
+        ge=1,
+        le=64,
+        description="Latência, em ciclos, de cnn.dot8, cnn.dwmac e cnn.rqnt[.relu].",
+    )
+
+    @model_validator(mode="after")
+    def latency_needs_pipeline(self) -> "CpuConfig":
+        if self.custom_latency != MUL_LATENCY and self.model in ("atomic", "timing"):
+            raise ValueError(
+                f"cpu.custom_latency só tem efeito nas CPUs minor, o3 e o3-edge; a "
+                f"{self.model} não modela a latência das unidades funcionais "
+                f"(use {MUL_LATENCY}, o padrão)"
+            )
+        return self
 
 
 class CacheLevelConfig(StrictModel):
@@ -117,15 +145,63 @@ class OutputConfig(StrictModel):
     dir: Path | None = Field(default=None, description="Padrão: results/<name>.")
 
 
+class Scenario(StrictModel):
+    """Cenário de memória nomeado de configs/scenarios.yaml (RCB-18)."""
+
+    description: str
+    cache: CacheConfig = CacheConfig()
+    memory: MemoryConfig = MemoryConfig()
+
+
+@functools.cache
+def load_scenarios() -> dict[str, Scenario]:
+    """Cenários de configs/scenarios.yaml, na ordem do arquivo."""
+    data = yaml.safe_load(SCENARIOS_PATH.read_text(encoding="utf-8")) or {}
+    return {str(name): Scenario.model_validate(item) for name, item in data.items()}
+
+
 class Experiment(StrictModel):
     name: str = Field(pattern=NAME_PATTERN)
     description: str = ""
+    # Antes de cache e memory: os validadores deles consultam o cenário.
+    scenario: str | None = Field(
+        default=None, description="Cenário de configs/scenarios.yaml; define cache e memory."
+    )
     benchmark: BenchmarkConfig
     compiler: CompilerConfig = CompilerConfig()
     cpu: CpuConfig = CpuConfig()
     cache: CacheConfig = CacheConfig()
     memory: MemoryConfig = MemoryConfig()
     output: OutputConfig = OutputConfig()
+
+    @field_validator("scenario")
+    @classmethod
+    def known_scenario(cls, value: str | None) -> str | None:
+        scenarios = load_scenarios()
+        if value is None or value in scenarios:
+            return value
+        close = difflib.get_close_matches(value, scenarios, n=1)
+        hint = f"você quis dizer {close[0]!r}?" if close else f"disponíveis: {', '.join(scenarios)}"
+        raise ValueError(f"cenário {value!r} não existe em configs/scenarios.yaml; {hint}")
+
+    @field_validator("cache", "memory", mode="before")
+    @classmethod
+    def not_with_scenario(cls, value: Any, info: ValidationInfo) -> Any:
+        scenario = info.data.get("scenario")
+        if scenario:
+            raise ValueError(
+                f"não use junto com scenario ({scenario}), que já define cache e memory; "
+                "tire um dos dois"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def expand_scenario(self) -> "Experiment":
+        if self.scenario:
+            scenario = load_scenarios()[self.scenario]
+            self.cache = scenario.cache.model_copy(deep=True)
+            self.memory = scenario.memory.model_copy(deep=True)
+        return self
 
     @property
     def benchmark_dir(self) -> Path:
@@ -139,11 +215,13 @@ class Experiment(StrictModel):
         """Argumentos para configs/gem5/se_riscv_configurable.py."""
         args = [f"--arg={arg}" for arg in self.benchmark.args]
         args += [f"--cpu={self.cpu.model}", f"--clock={self.cpu.clock}", f"--vlen={self.cpu.vlen}"]
+        args += [f"--custom-latency={self.cpu.custom_latency}"]
         for level in ("l1i", "l1d", "l2"):
             cache = getattr(self.cache, level)
             if cache:
                 args += [f"--{level}-size={cache.size}", f"--{level}-assoc={cache.assoc}"]
         args += [f"--mem-type={self.memory.type}", f"--mem-size={self.memory.size}"]
+        args += [f"--roi-caches={self.benchmark.cache_state}"]
         return args
 
 
@@ -208,6 +286,9 @@ def _describe(item: dict[str, Any]) -> str:
     if kind == "greater_than_equal":
         return f"deve ser no mínimo {context['ge']}, mas recebeu {value!r}"
 
+    if kind == "less_than_equal":
+        return f"deve ser no máximo {context['le']}, mas recebeu {value!r}"
+
     if kind == "value_error":
         return str(context.get("error", item["msg"]))
 
@@ -269,6 +350,23 @@ def uses_roi(benchmark_dir: Path) -> bool:
         "rcb_roi_begin" in source.read_text(encoding="utf-8", errors="replace")
         for source in benchmark_dir.glob("*.c")
     )
+
+
+def _cold_problems(experiment: Experiment, lines: _LineTracker) -> list[tuple[int, str]]:
+    """Caches frias exigem caches e um benchmark que marque a ROI (onde o gem5 as esvazia)."""
+    location = ("benchmark", "cache_state")
+    texts = []
+    if not (experiment.cache.l1i or experiment.cache.l1d):
+        texts.append(
+            "'cold' esvazia as caches no início da ROI, mas o experimento não tem caches; "
+            "configure cache ou use um scenario com caches"
+        )
+    if not uses_roi(experiment.benchmark_dir):
+        texts.append(
+            f"'cold' exige um benchmark que marque a região de interesse (rcb_roi_begin); "
+            f"{experiment.benchmark.name!r} não marca"
+        )
+    return [_problem(lines.line_of(location), location, text) for text in texts]
 
 
 def load_experiment(path: Path) -> Experiment:
@@ -335,6 +433,8 @@ def load_experiment(path: Path) -> Experiment:
                     f"{experiment.benchmark.variant!r}; disponíveis: {', '.join(variants)}",
                 )
             )
+        if experiment.benchmark.cache_state == "cold":
+            problems += _cold_problems(experiment, lines)
 
     if problems:
         raise ConfigError(path, [message for _, message in sorted(problems, key=lambda p: p[0])])
