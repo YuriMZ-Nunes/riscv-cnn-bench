@@ -8,6 +8,7 @@ Cada execução no gem5, por `riscvcnnbench run` ou `make hello-run-gem5`, cria 
 | --- | --- |
 | `riscvcnnbench run <yaml>` / `make run EXPERIMENT=<yaml>` | `<output.dir>/<run_id>/`, padrão `results/<name>/<run_id>/` |
 | `make hello-run-gem5` | `results/hello_riscv/<run_id>/` |
+| `riscvcnnbench campaign run <matriz>` / `make campaign MATRIX=<matriz>` | `results/campaigns/<name>/runs/<combinação>/<run_id>/`, uma por combinação, mais os arquivos da campanha ([campaigns.md](campaigns.md#pasta-da-campanha)) |
 
 O `run_id` combina data e hora em UTC com um sufixo aleatório, por exemplo `20261020T005249.889088Z-194128aa`. Ordenar as pastas pelo nome as ordena por horário.
 
@@ -104,6 +105,7 @@ Simulação encerrada no tick 1865429000: exiting with last active thread contex
 | `Caches esvaziadas antes da ROI no tick N` | `se_riscv_configurable.py` | Só com `benchmark.cache_state: cold`: o gem5 esvaziou as caches no início da ROI ([scenarios.md](scenarios.md#estado-das-caches-no-início-da-roi)). |
 | `RESULT ...` | programa simulado | Resultado calculado pelo benchmark. |
 | `Simulação encerrada no tick N: <causa> (code=C)` | config gem5 | `C` é o código de saída do programa. A causa normal é `exiting with last active thread context`. |
+| `Simulação interrompida no tick N: user interrupt received` | config gem5 | O gem5 recebeu SIGINT (Ctrl+C) antes do fim do programa. A configuração sai com `130`, a execução fica `failed` sem `program_exit_code`, e o diagnóstico é `interrupted`: as estatísticas estão incompletas. Até a RCB-19, esse caso saía com `0` e passava por `completed` |
 
 O tick é a unidade de tempo do gem5 (aqui, 10¹² ticks por segundo, ver `Global frequency`), **não** um ciclo da CPU. Ciclos ficam em `stats.txt`.
 
@@ -384,7 +386,7 @@ Erros detectados antes de criar a pasta (YAML inválido, gem5 inexistente, toolc
 | `instruction` | `panic: Unknown/Illegal/Unimplemented instruction` no `stderr.log` | Conferir se o gem5 foi compilado do fork com as instruções personalizadas. |
 | `gem5` | Outra falha na simulação | Primeira linha `fatal:`/`panic:` do `stderr.log`, ou o código do gem5. |
 | `preparation` | `failed_step: preparation` | Campo `error`. |
-| `interrupted` | `status: interrupted` | Etapa interrompida. |
+| `interrupted` | `status: interrupted`, ou `failed` com a linha `Simulação interrompida` no `stdout.log` (o SIGINT chegou só ao gem5) | Etapa interrompida; rodar de novo. |
 | `incomplete` | Status `preparing`, `building` ou `running` | Execução em andamento ou encerrada abruptamente. |
 
 A classificação por texto dos logs é heurística: as mensagens do gem5 podem mudar entre versões. O `metadata.json` continua sendo a fonte de verdade.

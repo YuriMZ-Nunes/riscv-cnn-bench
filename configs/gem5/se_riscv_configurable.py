@@ -68,6 +68,9 @@ CPU_MODELS = {
 # própria; na Minor, numa unidade só dela (configure_minor).
 MUL_LATENCY = 3
 
+# Causa com que o gem5 sai do laço de simulação ao receber SIGINT (Ctrl+C).
+INTERRUPT_CAUSE = "user interrupt received"
+
 # O3 de borda: larguras, filas e registradores do MediumBOOM (BOOM v3,
 # WithNMediumBooms, 2-wide), mapeados para os parâmetros da O3CPU. As filas de
 # emissão do BOOM (memória 12, inteira 20, ponto flutuante 16) viram uma fila
@@ -310,6 +313,13 @@ def main():
             flush=True,
         )
         exit_event = m5.simulate()
+
+    if exit_event.getCause() == INTERRUPT_CAUSE:
+        # SIGINT: o programa não terminou e as estatísticas estão incompletas.
+        # Sem a linha "Simulação encerrada", o wrapper não registra código do
+        # programa; o 130 (128 + SIGINT) faz a execução contar como falha.
+        print(f"Simulação interrompida no tick {m5.curTick()}: {INTERRUPT_CAUSE}", flush=True)
+        raise SystemExit(130)
 
     print(
         f"Simulação encerrada no tick {m5.curTick()}: "

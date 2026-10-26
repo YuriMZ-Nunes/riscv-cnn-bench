@@ -188,6 +188,6 @@ No código, `load_experiment()` levanta `ConfigError`, cujo atributo `problems` 
 
 ## Limitações
 
-- Um experimento descreve **uma** execução; varreduras (vários tamanhos de cache, por exemplo) ainda não fazem parte do formato (RCB-19).
+- Um experimento descreve **uma** execução. Para varrer valores (variantes, CPUs, cenários, latências), use uma campanha: [campaigns.md](campaigns.md).
 - Latências de cache, MSHRs e parâmetros internos de CPU, fora a latência das instruções personalizadas, usam valores fixos da configuração gem5, não configuráveis pelo YAML ([scenarios.md](scenarios.md#parâmetros-fixos)).
 - Os YAMLs das operações (`experiments/<operação>_{s,l}.yaml`) usam a CPU atomic, para validação funcional. Para medir, escolha a CPU e um `scenario`, como em `fc_s_cenario.yaml`.

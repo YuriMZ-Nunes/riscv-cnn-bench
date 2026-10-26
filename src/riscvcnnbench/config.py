@@ -9,7 +9,7 @@ nomeado de configs/scenarios.yaml (`scenario`). Veja docs/experiments.md e docs/
 import difflib
 import functools
 from pathlib import Path
-from typing import Any, Literal, get_args
+from typing import Any, Literal, TypeVar, get_args
 
 import yaml
 from pydantic import (
@@ -225,10 +225,15 @@ class Experiment(StrictModel):
         return args
 
 
-def _model_at(location: tuple[Any, ...]) -> type[BaseModel] | None:
-    """Modelo Pydantic que descreve o campo em `location`."""
-    model: type[BaseModel] = Experiment
+Model = TypeVar("Model", bound=BaseModel)
+
+
+def _model_at(location: tuple[Any, ...], root: type[BaseModel]) -> type[BaseModel] | None:
+    """Modelo Pydantic que descreve o campo em `location` (índices de lista são pulados)."""
+    model: type[BaseModel] = root
     for part in location:
+        if isinstance(part, int):
+            continue
         field = model.model_fields.get(str(part))
         if field is None:
             return None
@@ -240,7 +245,7 @@ def _model_at(location: tuple[Any, ...]) -> type[BaseModel] | None:
     return model
 
 
-def _describe(item: dict[str, Any]) -> str:
+def _describe(item: dict[str, Any], root: type[BaseModel] = Experiment) -> str:
     """Traduz um erro do Pydantic em uma explicação curta em português."""
     kind = item["type"]
     location = item["loc"]
@@ -251,7 +256,7 @@ def _describe(item: dict[str, Any]) -> str:
         return "campo obrigatório ausente"
 
     if kind == "extra_forbidden":
-        model = _model_at(location[:-1])
+        model = _model_at(location[:-1], root)
         valid = sorted(model.model_fields) if model else []
         close = difflib.get_close_matches(str(location[-1]), valid, n=1)
         if close:
@@ -267,7 +272,7 @@ def _describe(item: dict[str, Any]) -> str:
         return f"valor {value!r} inválido; {hint}"
 
     if kind == "string_type":
-        model = _model_at(location[:-1])
+        model = _model_at(location[:-1], root)
         field = model.model_fields.get(str(location[-1])) if model else None
         patterns = [getattr(m, "pattern", None) for m in field.metadata] if field else []
         hint = next((FORMAT_HINTS[p] for p in patterns if p in FORMAT_HINTS), None)
@@ -289,6 +294,12 @@ def _describe(item: dict[str, Any]) -> str:
     if kind == "less_than_equal":
         return f"deve ser no máximo {context['le']}, mas recebeu {value!r}"
 
+    if kind == "too_short":
+        return f"deve ter pelo menos {context['min_length']} item(ns)"
+
+    if kind == "bool_parsing" or kind == "bool_type":
+        return f"deve ser true ou false, mas recebeu {value!r}"
+
     if kind == "value_error":
         return str(context.get("error", item["msg"]))
 
@@ -298,12 +309,19 @@ def _describe(item: dict[str, Any]) -> str:
 class _LineTracker:
     """Linhas das chaves de um documento YAML, para apontar onde está cada erro."""
 
-    def __init__(self, root: yaml.Node) -> None:
+    def __init__(self, root: yaml.Node | None) -> None:
         self.lines: dict[tuple[str, ...], int] = {}
         self.duplicates: list[tuple[tuple[str, ...], int]] = []
-        self._walk(root, ())
+        if root is not None:
+            self._walk(root, ())
 
     def _walk(self, node: yaml.Node, path: tuple[str, ...]) -> None:
+        if isinstance(node, yaml.SequenceNode):
+            for index, item in enumerate(node.value):
+                child = (*path, str(index))
+                self.lines[child] = item.start_mark.line + 1
+                self._walk(item, child)
+            return
         if not isinstance(node, yaml.MappingNode):
             return
         for key, value in node.value:
@@ -325,7 +343,8 @@ class _LineTracker:
 
 
 def _problem(line: int | None, location: tuple[Any, ...], text: str) -> tuple[int, str]:
-    field = ".".join(str(part) for part in location) or "(raiz)"
+    # "[key]" é como o Pydantic marca o erro na chave de um dicionário.
+    field = ".".join(str(part) for part in location if part != "[key]") or "(raiz)"
     prefix = f"linha {line}: " if line else ""
     return (line or 0, f"{prefix}{field}: {text}")
 
@@ -369,8 +388,16 @@ def _cold_problems(experiment: Experiment, lines: _LineTracker) -> list[tuple[in
     return [_problem(lines.line_of(location), location, text) for text in texts]
 
 
-def load_experiment(path: Path) -> Experiment:
-    """Lê e valida um experimento, reunindo todos os problemas em um ConfigError."""
+def load_yaml(
+    path: Path, minimum: str
+) -> tuple[dict[str, Any], _LineTracker, list[tuple[int, str]]]:
+    """Lê um arquivo YAML que deve ser um mapeamento de campos.
+
+    Devolve os dados, as linhas das chaves e os campos repetidos já como
+    problemas `(linha, mensagem)`. Arquivo ausente, vazio, com sintaxe inválida
+    ou que não seja um mapeamento levanta ConfigError; `minimum` diz o que o
+    arquivo precisa ter, para a mensagem de arquivo vazio.
+    """
     if not path.is_file():
         raise ConfigError(path, ["arquivo não encontrado"])
 
@@ -388,7 +415,7 @@ def load_experiment(path: Path) -> Experiment:
         ) from error
 
     if data is None:
-        raise ConfigError(path, ["arquivo vazio; o mínimo é name e benchmark.name"])
+        raise ConfigError(path, [f"arquivo vazio; o mínimo é {minimum}"])
     if not isinstance(data, dict):
         raise ConfigError(
             path,
@@ -402,42 +429,79 @@ def load_experiment(path: Path) -> Experiment:
         _problem(line, location, "campo repetido; só o último valor seria usado")
         for location, line in lines.duplicates
     ]
+    return data, lines, problems
 
-    experiment = None
+
+def validate_model(
+    model: type[Model], data: Any, lines: _LineTracker
+) -> tuple[Model | None, list[tuple[int, str]]]:
+    """Valida `data` no modelo; os erros viram problemas `(linha, mensagem)` em português."""
     try:
-        experiment = Experiment.model_validate(data)
+        return model.model_validate(data), []
     except ValidationError as error:
-        for item in error.errors():
-            problems.append(_problem(lines.line_of(item["loc"]), item["loc"], _describe(item)))
+        return None, [
+            _problem(lines.line_of(item["loc"]), item["loc"], _describe(item, model))
+            for item in error.errors()
+        ]
 
-    if experiment and not (experiment.benchmark_dir / "Makefile").is_file():
+
+def _benchmark_problems(experiment: Experiment, lines: _LineTracker) -> list[tuple[int, str]]:
+    """Problemas que dependem de benchmarks/: benchmark, variante e ROI para caches frias."""
+    if not (experiment.benchmark_dir / "Makefile").is_file():
         location = ("benchmark", "name")
-        problems.append(
+        return [
             _problem(
                 lines.line_of(location),
                 location,
                 f"benchmark {experiment.benchmark.name!r} não encontrado em benchmarks/; "
                 f"disponíveis: {', '.join(available_benchmarks()) or 'nenhum'}",
             )
-        )
-
-    elif experiment:
-        variants = available_variants(experiment.benchmark_dir)
-        if experiment.benchmark.variant not in variants:
-            location = ("benchmark", "variant")
-            problems.append(
-                _problem(
-                    lines.line_of(location),
-                    location,
-                    f"o benchmark {experiment.benchmark.name!r} não tem a variante "
-                    f"{experiment.benchmark.variant!r}; disponíveis: {', '.join(variants)}",
-                )
+        ]
+    problems = []
+    variants = available_variants(experiment.benchmark_dir)
+    if experiment.benchmark.variant not in variants:
+        location = ("benchmark", "variant")
+        problems.append(
+            _problem(
+                lines.line_of(location),
+                location,
+                f"o benchmark {experiment.benchmark.name!r} não tem a variante "
+                f"{experiment.benchmark.variant!r}; disponíveis: {', '.join(variants)}",
             )
-        if experiment.benchmark.cache_state == "cold":
-            problems += _cold_problems(experiment, lines)
+        )
+    if experiment.benchmark.cache_state == "cold":
+        problems += _cold_problems(experiment, lines)
+    return problems
 
+
+def raise_problems(path: Path, problems: list[tuple[int, str]]) -> None:
+    """ConfigError com os problemas ordenados por linha, se houver algum."""
     if problems:
         raise ConfigError(path, [message for _, message in sorted(problems, key=lambda p: p[0])])
 
+
+def load_experiment(path: Path) -> Experiment:
+    """Lê e valida um experimento, reunindo todos os problemas em um ConfigError."""
+    data, lines, problems = load_yaml(path, "name e benchmark.name")
+    experiment, invalid = validate_model(Experiment, data, lines)
+    problems += invalid
+    # O benchmark e suas variantes só são procurados com o restante válido.
+    if experiment:
+        problems += _benchmark_problems(experiment, lines)
+    raise_problems(path, problems)
+    assert experiment is not None
+    return experiment
+
+
+def check_experiment(data: dict[str, Any], source: Path) -> Experiment:
+    """Valida um experimento montado em memória, com as regras de load_experiment.
+
+    Usado pelas campanhas, que geram os experimentos; as mensagens não têm linha.
+    """
+    lines = _LineTracker(None)
+    experiment, problems = validate_model(Experiment, data, lines)
+    if experiment:
+        problems += _benchmark_problems(experiment, lines)
+    raise_problems(source, problems)
     assert experiment is not None
     return experiment

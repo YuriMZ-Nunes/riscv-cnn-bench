@@ -172,6 +172,19 @@ CASES = [
         id="preparation",
     ),
     pytest.param(
+        {
+            "status": "failed",
+            "failed_step": "simulation",
+            "exit_code": 130,
+            "program_exit_code": None,
+            "stdout": "Simulação interrompida no tick 7: user interrupt received\n",
+        },
+        "interrupted",
+        "a simulação foi interrompida (SIGINT) antes do fim do programa; as estatísticas estão "
+        f"incompletas. Rode de novo. Veja {RUN}/stdout.log.",
+        id="gem5-interrupted",
+    ),
+    pytest.param(
         {"status": "interrupted", "failed_step": "simulation"},
         "interrupted",
         "execução interrompida pelo usuário (etapa: simulation).",

@@ -13,6 +13,8 @@ from typing import Any
 from riscvcnnbench.config import PROJECT_ROOT, uses_roi
 from riscvcnnbench.parser import RegionStats, StatsError, cpu_model, read_region
 
+# Linha da configuração gem5 quando a simulação recebe SIGINT antes do fim.
+INTERRUPTED_SIMULATION = re.compile(r"^Simulação interrompida no tick \d+", re.MULTILINE)
 UNKNOWN_INSTRUCTION = re.compile(r"panic: (Unknown|Illegal|Unimplemented) instruction.*")
 GEM5_ERROR = re.compile(r"\b(fatal|panic): .*")
 BUILD_ERROR = re.compile(r".*\berror\b.*", re.IGNORECASE)
@@ -201,6 +203,12 @@ def diagnose(run: Run) -> Diagnosis | None:
                 f"o benchmark '{run.benchmark}' terminou com código {program_code}: o gem5 "
                 f"funcionou, mas o programa reportou resultado inválido ou rejeitou a entrada."
                 f"{detail} Veja {display(stdout_log)} e {display(stderr_log)}.",
+            )
+        if INTERRUPTED_SIMULATION.search(read_text(stdout_log)):
+            return Diagnosis(
+                "interrupted",
+                "a simulação foi interrompida (SIGINT) antes do fim do programa; as "
+                f"estatísticas estão incompletas. Rode de novo. Veja {display(stdout_log)}.",
             )
         unknown = first_match(UNKNOWN_INSTRUCTION, stderr)
         if unknown:
