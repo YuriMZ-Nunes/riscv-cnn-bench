@@ -53,6 +53,8 @@ def state(**changes: Any) -> dict[str, Any]:
         "scenarios": ["l1-l2"],
         "custom": None,
         "latencies": [3],
+        "units": [None],
+        "pipelined": [True],
         "vlens": [256],
         "flags": ["-O2"],
         "datasets": ["random"],
@@ -251,6 +253,14 @@ CAMPAIGNS = [
             l1i=(["32KiB"], 4), l1d=(["8KiB", "16KiB", "32KiB"], 4), l2=(["128KiB", "256KiB"], 8)
         ),
     ),
+    # Unidades das instruções personalizadas (RCB-33), com a normalização da campanha.
+    state(
+        variants=["ref", "custom", "rvv"],
+        cpus=["timing", "minor", "o3-edge"],
+        latencies=[3, 6],
+        units=[None, 1, 2],
+        pipelined=[True, False],
+    ),
     # Ajustes das caches (RCB-32): linha, latência, MSHRs e prefetcher com e sem.
     state(
         ops=["fc", "maxpool2x2"],
@@ -328,6 +338,8 @@ def test_many_choices_are_a_valid_campaign(
                 (memory.get("type", "simple"), memory.get("size", "512MiB")),
             ),
             cpu.get("custom_latency", 3),
+            cpu.get("custom_units"),
+            cpu.get("custom_pipelined", True),
             cpu.get("vlen", 256),
             tuple((data.get("compiler") or {}).get("flags", ["-O2"])),
             benchmark.get("cache_state", "warm"),
@@ -342,6 +354,8 @@ def test_many_choices_are_a_valid_campaign(
             c["cpu"],
             memory_of(c["scenario"], c["cache"], c["line"], (c["memoryType"], c["memorySize"])),
             c["latency"],
+            c["units"],
+            c["pipelined"],
             c["vlen"],
             tuple(c["flags"]),
             c["cacheState"],
@@ -360,6 +374,23 @@ def test_many_choices_are_a_valid_campaign(
             yaml.safe_load(path.read_text(encoding="utf-8"))["description"]
             == (selected["description"])
         )
+
+
+def test_custom_units_experiment(js: quickjs.Context, tmp_path: Path) -> None:
+    selected = state(variants=["custom"], cpus=["o3-edge"], units=[2], pipelined=[False])
+    result = call(js, "build", selected, DATA)
+    assert (result["kind"], result["problems"]) == ("experiment", [])
+    assert yaml.safe_load(result["yaml"])["cpu"] == {
+        "model": "o3-edge",
+        "custom_units": 2,
+        "custom_pipelined": False,
+    }
+    experiment = load_experiment(write(tmp_path / "unidades.yaml", result["yaml"]))
+    assert (experiment.cpu.custom_units, experiment.cpu.custom_pipelined) == (2, False)
+    # Na minor, 1 unidade é o padrão; na ref, as unidades não contam.
+    for changes in ({"cpus": ["minor"], "units": [1]}, {"variants": ["ref"], "units": [2]}):
+        cpu = yaml.safe_load(call(js, "build", state(**changes), DATA)["yaml"])["cpu"]
+        assert "custom_units" not in cpu
 
 
 def test_cache_tuning_experiment(js: quickjs.Context, tmp_path: Path) -> None:
@@ -469,6 +500,14 @@ def test_final_matrix_size(js: quickjs.Context) -> None:
         ({"variants": ["rvv"], "vlens": []}, "Escolha pelo menos uma VLEN."),
         ({"clock": "1 GHz"}, "Clock: use uma frequência como 800MHz ou 2GHz."),
         ({"datasets": []}, "Escolha pelo menos um conjunto de dados."),
+        (
+            {"variants": ["custom"], "units": []},
+            "Escolha pelo menos uma opção de unidades para as instruções personalizadas.",
+        ),
+        (
+            {"variants": ["custom"], "pipelined": []},
+            "Escolha com ou sem pipeline para as instruções personalizadas.",
+        ),
         ({"scenarios": []}, "Escolha pelo menos uma configuração de memória."),
         ({"scenarios": [""], "custom": custom()}, '"Sem cenário" só pode ser escolhido sozinho.'),
         ({"custom": custom(l2=(["256KiB"], 8))}, "A L2 exige a L1i e a L1d."),

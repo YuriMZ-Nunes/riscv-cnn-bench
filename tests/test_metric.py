@@ -12,6 +12,7 @@ from riscvcnnbench.metric import (
     cache_tuning,
     collect,
     compare,
+    custom_qualifier,
     derive,
     parse_result,
     scenario_label,
@@ -53,6 +54,7 @@ def measured(
     bench: str | None = "fc",
     latency: int = 3,
     cache_state: str = "warm",
+    units: dict | None = None,
 ) -> RunMetrics:
     """Execução sintética: fc 512×32 R=1 com as métricas e o cenário dados."""
     resolved = {
@@ -60,7 +62,13 @@ def measured(
         "scenario": None,
         "benchmark": {"name": "fc", "args": [], "variant": variant, "cache_state": cache_state},
         "compiler": {"flags": list(flags)},
-        "cpu": {"model": cpu, "clock": "1GHz", "vlen": vlen, "custom_latency": latency},
+        "cpu": {
+            "model": cpu,
+            "clock": "1GHz",
+            "vlen": vlen,
+            "custom_latency": latency,
+            **(units or {}),
+        },
         "cache": {"l1i": None, "l1d": {"size": "32KiB", "assoc": 4}, "l2": None},
         "memory": {"type": memory, "size": "512MiB"},
         "output": {"dir": f"/x/{variant}"},
@@ -280,6 +288,32 @@ def test_latency_only_matters_for_custom() -> None:
         "custom→rvv": 1.6,
         "custom@lat6→rvv": 2.0,
     }
+
+
+def test_custom_units_only_matter_for_custom() -> None:
+    """RCB-33: unidades e pipeline entram no rótulo e na chave só da custom."""
+    ref = measured("ref", units={"custom_units": 2})
+    custom = measured("custom", insts=200, cycles=800)
+    two = measured("custom", insts=200, cycles=500, units={"custom_units": 2})
+    serial = measured(
+        "custom", insts=200, cycles=1000, latency=6, units={"custom_pipelined": False}
+    )
+
+    comparison = compare([ref, custom, two, serial])
+
+    labels = {pair.label: pair.values["s_c"] for pair in comparison.pairs}
+    assert labels == {
+        "ref→custom": 2.5,
+        "ref→custom@2u": 4.0,
+        "ref→custom@lat6+np": 2.0,
+    }
+    assert custom_qualifier(
+        {"custom_latency": 6, "custom_units": 2, "custom_pipelined": False}
+    ) == ("lat6+2u+np")
+    assert (
+        custom_qualifier({"custom_latency": "3", "custom_units": "", "custom_pipelined": "true"})
+        == ""
+    )
 
 
 def test_cold_and_warm_caches_do_not_mix() -> None:

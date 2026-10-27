@@ -27,9 +27,14 @@ VARIANT_PAIRS = (("ref", "custom"), ("ref", "rvv"), ("custom", "rvv"))
 # variante: a VLEN só vale para a RVV, e a latência das instruções
 # personalizadas (RCB-18), só para a custom.
 IRRELEVANT: dict[str, set[tuple[str, str]]] = {
-    "ref": {("cpu", "vlen"), ("cpu", "custom_latency")},
+    "ref": {
+        ("cpu", "vlen"),
+        ("cpu", "custom_latency"),
+        ("cpu", "custom_units"),
+        ("cpu", "custom_pipelined"),
+    },
     "custom": {("cpu", "vlen")},
-    "rvv": {("cpu", "custom_latency")},
+    "rvv": {("cpu", "custom_latency"), ("cpu", "custom_units"), ("cpu", "custom_pipelined")},
 }
 
 
@@ -344,11 +349,11 @@ class Pair:
         for item in (self.a, self.b):
             cpu = item.run.resolved.get("cpu") or {}
             vlen = cpu.get("vlen", DEFAULT_VLEN)
-            latency = cpu.get("custom_latency", MUL_LATENCY)
+            qualifier = custom_qualifier(cpu)
             if item.variant == "rvv" and vlen != DEFAULT_VLEN:
                 sides.append(f"rvv@vlen{vlen}")
-            elif item.variant == "custom" and latency != MUL_LATENCY:
-                sides.append(f"custom@lat{latency}")
+            elif item.variant == "custom" and qualifier:
+                sides.append(f"custom@{qualifier}")
             else:
                 sides.append(item.variant)
         optimization = self.a.optimization
@@ -455,6 +460,21 @@ def parameters_label(item: RunMetrics) -> str:
     params = ",".join(f"{key}={value}" for key, value in (result.params if result else {}).items())
     data = result.data if result else None
     return params + (f",data={data}" if data and data != "random" else "")
+
+
+def custom_qualifier(cpu: dict) -> str:
+    """O que muda nas unidades da custom, como lat6, 2u (unidades próprias) e np
+    (sem pipeline), juntos por "+"; vazio com os padrões. Usado nos rótulos de
+    pares, séries e nomes de combinação."""
+    parts = []
+    latency = cpu.get("custom_latency", MUL_LATENCY)
+    if latency not in (None, "") and int(latency) != MUL_LATENCY:
+        parts.append(f"lat{latency}")
+    if cpu.get("custom_units") not in (None, ""):
+        parts.append(f"{cpu['custom_units']}u")
+    if cpu.get("custom_pipelined") in (False, "false"):
+        parts.append("np")
+    return "+".join(parts)
 
 
 # Ajustes das caches (RCB-32) e o nome curto de cada um no rótulo do cenário.

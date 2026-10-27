@@ -19,6 +19,7 @@ from riscvcnnbench.plot import (
     scenario_order,
     scenario_styles,
     series_label,
+    series_of,
     series_order,
     variant_styles,
     write_plots,
@@ -189,6 +190,18 @@ def test_orders_and_labels() -> None:
     # A coluna cache_tuning do runs.csv (RCB-32) entra no rótulo; sem ela, nada muda.
     tuned = {**explicit, "cache_tuning": "l1d.pf=stride"}
     assert run_scenario(tuned) == "l1i=32KiB,l1d=16KiB,simple,l1d.pf=stride,cold"
+
+
+def test_custom_units_series() -> None:
+    """RCB-33: unidades e pipeline viram série e rótulo; um runs.csv antigo não tem as colunas."""
+    row = run("20261027T000001.000000Z-u", variant="custom", custom_latency=6)
+    assert series_of({k: str(v) for k, v in row.items()}) == "custom@lat6"
+    two = {**row, "custom_latency": "3", "custom_units": "2", "custom_pipelined": "false"}
+    assert series_of(two) == "custom@2u+np"
+    assert (
+        series_label("custom@lat6+2u+np") == "Personalizada (latência 6, 2 unidades, sem pipeline)"
+    )
+    assert series_label("custom@1u") == "Personalizada (1 unidade)"
 
 
 def test_styles_readable_in_black_and_white() -> None:

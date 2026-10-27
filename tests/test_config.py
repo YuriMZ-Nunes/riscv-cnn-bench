@@ -76,6 +76,32 @@ def test_minimal_uses_defaults(tmp_path: Path) -> None:
     ]
 
 
+def test_custom_units(tmp_path: Path) -> None:
+    """RCB-33: os campos só aparecem quando mudam; 1 unidade é o padrão da minor."""
+    text = VALID_START + "cpu:\n  model: o3-edge\n  custom_units: 2\n  custom_pipelined: false\n"
+    config = load_experiment(write(tmp_path, text))
+
+    cpu = config.model_dump(mode="json")["cpu"]
+    assert (cpu["custom_units"], cpu["custom_pipelined"]) == (2, False)
+    assert config.gem5_args()[3:6] == [
+        "--custom-latency=3",
+        "--custom-units=2",
+        "--custom-unpipelined",
+    ]
+    minor = load_experiment(
+        write(tmp_path, VALID_START + "cpu:\n  model: minor\n  custom_units: 1\n")
+    )
+    default = load_experiment(write(tmp_path, VALID_START + "cpu:\n  model: minor\n"))
+    assert minor.model_dump(mode="json") == default.model_dump(mode="json")
+    assert set(default.model_dump(mode="json")["cpu"]) == {
+        "model",
+        "clock",
+        "vlen",
+        "custom_latency",
+    }
+    assert not any(arg.startswith("--custom-u") for arg in default.gem5_args())
+
+
 def test_cache_tuning(tmp_path: Path) -> None:
     """Ajustes das caches (RCB-32): só os diferentes do padrão chegam ao gem5 e à
     configuração resolvida, para a chave das execuções anteriores não mudar."""
@@ -313,6 +339,20 @@ VALID_START = "name: x\nbenchmark:\n  name: hello_riscv\n"
             VALID_START + "cpu:\n  custom_latency: 6\n",
             "linha 4: cpu: cpu.custom_latency só tem efeito nas CPUs minor, o3 e o3-edge; a "
             "atomic não modela a latência das unidades funcionais (use 3, o padrão)",
+        ),
+        (
+            VALID_START + "cpu:\n  model: timing\n  custom_units: 2\n",
+            "linha 4: cpu: cpu.custom_units só tem efeito nas CPUs minor, o3 e o3-edge; a "
+            "timing não modela as unidades funcionais (tire o campo)",
+        ),
+        (
+            VALID_START + "cpu:\n  custom_pipelined: false\n",
+            "linha 4: cpu: cpu.custom_pipelined só tem efeito nas CPUs minor, o3 e o3-edge; a "
+            "atomic não modela as unidades funcionais (use true, o padrão)",
+        ),
+        (
+            VALID_START + "cpu:\n  model: o3\n  custom_units: 9\n",
+            "linha 6: cpu.custom_units: deve ser no máximo 8, mas recebeu 9",
         ),
         (
             VALID_START + "cpu:\n  model: minor\n  custom_latency: 0\n",

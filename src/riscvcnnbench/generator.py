@@ -56,6 +56,8 @@ SIZES = ("S", "L")
 FLAGS = ("-O2", "-O3")
 # Latências oferecidas: a do mul e a pessimista da matriz final (docs/scenarios.md).
 LATENCIES = {MUL_LATENCY: "igual à do mul (padrão)", 2 * MUL_LATENCY: "o dobro (pessimista)"}
+# Unidades próprias oferecidas para as instruções personalizadas (RCB-33).
+UNIT_OPTIONS = (1, 2, 4)
 
 CPU_DESCRIPTIONS = {
     "atomic": "só confere o resultado, sem ciclos (rápida)",
@@ -264,6 +266,13 @@ def page_data(measured: list[Path] | None = None) -> dict[str, Any]:
             "min": bounds["Ge"].ge,
             "max": bounds["Le"].le,
             "options": [{"value": value, "detail": text} for value, text in LATENCIES.items()],
+        },
+        "units": {
+            "options": [None, *UNIT_OPTIONS],
+            "default": "1 própria na minor; dividida com o mul nas O3",
+            "max": {type(m).__name__: m for m in CpuConfig.model_fields["custom_units"].metadata}[
+                "Le"
+            ].le,
         },
         "vlen": {"default": CpuConfig().vlen, "options": _choices(CpuConfig, "vlen")},
         "flags": {"default": CompilerConfig().flags[0], "options": list(FLAGS)},

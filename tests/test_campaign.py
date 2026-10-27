@@ -215,6 +215,45 @@ groups:
     assert ("cpu.custom_latency",) in ignored and ("cpu.vlen",) in ignored
 
 
+def test_custom_units_names_and_normalization(tmp_path: Path) -> None:
+    """RCB-33: unidades e pipeline só na custom fora da atomic e da timing; na minor,
+    1 unidade é o padrão."""
+    path = matrix(
+        tmp_path,
+        """\
+name: t
+set: {scenario: l1-l2}
+groups:
+  - name: g
+    experiments: [fc_s]
+    vary:
+      benchmark.variant: [ref, custom]
+      cpu.model: [timing, minor, o3-edge]
+      cpu.custom_units: [null, 1, 2]
+      cpu.custom_pipelined: [true, false]
+""",
+    )
+
+    plan = plan_of(path)
+
+    assert [run.name.removeprefix("fc_s__") for run in plan.runs] == [
+        "ref__timing__l1-l2",
+        "ref__minor__l1-l2",
+        "ref__o3-edge__l1-l2",
+        "custom__timing__l1-l2",
+        "custom__minor__l1-l2",
+        "custom__minor__l1-l2__np",
+        "custom__minor__l1-l2__2u",
+        "custom__minor__l1-l2__2u-np",
+        "custom__o3-edge__l1-l2",
+        "custom__o3-edge__l1-l2__np",
+        "custom__o3-edge__l1-l2__1u",
+        "custom__o3-edge__l1-l2__1u-np",
+        "custom__o3-edge__l1-l2__2u",
+        "custom__o3-edge__l1-l2__2u-np",
+    ]
+
+
 def test_invalid_combinations_are_listed(tmp_path: Path) -> None:
     path = matrix(
         tmp_path,

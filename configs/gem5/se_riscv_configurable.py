@@ -23,6 +23,7 @@ from m5.objects import (
     DDR4_2400_8x8,
     DefaultFUPool,
     FP_MultDiv,
+    FUDesc,
     FUPool,
     IntALU,
     IntMultDiv,
@@ -100,26 +101,41 @@ O3_EDGE = {
 O3_EDGE_IQ_ENTRIES = 48
 
 
-def mult_div(latency, count):
-    """IntMultDiv da O3 com a latência das instruções personalizadas."""
-    return IntMultDiv(
-        count=count,
-        opList=[
-            OpDesc(opClass="IntMult", opLat=MUL_LATENCY),
-            OpDesc(opClass="CnnMult", opLat=latency),
-            OpDesc(opClass="IntDiv", opLat=20, pipelined=False),
-        ],
+def mult_div(latency, count, pipelined=True, shared=True):
+    """IntMultDiv da O3; com `shared`, também executa as instruções personalizadas."""
+    ops = [OpDesc(opClass="IntMult", opLat=MUL_LATENCY)]
+    if shared:
+        ops.append(OpDesc(opClass="CnnMult", opLat=latency, pipelined=pipelined))
+    ops.append(OpDesc(opClass="IntDiv", opLat=20, pipelined=False))
+    return IntMultDiv(count=count, opList=ops)
+
+
+def cnn_units(latency, count, pipelined):
+    """Unidades só de CnnMult (RCB-33: cpu.custom_units)."""
+    return FUDesc(
+        count=count, opList=[OpDesc(opClass="CnnMult", opLat=latency, pipelined=pipelined)]
     )
 
 
-def configure_o3(cpu, edge, latency):
-    """Unidades funcionais (e, na de borda, larguras e filas) da O3CPU."""
+def configure_o3(cpu, edge, latency, units=None, pipelined=True):
+    """Unidades funcionais (e, na de borda, larguras e filas) da O3CPU.
+
+    Sem `units`, CnnMult divide as IntMultDiv com o mul, como no fork; com
+    `units`, sai delas e ganha `units` unidades próprias.
+    """
+    shared = units is None
+
+    def mult(count):
+        return mult_div(latency, count, pipelined, shared)
+
+    extra = [] if shared else [cnn_units(latency, units, pipelined)]
     if edge:
         for name, value in O3_EDGE.items():
             setattr(cpu, name, value)
-        units = [
+        pool = [
             IntALU(count=2),
-            mult_div(latency, count=1),
+            mult(1),
+            *extra,
             FP_ALU(count=1),
             FP_MultDiv(count=1),
             SIMD_Unit(count=1),
@@ -128,40 +144,43 @@ def configure_o3(cpu, edge, latency):
             PredALU(),
             RdWrPort(count=1),
         ]
-        cpu.instQueues = [IQUnit(numEntries=O3_EDGE_IQ_ENTRIES, fuPool=FUPool(FUList=units))]
-    elif latency != MUL_LATENCY:
-        # Mesmas unidades e fila do padrão, só com outra latência para CnnMult.
-        units = [
-            mult_div(latency, fu.count) if isinstance(fu, IntMultDiv) else type(fu)()
-            for fu in DefaultFUPool().FUList
-        ]
-        cpu.instQueues = [IQUnit(fuPool=FUPool(FUList=units))]
+        cpu.instQueues = [IQUnit(numEntries=O3_EDGE_IQ_ENTRIES, fuPool=FUPool(FUList=pool))]
+    elif latency != MUL_LATENCY or not shared or not pipelined:
+        # Mesmas unidades e fila do padrão, só com a mudança nas de CnnMult.
+        pool = []
+        for fu in DefaultFUPool().FUList:
+            pool.append(mult(fu.count) if isinstance(fu, IntMultDiv) else type(fu)())
+            if isinstance(fu, IntMultDiv):
+                pool += extra
+        cpu.instQueues = [IQUnit(fuPool=FUPool(FUList=pool))]
 
 
-def configure_minor(cpu, latency):
+def configure_minor(cpu, latency, units=None, pipelined=True):
     """Unidade própria de CnnMult na MinorCPU, com pipeline e a latência pedida.
 
     Uma unidade da Minor tem uma latência só (opLat), e o scoreboard libera o
     destino no commit, no fim da unidade. Por isso CnnMult sai da unidade de
     multiplicação, onde o fork a registra, e ganha uma unidade ao lado dela,
     como a de divisão. Vale também com a latência 3, para que só a latência
-    mude entre os valores da matriz.
+    mude entre os valores da matriz. `units` (RCB-33) repete essa unidade; sem
+    pipeline, ela só aceita outra instrução depois da latência inteira.
     """
-    units = []
+    pool = []
     for fu in MinorDefaultFUPool().funcUnits:
         unit = type(fu)()
-        units.append(unit)
+        pool.append(unit)
         if isinstance(fu, MinorDefaultIntMulFU):
             unit.opClasses = minorMakeOpClassSet(["IntMult"])
-            units.append(
+            pool += [
                 MinorFU(
                     opClasses=minorMakeOpClassSet(["CnnMult"]),
                     opLat=latency,
-                    issueLat=1,
+                    issueLat=1 if pipelined else latency,
                     timings=[MinorFUTiming(description="CnnMult", srcRegsRelativeLats=[0])],
                 )
-            )
-    cpu.executeFuncUnits = MinorFUPool(funcUnits=units)
+                for _ in range(units or 1)
+            ]
+    cpu.executeFuncUnits = MinorFUPool(funcUnits=pool)
 
 
 # Ajustes das caches (RCB-32); os padrões são os de antes, e o YAML só os passa
@@ -232,6 +251,16 @@ def main():
         default=MUL_LATENCY,
         help="Latência, em ciclos, de cnn.dot8, cnn.dwmac e cnn.rqnt[.relu] (minor e o3).",
     )
+    parser.add_argument(
+        "--custom-units",
+        type=int,
+        help="Unidades só de CnnMult (padrão: 1 própria na minor; as IntMultDiv nas O3).",
+    )
+    parser.add_argument(
+        "--custom-unpipelined",
+        action="store_true",
+        help="As unidades de CnnMult só aceitam outra instrução depois da latência inteira.",
+    )
     parser.add_argument("--mem-type", choices=["simple", "ddr4"], default="simple")
     parser.add_argument("--mem-size", default="512MiB")
     parser.add_argument(
@@ -259,6 +288,9 @@ def main():
         parser.error("A L2 requer --l1i-size e --l1d-size.")
     if args.custom_latency < 1:
         parser.error("--custom-latency deve ser no mínimo 1.")
+    if args.custom_units is not None and args.custom_units < 1:
+        parser.error("--custom-units deve ser no mínimo 1.")
+    pipelined = not args.custom_unpipelined
 
     system = System()
     # Com caches frias, o m5_work_begin de rcb_roi_begin devolve o controle a
@@ -277,9 +309,11 @@ def main():
     system.cpu = CPU_MODELS[args.cpu]()
     system.cpu.isa = [system.cpu.ArchISA(vlen=args.vlen)]
     if args.cpu in ("o3", "o3-edge"):
-        configure_o3(system.cpu, args.cpu == "o3-edge", args.custom_latency)
+        configure_o3(
+            system.cpu, args.cpu == "o3-edge", args.custom_latency, args.custom_units, pipelined
+        )
     elif args.cpu == "minor":
-        configure_minor(system.cpu, args.custom_latency)
+        configure_minor(system.cpu, args.custom_latency, args.custom_units, pipelined)
     system.membus = SystemXBar()
 
     # Caches L1 ligam a CPU à L2 (se existir) ou diretamente ao barramento.
@@ -334,6 +368,8 @@ def main():
         f"custom_latency={args.custom_latency} "
         f"l1i={args.l1i_size} l1d={args.l1d_size} l2={args.l2_size} "
         f"memória={args.mem_type}/{args.mem_size} caches_roi={args.roi_caches}"
+        + (f" custom_units={args.custom_units}" if args.custom_units is not None else "")
+        + (" custom_pipelined=false" if not pipelined else "")
         + "".join(f" {part}" for part in tuning(args)),
         flush=True,
     )
