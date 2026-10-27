@@ -30,7 +30,8 @@ app = typer.Typer(
 campaign_app = typer.Typer(
     help=(
         "Executa em lote uma matriz de experimentos (campaigns/*.yaml): `plan` mostra as "
-        "combinações, `run` executa e retoma, `status` mostra o estado. Veja docs/campaigns.md."
+        "combinações, `estimate` estima o tempo a partir de execuções medidas, `run` executa "
+        "e retoma, `status` mostra o estado. Veja docs/campaigns.md."
     ),
     no_args_is_help=True,
 )
@@ -676,6 +677,101 @@ def campaign_status(
             problem = diagnose(state.run) if state.run else None
             reason = problem.message if problem else "concluída com outro executável do gem5"
             typer.echo(f"  {state.planned.name}: {reason} ({display(state.run.path)})")
+
+
+def _hours(seconds: float) -> str:
+    return f"{seconds / 3600:.2f} h" if seconds >= 3600 else f"{seconds / 60:.1f} min"
+
+
+@campaign_app.command("estimate")
+def campaign_estimate(
+    target: Annotated[
+        Path, typer.Argument(help="Matriz da campanha (.yaml) ou a pasta da campanha.")
+    ],
+    measured: Annotated[
+        list[Path],
+        typer.Option(
+            "--measured",
+            "-m",
+            help="Pasta com execuções medidas (repita para várias): results/, uma campanha...",
+        ),
+    ],
+    jobs: Annotated[
+        int, typer.Option("--jobs", "-j", min=1, help="Tarefas em paralelo na estimativa.")
+    ] = 4,
+    table: Annotated[
+        Path | None,
+        typer.Option("--csv", help="Grava a tabela das combinações, com o tempo de cada uma."),
+    ] = None,
+    output: OutputOption = None,
+) -> None:
+    """Estima o tempo da campanha a partir de execuções já medidas, sem executar nada.
+
+    Cada combinação usa a duração de uma execução medida com a mesma configuração
+    ou, sem ela, a + b · W: W são as instruções simuladas do mesmo binário (em
+    qualquer CPU) e a, b vêm de uma regressão sobre as execuções medidas na mesma
+    CPU e cenário. O total com N tarefas simula a ordem de `campaign run`. Veja
+    docs/matrix.md.
+    """
+    from riscvcnnbench.estimate import MEASURED, MISSING, MODEL, estimate, write_csv
+    from riscvcnnbench.metric import scenario_label
+    from riscvcnnbench.runs import display
+
+    for root in measured:
+        if not root.is_dir():
+            _fail(f"pasta não encontrada: {root}")
+    plan = _plan_or_exit(target, output)
+    source = target / "campaign.yaml" if target.is_dir() else target
+    result = estimate(plan, source, measured, jobs)
+    if table:
+        write_csv(table, result)
+
+    typer.echo(
+        f"Campanha {plan.campaign.name}: {len(plan.runs)} combinação(ões); estimativa a partir "
+        f"de {result.samples} execução(ões) medida(s) em {len(measured)} pasta(s)"
+    )
+    extrapolated = sum(1 for item in result.estimates if item.extrapolated)
+    typer.echo(
+        f"  {MEASURED}: {result.count(MEASURED)}, {MODEL}: {result.count(MODEL)} "
+        f"({extrapolated} fora da faixa de W medida), {MISSING}: {result.count(MISSING)}"
+    )
+
+    cells: dict[tuple[str, str], list[float]] = {}
+    for item in result.estimates:
+        if item.resolved:
+            key = (item.resolved["cpu"]["model"], scenario_label(item.resolved))
+            cells.setdefault(key, []).append(item.seconds or 0.0)
+    rows = [["CPU", "CENÁRIO", "COMBINAÇÕES", "EM SÉRIE"]] + [
+        [cpu, scenario, str(len(values)), _hours(sum(values))]
+        for (cpu, scenario), values in cells.items()
+    ]
+    widths = [max(len(row[i]) for row in rows) for i in range(4)]
+    typer.echo("")
+    for row in rows:
+        typer.echo("  ".join(cell.ljust(w) for cell, w in zip(row, widths, strict=True)).rstrip())
+
+    typer.echo("\nPor grupo (onde a combinação aparece primeiro):")
+    for group in plan.campaign.groups:
+        mine = [item for item in result.estimates if item.groups[0] == group.name]
+        total = sum(item.seconds or 0.0 for item in mine)
+        typer.echo(f"  {group.name}: {len(mine)} combinação(ões), {_hours(total)} em série")
+
+    typer.echo(
+        f"\nTotal: {_hours(result.serial)} em série; com {jobs} tarefa(s), "
+        f"≈ {_hours(result.makespan)} na ordem do plano"
+    )
+    longest = result.longest
+    if longest is not None and longest.seconds is not None:
+        typer.echo(
+            f"Maior combinação: {longest.name}, ≈ {_hours(longest.seconds)} ({longest.source})"
+        )
+    missing = [item for item in result.estimates if item.source == MISSING]
+    if missing:
+        typer.echo(f"\nSem estimativa (fora do total): {len(missing)}")
+        for item in missing:
+            typer.echo(f"  {item.name}: {item.detail}")
+    if table:
+        typer.echo(f"\nTabela gravada em {display(table)}")
 
 
 if __name__ == "__main__":

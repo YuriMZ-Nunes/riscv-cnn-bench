@@ -6,8 +6,8 @@ Uma campanha executa uma matriz de experimentos sem montar cada YAML à mão (RC
 | --- | --- |
 | Formato da matriz (`campaigns/*.yaml`), plano, execução em paralelo, retomada, estado e validação antes de começar | Existente (`src/riscvcnnbench/campaign.py`, `riscvcnnbench campaign`) |
 | Matriz de exemplo [`campaigns/exemplo.yaml`](../campaigns/exemplo.yaml) | Existente |
-| Matriz final da campanha | Planejado (RCB-22) |
-| Estimativa de tempo por combinação | Planejado (RCB-22, com o piloto da RCB-23) |
+| Matriz final da campanha [`campaigns/final.yaml`](../campaigns/final.yaml) | Existente (RCB-22, [matrix.md](matrix.md)); a execução é a RCB-24 |
+| Estimativa de tempo por combinação: `riscvcnnbench campaign estimate` | Existente (RCB-22, [matrix.md](matrix.md#como-a-estimativa-é-feita)); a refazer com o piloto (RCB-23) |
 | Exportação em CSV: `riscvcnnbench report <pasta da campanha>` | Existente (RCB-20, [report.md](report.md)); com colunas `campaign` e `groups` |
 | Gráficos: `riscvcnnbench plot <pasta da campanha>` | Existente (RCB-21, [plots.md](plots.md)); lê o `report/` da campanha e grava em `figures/` |
 
@@ -17,20 +17,23 @@ Uma campanha executa uma matriz de experimentos sem montar cada YAML à mão (RC
 uv run riscvcnnbench campaign plan campaigns/exemplo.yaml            # combinações, sem executar
 uv run riscvcnnbench campaign run campaigns/exemplo.yaml --jobs 4     # executa ou retoma
 uv run riscvcnnbench campaign status campaigns/exemplo.yaml          # estado de cada combinação
+uv run riscvcnnbench campaign estimate campaigns/final.yaml -m results/campaigns/medicao   # tempo estimado
 ```
 
-Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [JOBS=N] [VALIDATE=1]` e `make campaign-status MATRIX=...`. O `make campaign` roda a campanha inteira dentro de **um** container.
+Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [JOBS=N] [VALIDATE=1]`, `make campaign-status MATRIX=...` e `make campaign-estimate MATRIX=... MEASURED="<pastas>" [JOBS=N] [CSV=<arquivo>]`. O `make campaign` roda a campanha inteira dentro de **um** container.
 
 | Opção | Comandos | Efeito |
 | --- | --- | --- |
-| `--jobs N`, `-j N` | `run` | Simulações em paralelo. Padrão: número de CPUs (no `make campaign`, `JOBS`, padrão 4) |
+| `--jobs N`, `-j N` | `run`, `estimate` | Simulações em paralelo. Padrão: número de CPUs (no `make campaign`, `JOBS`, padrão 4); no `estimate`, as tarefas da estimativa (padrão 4) |
+| `--measured <pasta>`, `-m` | `estimate` | Pasta com execuções medidas; repita para várias |
+| `--csv <arquivo>` | `estimate` | Grava a tabela das combinações, com o tempo de cada uma |
 | `--validate` | `run` | Roda `pytest -m validation` antes, como `validate: true` na matriz |
 | `--update` | `run` | Aceita uma matriz diferente da já usada na pasta |
 | `--gem5 <arquivo>` | `run`, `status` | Executável do gem5. Padrão: `$GEM5_BIN` ou o build do submódulo |
 | `--output <pasta>` | todos | Pasta da campanha. Padrão: `output.dir` da matriz ou `results/campaigns/<name>` |
 | `--json` | `plan`, `status` | Saída em JSON |
 
-`campaign status` aceita a matriz ou a pasta da campanha. `riscvcnnbench runs <pasta>`, `stats`, `compare <pasta>`, `report <pasta>` ([report.md](report.md)) e `plot <pasta>` ([plots.md](plots.md)) também funcionam sobre a pasta de uma campanha, porque ela só contém execuções normais.
+`campaign status` e `campaign estimate` aceitam a matriz ou a pasta da campanha. `riscvcnnbench runs <pasta>`, `stats`, `compare <pasta>`, `report <pasta>` ([report.md](report.md)) e `plot <pasta>` ([plots.md](plots.md)) também funcionam sobre a pasta de uma campanha, porque ela só contém execuções normais.
 
 ## Matriz
 

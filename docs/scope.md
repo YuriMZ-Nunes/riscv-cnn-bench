@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); os cenários de CPU e memória, a latência configurável das instruções personalizadas e as caches frias opcionais existem (RCB-18, [scenarios.md](scenarios.md)); a execução em lote (RCB-19, [campaigns.md](campaigns.md)), as tabelas em CSV (RCB-20, [report.md](report.md)) e os gráficos (RCB-21, [plots.md](plots.md)) existem; a matriz final e a campanha (RCB-22+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); os cenários de CPU e memória, a latência configurável das instruções personalizadas e as caches frias opcionais existem (RCB-18, [scenarios.md](scenarios.md)); a execução em lote (RCB-19, [campaigns.md](campaigns.md)), as tabelas em CSV (RCB-20, [report.md](report.md)), os gráficos (RCB-21, [plots.md](plots.md)) e a matriz final com a estimativa de tempo (RCB-22, [matrix.md](matrix.md)) existem; o piloto e a campanha (RCB-23+) são **planejados**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -182,24 +182,21 @@ Variantes personalizada e RVV, medidas em 21/10/2026 no gem5 atomic (RCB-14; tab
 | RVV (VLEN 256) | 18,6 M | 162,4 M |
 | **Três variantes** | **163,2 M** | **594,7 M** |
 
-As velocidades de simulação acima foram medidas com código escalar. Na atomic, a RVV simulou a uma taxa parecida (~1 M instruções por segundo). Nas CPUs detalhadas, ainda é preciso medir, porque cada instrução vetorial vira vários micro-ops.
+As velocidades de simulação da primeira tabela foram medidas com código escalar, num laço simples. A estimativa da matriz final (RCB-22) usa tempos medidos com os próprios benchmarks: todas as combinações S da matriz e uma amostra de L, nas três CPUs e nos quatro cenários, inclusive a RVV nas CPUs detalhadas e o `sem-cache`. O método, as tabelas e a incerteza estão em [matrix.md](matrix.md#estimativa-de-tempo).
 
 | Item | Valor |
 | --- | --- |
-| Binários | 7 operações × 2 tamanhos × 3 variantes = 42 |
-| Configurações | 4 cenários de memória ([scenarios.md](scenarios.md)) × 3 CPUs (timing, minor, o3-edge) + atomic para validação = 13 |
-| Instruções simuladas por configuração | 594,7 M (era ≤ 800 M na estimativa da RCB-12, que supunha as variantes iguais à referência) |
-| Tempo por cenário de memória | o3 ≈ 37 min, minor ≈ 32 min, timing ≈ 11 min (≈ 1,3 h) |
-| Total por passada da matriz | ≈ 5,3 h nos 4 cenários, mais ≈ 8 min de atomic (546 execuções) |
-| Maior execução isolada | Conv direta L, referência, em o3: ≈ 290 s |
+| Binários | 7 operações × 2 tamanhos × 3 variantes = 42, mais 4 com `-O3` |
+| Execuções | 620: fatorial variante × CPU (timing, minor, o3-edge) × 4 cenários nos dois tamanhos (504), latência 6 na custom (112), `-O2` × `-O3` (4) |
+| Velocidade medida | Com cache: timing ≈ 0,9 M, minor ≈ 0,31 M, o3-edge ≈ 0,27 M instruções/s; sem cache, de 2 a 4 vezes menor |
+| Tempo | S medido: 1,5 h em série; L estimado: 9,9 h em série; total 11,4 h em série, **≈ 2,8 h com 4 tarefas** |
+| Maior execução | Conv direta L, referência, o3-edge sem cache: 16,1 min (medida) |
 
 **Decisão (21/10/2026):** o oráculo e a comparação são simulados em todas as CPUs, inclusive nas detalhadas. Cada execução da campanha verifica a própria saída (`mismatches=0` e código de saída 0), e uma execução que calculou errado aparece como falha no `metadata.json`. Isso protege as medições contra defeitos do simulador que só aparecem nas CPUs detalhadas, como o da redução RVV na O3CPU ([kernels.md](kernels.md#limitação-do-gem5-reduções-rvv-na-o3cpu)), e por isso a estimativa acima já inclui a verificação.
 
-Forma de reduzir o tempo ainda em aberto, a decidir nas RCB-18 e RCB-22: simular fora da ROI com a CPU atomic e trocar para a CPU detalhada só na ROI, como permite o gem5. A verificação continua valendo, porque a saída calculada na CPU detalhada é comparada com o oráculo, ainda que o oráculo rode na atomic. Isso também afeta o estado das caches no início da ROI.
+**Decisão (27/10/2026, RCB-22):** não reduzir o tempo simulando fora da ROI com a CPU atomic. Com a verificação simulada em todas as CPUs, a matriz completa leva cerca de 2,8 h com 4 tarefas, uma noite. A troca de CPU mudaria também o estado das caches no início da ROI, sem necessidade.
 
-Mesmo sem reduções, a matriz cabe no cronograma da proposta (experimentos em outubro e novembro), com uma passada por dia. As incertezas:
-- a velocidade foi medida com um laço simples; configurações sem cache geram mais eventos de memória e podem simular mais devagar;
-- a velocidade de simulação das instruções vetoriais nas CPUs detalhadas não foi medida (na atomic, foi parecida com a do código escalar).
+A incerteza fica no L: a estimativa interpola entre as duas operações amostradas, a conv direta e a FC (veja [matrix.md](matrix.md#incerteza)). O piloto (RCB-23) mede outras e refaz a estimativa com `riscvcnnbench campaign estimate`.
 
 Como o gem5 é determinístico, repetir uma execução com as mesmas entradas deve reproduzir as mesmas estatísticas (a confirmar); repetições servem só para medir o tempo do host.
 

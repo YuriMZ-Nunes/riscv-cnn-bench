@@ -21,7 +21,7 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
 	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare \
-	campaign-plan campaign campaign-status report plot
+	campaign-plan campaign campaign-status campaign-estimate report plot
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -72,11 +72,11 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
 
-e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes, a leitura do stats.txt nas quatro CPUs, as comparações entre variantes, os cenários de CPU e memória e uma campanha pequena com o report em CSV e os gráficos; ~7 min).
+e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes, a leitura do stats.txt nas quatro CPUs, as comparações entre variantes, os cenários de CPU e memória e uma campanha pequena com o report em CSV, os gráficos e a estimativa de tempo; ~7 min).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 validate: PODMAN_ARGS += $(if $(RCB_JOBS),-e RCB_JOBS=$(RCB_JOBS))
-validate: ## Validação completa antes da campanha: e2e + equivalência das variantes (S e L, dados extremos) no QEMU e no gem5, e as três variantes em S nas CPUs timing, minor e o3-edge. Use RCB_JOBS=N para o paralelismo.
+validate: ## Validação completa antes da campanha: e2e + equivalência das variantes (S e L, dados extremos) no QEMU e no gem5, as três variantes em S nas CPUs timing, minor e o3-edge, e o -O3 do grupo compilador da matriz final. Use RCB_JOBS=N para o paralelismo.
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m "e2e or validation" -v'
 
 clean-results: ## Remove resultados gerados pelo framework.
@@ -143,6 +143,11 @@ campaign: ## Executa ou retoma uma campanha num só container: make campaign MAT
 campaign-status: ## Estado de cada combinação de uma campanha: make campaign-status MATRIX=campaigns/<nome>.yaml
 	@test -n "$(MATRIX)" || { echo "Informe MATRIX=campaigns/<nome>.yaml (ou a pasta da campanha)"; exit 2; }
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign status "$(MATRIX)"'
+
+campaign-estimate: ## Tempo estimado de uma campanha a partir de execuções medidas: make campaign-estimate MATRIX=campaigns/<nome>.yaml MEASURED="<pastas>" [JOBS=N] [CSV=<arquivo>]
+	@test -n "$(MATRIX)" || { echo "Informe MATRIX=campaigns/<nome>.yaml"; exit 2; }
+	@test -n "$(MEASURED)" || { echo "Informe MEASURED=\"<pasta> [<pasta>...]\" com execuções medidas"; exit 2; }
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign estimate "$(MATRIX)" $(foreach d,$(MEASURED),-m "$(d)") --jobs $(JOBS) $(if $(CSV),--csv "$(CSV)")'
 
 report: ## Exporta as execuções em CSV (runs.csv e pairs.csv): make report [DIR=results/campaigns/<nome>] [FORCE=1]
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench report "$(or $(DIR),results)" $(if $(FORCE),--force)'

@@ -6,7 +6,8 @@ pois precisa da toolchain RISC-V e do gem5 do fork compilado.
 Roda pela CLI uma matriz pequena (fc S, ref e custom, atomic e timing) com um
 grupo que falha de propósito (argumento inválido), confere o estado de cada
 combinação, a retomada sem repetir as concluídas, os pares do compare, os CSVs
-do report (RCB-20) e as figuras do plot (RCB-21) sobre a pasta da campanha.
+do report (RCB-20), as figuras do plot (RCB-21) e a estimativa de tempo
+(RCB-22) sobre a pasta da campanha.
 """
 
 import csv
@@ -129,3 +130,12 @@ groups:
     assert [path.suffix for path in files] == [".pdf", ".png"] * 3
     assert all(path.stat().st_size > 0 for path in files)
     assert (figures / "runs.csv").read_bytes() == (root / "report" / "runs.csv").read_bytes()
+
+    # A própria campanha como medição (RCB-22): as concluídas valem pela duração
+    # medida; a que nunca terminou não tem instruções medidas.
+    estimate = cli("campaign", "estimate", str(root), "-m", str(root))
+    assert estimate.returncode == 0, estimate.stderr
+    lines = estimate.stdout.splitlines()
+    assert "  medida: 4, modelo: 0 (0 fora da faixa de W medida), sem estimativa: 1" in lines
+    reason = "nenhuma execução medida do mesmo binário com os mesmos argumentos"
+    assert f"  {failing}: {reason}" in lines

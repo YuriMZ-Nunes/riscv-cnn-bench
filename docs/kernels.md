@@ -253,6 +253,7 @@ Cobertura:
 - **Tamanhos e conjuntos de dados.** O conjunto aleatório roda em S e L. Os extremos `satpos` e `satneg` ([kernel_base.md](kernel_base.md#dados-determinísticos)) rodam em S. São 7 operações × 4 casos (S aleatório, L aleatório, S `satpos`, S `satneg`) × 7 execuções (3 no QEMU + 4 no gem5), com 7 checksums iguais por caso.
 - **Saturação de toda a saída.** Nos conjuntos extremos, além de bater com o oráculo, o checksum precisa ser o de uma saída inteira saturada: 127 em `satpos`, 0 em `satneg` e −128 no pooling. Isso prova que os extremos de fato chegaram às bordas da requantização.
 - **Casos de borda das instruções.** São os 39 casos de [custom_instructions.md](custom_instructions.md), no modo hw, nas quatro CPUs (e2e).
+- **Compilação com `-O3`** (RCB-22, `tests/test_compiler_validation.py`). A matriz final tem um grupo `-O2` × `-O3` ([matrix.md](matrix.md#compilador)). No QEMU, as sete operações em S e L, nas três variantes, compiladas com `-O3`, passam com o checksum da ref `-O2`. No gem5 atomic, a conv direta e a im2col em S, ref e custom com as instruções reais, também passam com esse checksum.
 
 Testes negativos (e2e):
 

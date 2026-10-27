@@ -1,0 +1,72 @@
+# Medições usadas na estimativa de tempo da matriz final (RCB-22). Roda a mesma
+# coisa que as campanhas de conferência da RCB-21 e de medição da RCB-22: todo o
+# tamanho S nas CPUs com tempo, uma amostra de L e a conferência do -O3.
+# Detalhes em docs/matrix.md.
+#
+#   make campaign MATRIX=campaigns/medicao.yaml JOBS=4
+#   uv run riscvcnnbench campaign estimate campaigns/final.yaml -m results/campaigns/medicao
+
+name: medicao
+description: >-
+  S completo nas CPUs com tempo; contagem de instruções de L na atomic; amostra
+  de L (conv direta e FC) nas CPUs com tempo e nos quatro cenários; -O2 × -O3.
+
+groups:
+  - name: s
+    description: >-
+      Todo o tamanho S da matriz final (variantes, CPUs, cenários e as duas
+      latências): a duração medida de cada combinação S.
+    experiments:
+      - conv3x3_direct_s
+      - conv3x3_im2col_s
+      - depthwise3x3_s
+      - pointwise1x1_s
+      - maxpool2x2_s
+      - requant_relu_s
+      - fc_s
+    vary:
+      benchmark.variant: [ref, custom, rvv]
+      cpu.model: [timing, minor, o3-edge]
+      scenario: [sem-cache, l1, l1-l2, reduzido]
+      cpu.custom_latency: [3, 6]
+
+  - name: atomic-l
+    description: >-
+      Instruções simuladas de cada binário L (o número não depende da CPU), na
+      atomic, que é rápida.
+    experiments:
+      - conv3x3_direct_l
+      - conv3x3_im2col_l
+      - depthwise3x3_l
+      - pointwise1x1_l
+      - maxpool2x2_l
+      - requant_relu_l
+      - fc_l
+    vary:
+      benchmark.variant: [ref, custom, rvv]
+
+  - name: amostra-l
+    description: >-
+      Velocidade de simulação de L: a maior operação (conv direta) e a que mais
+      depende da memória (FC), na ref, nas três CPUs e nos quatro cenários.
+    experiments: [conv3x3_direct_l, fc_l]
+    vary:
+      cpu.model: [timing, minor, o3-edge]
+      scenario: [sem-cache, l1, l1-l2, reduzido]
+
+  - name: compilador
+    description: >-
+      As sete operações S, ref e custom, com -O2 e -O3, na atomic: as variantes
+      passam com -O3 e quanto o -O3 muda as instruções (escolha do grupo
+      compilador da matriz final).
+    experiments:
+      - conv3x3_direct_s
+      - conv3x3_im2col_s
+      - depthwise3x3_s
+      - pointwise1x1_s
+      - maxpool2x2_s
+      - requant_relu_s
+      - fc_s
+    vary:
+      benchmark.variant: [ref, custom]
+      compiler.flags: [[-O2], [-O3]]
