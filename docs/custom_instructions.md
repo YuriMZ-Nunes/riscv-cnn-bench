@@ -309,7 +309,9 @@ Desde a RCB-18, `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` têm a classe própr
 - **Minor.** Uma unidade da Minor tem uma latência só, e o scoreboard libera o destino no commit, no fim da unidade (um `extraAssumedLat` não teria efeito). Por isso `CnnMult` tem uma unidade só dela, com pipeline e `opLat` igual à latência pedida, ao lado da de multiplicação. Isso vale também com 3, para que só a latência mude entre os valores da matriz.
 - **atomic e timing.** Não modelam a latência das unidades; o YAML só aceita o padrão nelas.
 
-`cnn.max8` continua em `IntAlu`: é um máximo byte a byte, do custo de um `add`. A escolha dos valores da matriz (3 e 6) e a medição com o benchmark `insn_latency` estão em [scenarios.md](scenarios.md#latência-das-instruções-personalizadas).
+Desde a RCB-33, `cpu.custom_units` dá N unidades só de `CnnMult` (na O3, `CnnMult` sai das `IntMultDiv`), e `cpu.custom_pipelined: false` tira o pipeline delas ([scenarios.md](scenarios.md#unidades-e-pipeline)). Sem os campos, a montagem é a descrita acima.
+
+`cnn.max8` continua em `IntAlu`: é um máximo byte a byte, do custo de um `add`. Uma latência própria para ele exigiria uma classe nova no fork e recompilar o gem5 (registrado na RCB-34, issue #70). A escolha dos valores da matriz (3 e 6) e a medição com o benchmark `insn_latency` estão em [scenarios.md](scenarios.md#latência-das-instruções-personalizadas).
 
 **Alinhamento em atomic e timing.** Com `-march=rv64gc`, uma instrução de 4 bytes pode começar num endereço 2 mod 4, depois de instruções comprimidas, e então a CPU precisa de duas buscas. No mesmo microbenchmark compilado com `rv64gc` e sem caches, as cadeias de instruções personalizadas ficaram desalinhadas e custaram, por instrução, +1 ciclo na atomic e ~+40 na timing, em relação ao `mul` alinhado. O efeito vale para qualquer instrução de 4 bytes, não só para as personalizadas. Ele deve ser lembrado ao comparar `numCycles` de variantes nessas CPUs.
 

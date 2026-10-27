@@ -48,6 +48,10 @@ cpu:
   # variante custom nas CPUs minor, o3 e o3-edge; nas atomic e timing, só o
   # padrão é aceito. Padrão: 3 (a do mul).
   custom_latency: 3
+  # Unidades de cnn.dot8, cnn.dwmac e cnn.rqnt (RCB-33), também só nas CPUs minor,
+  # o3 e o3-edge (a timing deste exemplo recusa os campos): custom_units: N dá N
+  # unidades próprias (padrão: 1 própria na minor; as IntMultDiv, com o mul, nas
+  # O3) e custom_pipelined: false tira o pipeline (padrão: true).
 
 # Cada nível é opcional; omitido = sem aquele cache. Padrão: sem caches.
 # size em KiB/MiB/GiB; assoc = associatividade (vias). Padrão de assoc: 4.

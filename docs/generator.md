@@ -25,7 +25,7 @@ A página é um arquivo HTML só, com o script e os estilos embutidos. Ela funci
    - operação e tamanho (S ou L);
    - implementações (`ref`, `custom`, `rvv`);
    - CPU e clock;
-   - latência das instruções personalizadas (só aparece com a `custom` e uma CPU minor, o3 ou o3-edge);
+   - latência, unidades e pipeline das instruções personalizadas (só aparecem com a `custom` e uma CPU minor, o3 ou o3-edge);
    - VLEN (só aparece com a `rvv`);
    - cenário de memória, memória personalizada e estado das caches;
    - flags do compilador e conjunto de dados;

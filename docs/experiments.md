@@ -23,7 +23,7 @@ Para executar, veja [Executar um experimento](#executar-um-experimento).
 | [`hello_param_cache.yaml`](../experiments/hello_param_cache.yaml) | Variação com todos os campos anotados: CPU timing a 2GHz, L1/L2, DDR4 e flags próprias. |
 | [`conv3x3_direct_s_custom.yaml`](../experiments/conv3x3_direct_s_custom.yaml), [`conv3x3_direct_s_rvv.yaml`](../experiments/conv3x3_direct_s_rvv.yaml) | Mesma operação de `conv3x3_direct_s.yaml` nas variantes `custom` e `rvv`. |
 | [`fc_s_cenario.yaml`](../experiments/fc_s_cenario.yaml) | Medição num cenário: `scenario`, CPU `o3-edge`, latência das instruções personalizadas e caches frias. |
-| [`insn_latency.yaml`](../experiments/insn_latency.yaml) | Cadeia dependente de uma instrução, para ver a latência (`cpu.custom_latency`) nos ciclos. |
+| [`insn_latency.yaml`](../experiments/insn_latency.yaml) | Cadeia dependente de uma instrução, para ver a latência (`cpu.custom_latency`) nos ciclos; com o terceiro argumento `1`, cadeias independentes, para ver as unidades (`cpu.custom_units`, `cpu.custom_pipelined`). |
 
 Configuração mínima:
 
@@ -49,6 +49,8 @@ benchmark:
 | `cpu.clock` | `1GHz` | Número seguido de `MHz` ou `GHz`. |
 | `cpu.vlen` | `256` | VLEN da extensão V, em bits: `128`, `256`, `512` ou `1024`. Só a variante `rvv` usa registradores vetoriais. O padrão é o do gem5. |
 | `cpu.custom_latency` | `3` | Latência, em ciclos (1 a 64), de `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` nas CPUs `minor`, `o3` e `o3-edge`. O padrão é a do `mul`. Nas `atomic` e `timing`, que não modelam a latência das unidades, só o padrão é aceito. Ver [scenarios.md](scenarios.md#latência-das-instruções-personalizadas). |
+| `cpu.custom_units` | a montagem de antes | Unidades só para `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` (1 a 8). Sem o campo, a minor tem 1 unidade própria, e a `o3` e a `o3-edge` executam essas instruções nas `IntMultDiv`, divididas com o `mul`. Com o campo, elas ganham N unidades próprias (na minor, 1 é o padrão). Ver [scenarios.md](scenarios.md#unidades-e-pipeline). |
+| `cpu.custom_pipelined` | `true` | `false`: a unidade só aceita outra instrução personalizada depois da latência inteira. |
 | `cache.l1i`, `cache.l1d`, `cache.l2` | sem cache | Cada nível tem `size` (`KiB`/`MiB`/`GiB`) e `assoc` (padrão 4). A L2 exige L1i e L1d. O número de conjuntos, `size` ÷ (linha × `assoc`), tem de ser potência de 2, como o gem5 exige. |
 | `cache.<nível>.latency` | 2 na L1i e na L1d, 10 na L2 | Ciclos de tag, dados e resposta (1 a 1000). |
 | `cache.<nível>.mshrs` | 16 | Faltas pendentes ao mesmo tempo (1 a 1024). |
@@ -95,7 +97,7 @@ Para comparar caches ou memória, use `timing`, `minor` ou `o3-edge`. Os parâme
 | `fc` | `[In, Out, R]`. S: `512 32`; L: `1024 512`. | idem, com `In=` e `Out=` |
 | `int8_base_example` | `[K, M, R]`: `M` produtos escalares int8 de tamanho `K` (múltiplo de 8) com requantização, repetidos `R` vezes na região de interesse. Padrão `64 16 1`. | `RESULT bench=int8_base_example variant=ref data=random K=.. M=.. R=.. checksum=0x... mismatches=0` |
 | `cnn_insn_semantics` | nenhum. Com `compiler.flags: [-O2, -DCNN_INSN_HW]` usa as instruções personalizadas reais, que só existem no gem5 do fork (`third_party/gem5`). | `RESULT mode=model cases=39 failures=0` (ou `mode=hw`) |
-| `insn_latency` | `[OP, N]`: `N` iterações de 8 instruções `OP` em cadeia dependente (0 `mul`, 1 `cnn.dot8`, 2 `cnn.dwmac`, 3 `cnn.rqnt`, 4 `cnn.max8`), conferidas com o modelo em C. Padrão `1 2000`. Só no gem5 do fork. | `RESULT bench=insn_latency variant=custom data=random OP=.. N=.. checksum=0x... mismatches=0` |
+| `insn_latency` | `[OP, N, MODE]`: `N` iterações de 8 instruções `OP` (0 `mul`, 1 `cnn.dot8`, 2 `cnn.dwmac`, 3 `cnn.rqnt`, 4 `cnn.max8`), em cadeia dependente (`MODE` 0) ou em 8 cadeias independentes (`MODE` 1, RCB-33), conferidas com o modelo em C. Padrão `1 2000 0`. Só no gem5 do fork. | `RESULT bench=insn_latency variant=custom data=random OP=.. N=.. MODE=.. checksum=0x... mismatches=0` |
 
 O `hello_riscv_param` existe para testar as opções. Com `N` maior que a L1 (por exemplo, `65536` = 256KiB), as faltas de cache e o tipo de memória passam a aparecer nas estatísticas. Os dois `hello_*` são de teste, não CNNs. As sete operações de CNN são descritas em [kernels.md](kernels.md); cada uma tem `experiments/<operação>_s.yaml` e `_l.yaml` (variante `ref`; troque `benchmark.variant` para as outras), e as três variantes têm o mesmo checksum. Para os conjuntos de dados extremos da validação, acrescente `-DRCB_DATA=1` (`satpos`) ou `-DRCB_DATA=2` (`satneg`) em `compiler.flags` ([kernel_base.md](kernel_base.md#dados-determinísticos)); a linha `RESULT` mostra `data=`. O `int8_base_example` exercita a base comum dos kernels e separa a região de interesse no `stats.txt` ([kernel_base.md](kernel_base.md)). O `cnn_insn_semantics` confere os casos de teste das instruções personalizadas, descritos em [custom_instructions.md](custom_instructions.md).
 
@@ -188,6 +190,7 @@ Além disso, são detectados:
 | Cenário inexistente | `cenário 'l1l2' não existe em configs/scenarios.yaml; você quis dizer 'l1-l2'?` |
 | `scenario` junto com `cache` ou `memory` | `não use junto com scenario (l1), que já define cache e memory; tire um dos dois` |
 | Latência própria na atomic ou timing | `cpu.custom_latency só tem efeito nas CPUs minor, o3 e o3-edge; ...` |
+| Unidades ou pipeline na atomic ou timing | `cpu.custom_units só tem efeito nas CPUs minor, o3 e o3-edge; a timing não modela as unidades funcionais (tire o campo)` |
 | `cache_state: cold` sem caches ou sem ROI | `'cold' esvazia as caches no início da ROI, mas o experimento não tem caches; ...` e `'cold' exige um benchmark que marque a região de interesse (rcb_roi_begin); ...` |
 
 O benchmark, suas variantes e a ROI (para `cache_state: cold`) só são procurados em `benchmarks/` quando o restante do arquivo está válido.

@@ -28,7 +28,6 @@ import yaml
 from pydantic import AfterValidator, Field, field_validator
 
 from riscvcnnbench.config import (
-    MUL_LATENCY,
     NAME_PATTERN,
     PROJECT_ROOT,
     ConfigError,
@@ -41,7 +40,7 @@ from riscvcnnbench.config import (
     raise_problems,
     validate_model,
 )
-from riscvcnnbench.metric import IRRELEVANT, scenario_label
+from riscvcnnbench.metric import IRRELEVANT, custom_qualifier, scenario_label
 from riscvcnnbench.runner import check_environment, execute, prepare_run
 from riscvcnnbench.runs import Run, diagnose, display, list_runs, metric_cells
 
@@ -223,7 +222,7 @@ def normalize(data: dict[str, Any]) -> list[str]:
     model = (data.get("cpu") or {}).get("model", "atomic")
     fields = set(IRRELEVANT.get(variant, set()))
     if model in NO_FU_TIMING:
-        fields.add(("cpu", "custom_latency"))
+        fields |= {("cpu", "custom_latency"), ("cpu", "custom_units"), ("cpu", "custom_pipelined")}
     removed = []
     for section, name in sorted(fields):
         if name in (data.get(section) or {}):
@@ -248,8 +247,9 @@ def run_name(base: str, experiment: Experiment) -> str:
     cpu = experiment.cpu
     parts = [_token(base), experiment.benchmark.variant, cpu.model]
     parts.append(re.sub(r"[^A-Za-z0-9-]", "", scenario_label(resolved).replace(",", "-")))
-    if experiment.benchmark.variant == "custom" and cpu.custom_latency != MUL_LATENCY:
-        parts.append(f"lat{cpu.custom_latency}")
+    qualifier = custom_qualifier(resolved["cpu"])
+    if experiment.benchmark.variant == "custom" and qualifier:
+        parts.append(qualifier.replace("+", "-"))
     if experiment.benchmark.variant == "rvv" and cpu.vlen != CpuConfig().vlen:
         parts.append(f"vlen{cpu.vlen}")
     if cpu.clock != CpuConfig().clock:

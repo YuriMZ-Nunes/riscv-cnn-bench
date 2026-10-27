@@ -202,6 +202,7 @@ def test_runs_table(results: Path) -> None:
     )
     assert (ref["project_dirty"], ref["duration_s"]) == ("false", "12.5")
     assert ref["cache_tuning"] == ""
+    assert (ref["custom_units"], ref["custom_pipelined"]) == ("", "true")
 
     # Repetida: só a mais recente vale.
     assert (rows["02"]["current"], rows["03"]["current"]) == ("false", "true")

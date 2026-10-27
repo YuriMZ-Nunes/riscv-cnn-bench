@@ -108,6 +108,20 @@ class CpuConfig(StrictModel):
         le=64,
         description="Latência, em ciclos, de cnn.dot8, cnn.dwmac e cnn.rqnt[.relu].",
     )
+    custom_units: int | None = Field(
+        default=None,
+        ge=1,
+        le=8,
+        description=(
+            "Unidades só para cnn.dot8, cnn.dwmac e cnn.rqnt[.relu] (RCB-33). Padrão: a "
+            "montagem de antes, 1 unidade própria na minor e as IntMultDiv, divididas com "
+            "o mul, na o3 e na o3-edge."
+        ),
+    )
+    custom_pipelined: bool = Field(
+        default=True,
+        description="false: a unidade só aceita outra instrução depois da latência inteira.",
+    )
 
     @model_validator(mode="after")
     def latency_needs_pipeline(self) -> "CpuConfig":
@@ -117,7 +131,31 @@ class CpuConfig(StrictModel):
                 f"{self.model} não modela a latência das unidades funcionais "
                 f"(use {MUL_LATENCY}, o padrão)"
             )
+        if self.model in ("atomic", "timing"):
+            for name, changed, hint in (
+                ("custom_units", self.custom_units is not None, "tire o campo"),
+                ("custom_pipelined", not self.custom_pipelined, "use true, o padrão"),
+            ):
+                if changed:
+                    raise ValueError(
+                        f"cpu.{name} só tem efeito nas CPUs minor, o3 e o3-edge; a "
+                        f"{self.model} não modela as unidades funcionais ({hint})"
+                    )
+        # Na minor, a montagem de antes já é 1 unidade própria: 1 é o padrão.
+        if self.model == "minor" and self.custom_units == 1:
+            self.custom_units = None
         return self
+
+    @model_serializer(mode="wrap")
+    def without_default_units(self, handler: Any) -> dict[str, Any]:
+        """Os campos da RCB-33 só aparecem quando mudam: a chave das execuções
+        anteriores não muda."""
+        data = handler(self)
+        if data.get("custom_units") is None:
+            data.pop("custom_units", None)
+        if data.get("custom_pipelined") is True:
+            data.pop("custom_pipelined", None)
+        return data
 
 
 # Padrões de configs/gem5/se_riscv_configurable.py para os ajustes das caches
@@ -305,6 +343,10 @@ class Experiment(StrictModel):
         args = [f"--arg={arg}" for arg in self.benchmark.args]
         args += [f"--cpu={self.cpu.model}", f"--clock={self.cpu.clock}", f"--vlen={self.cpu.vlen}"]
         args += [f"--custom-latency={self.cpu.custom_latency}"]
+        if self.cpu.custom_units is not None:
+            args.append(f"--custom-units={self.cpu.custom_units}")
+        if not self.cpu.custom_pipelined:
+            args.append("--custom-unpipelined")
         if self.cache.line:
             args += [f"--cache-line={self.cache.line}"]
         for level in ("l1i", "l1d", "l2"):

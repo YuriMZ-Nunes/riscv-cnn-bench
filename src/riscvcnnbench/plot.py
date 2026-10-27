@@ -38,7 +38,7 @@ from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 
 from riscvcnnbench import __version__
 from riscvcnnbench.config import MUL_LATENCY, load_scenarios
-from riscvcnnbench.metric import DEFAULT_VLEN, scenario_label
+from riscvcnnbench.metric import DEFAULT_VLEN, custom_qualifier, scenario_label
 from riscvcnnbench.report import PAIRS_FILE, RUNS_FILE
 from riscvcnnbench.runs import display
 
@@ -237,21 +237,36 @@ def run_scenario(row: dict[str, str]) -> str:
 def series_of(row: dict[str, str]) -> str:
     """Variante com a latência ou a VLEN quando não são as padrão, como no compare."""
     variant = row["variant"]
-    if variant == "custom" and row["custom_latency"] and int(row["custom_latency"]) != MUL_LATENCY:
-        return f"custom@lat{row['custom_latency']}"
+    # custom_units e custom_pipelined são colunas da RCB-33; um runs.csv anterior não as tem.
+    qualifier = custom_qualifier(
+        {
+            "custom_latency": row["custom_latency"] or MUL_LATENCY,
+            "custom_units": row.get("custom_units"),
+            "custom_pipelined": row.get("custom_pipelined"),
+        }
+    )
+    if variant == "custom" and qualifier:
+        return f"custom@{qualifier}"
     if variant == "rvv" and row["vlen"] and int(row["vlen"]) != DEFAULT_VLEN:
         return f"rvv@vlen{row['vlen']}"
     return variant
 
 
 def series_label(series: str) -> str:
-    variant, _, qualifier = series.partition("@")
+    variant, _, qualifiers = series.partition("@")
     name = VARIANTS.get(variant, variant)
-    if qualifier.startswith("lat"):
-        return f"{name} (latência {qualifier[3:]})"
-    if qualifier.startswith("vlen"):
-        return f"{name} (VLEN {qualifier[4:]})"
-    return name
+    texts = []
+    for qualifier in filter(None, qualifiers.split("+")):
+        if qualifier.startswith("lat"):
+            texts.append(f"latência {qualifier[3:]}")
+        elif qualifier.startswith("vlen"):
+            texts.append(f"VLEN {qualifier[4:]}")
+        elif qualifier.endswith("u"):
+            units = qualifier[:-1]
+            texts.append(f"{units} unidade{'s' if units != '1' else ''}")
+        elif qualifier == "np":
+            texts.append("sem pipeline")
+    return f"{name} ({', '.join(texts)})" if texts else name
 
 
 # Ordens -------------------------------------------------------------------------

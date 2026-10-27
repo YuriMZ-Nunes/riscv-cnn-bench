@@ -6,7 +6,7 @@ Os cenários arquiteturais das comparações (RCB-18). O objetivo específico 4 
 | --- | --- | --- |
 | Hierarquia de memória | Quatro [cenários de memória](#cenários-de-memória) nomeados, o [estado das caches](#estado-das-caches-no-início-da-roi) no início da ROI e os [ajustes das caches](#ajustes-das-caches) (latência, MSHRs, prefetcher, linha) | `scenario`, `benchmark.cache_state`, `cache.<nível>.latency` e outros |
 | Organização da CPU | timing, minor e uma [O3 de borda](#o3-de-borda-o3-edge) | `cpu.model` |
-| Latência das instruções | [Latência](#latência-das-instruções-personalizadas) de `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` | `cpu.custom_latency` |
+| Latência das instruções | [Latência](#latência-das-instruções-personalizadas) de `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]`, e as [unidades](#unidades-e-pipeline) que as executam | `cpu.custom_latency`, `cpu.custom_units`, `cpu.custom_pipelined` |
 
 | Parte | Situação |
 | --- | --- |
@@ -182,6 +182,32 @@ Num kernel real o efeito depende de quanto a CPU esconde a latência. Ciclos da 
 | `conv3x3_direct` | minor | 551.814 | 698.942 | +26,7% |
 | | o3-edge | 411.831 | 411.829 | 0,0% |
 
+### Unidades e pipeline
+
+Desde a RCB-33, as unidades que executam `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` também são configuráveis:
+
+| Campo | Sem o campo (como antes) | Com o campo |
+| --- | --- | --- |
+| `cpu.custom_units` | minor: 1 unidade própria; `o3` e `o3-edge`: as `IntMultDiv` (2 na `o3`, 1 na `o3-edge`), divididas com o `mul` | N unidades só de `CnnMult`, e na O3 `CnnMult` sai das `IntMultDiv` |
+| `cpu.custom_pipelined` | `true`: com pipeline, uma instrução nova por ciclo | `false`: a unidade só aceita outra depois da latência inteira (`issueLat` = latência na Minor, `pipelined=False` na O3) |
+
+Os campos só aparecem na configuração resolvida quando mudam, e na minor 1 unidade é o padrão. Assim, a chave das execuções anteriores não muda. Com os padrões, o `config.ini` e os ciclos são os mesmos de antes: a FC S custom com latência 6 no `l1-l2` deu exatamente 19.075 ciclos na minor e 11.757 na o3-edge, os mesmos da campanha final. Nas `atomic` e `timing`, o YAML recusa os dois campos. Para a ref e a rvv, eles não contam, como a latência. O rótulo da custom os mostra: `custom@2u`, `custom@np` (sem pipeline), `custom@lat6+2u+np`.
+
+**Medição com o `insn_latency`** (27/10/2026, ilustração). Foram 1000 iterações de 8 `cnn.dot8`, com latência 3, no cenário `l1-l2`. Com o terceiro argumento `1`, as 8 instruções de cada iteração formam 8 cadeias independentes:
+
+| Ciclos da ROI | minor, cadeia | minor, independentes | o3-edge, cadeia | o3-edge, independentes |
+| --- | --- | --- | --- | --- |
+| padrão | 24.134 | 11.361 | 24.108 | 8.202 |
+| sem pipeline | 24.134 | 24.319 | 24.108 | 24.197 |
+| sem pipeline, 2 unidades | 24.134 | 12.357 | 24.108 | 12.198 |
+| 2 unidades, com pipeline | 24.134 | 11.347 | 24.108 | 6.218 |
+
+- **Numa cadeia dependente**, nada muda: cada instrução espera a anterior, 3 ciclos cada.
+- **Nas cadeias independentes**, sem pipeline cada unidade aceita uma instrução a cada 3 ciclos, e os ciclos triplicam em relação ao padrão. Duas unidades recuperam metade.
+- **Duas unidades com pipeline** não ajudam na minor, cuja emissão já é o limite. Na o3-edge, ajudam: liberam a `IntMultDiv` única e aceitam duas por ciclo.
+
+O teste `tests/test_custom_units_e2e.py` confere essas relações e a montagem no `config.ini`. A campanha final não usa esses campos, então o efeito de ter uma só unidade nos kernels continua sem medição ([analysis.md](analysis.md#hipóteses)).
+
 ## Ajustes das caches
 
 Desde a RCB-32, os parâmetros das caches que eram fixos viraram campos opcionais do YAML ([experiments.md](experiments.md#campos)). Os padrões são os de antes, então a campanha final e todos os cenários continuam iguais:
@@ -223,6 +249,7 @@ Mudar qualquer um deles exige editar `configs/gem5/se_riscv_configurable.py`. Mu
 | --- | --- | --- |
 | `tests/test_config.py` | `scenario` (expansão, nome desconhecido com sugestão, conflito com `cache`/`memory`), `cpu.custom_latency` (faixa, recusa na atomic e timing), `benchmark.cache_state` (recusa sem caches e sem ROI), `o3-edge` nos argumentos do gem5, os quatro cenários do arquivo | `make test` |
 | `tests/test_metric.py` | A latência não entra na chave de ref e rvv (uma ref pareia com a custom de cada latência), caches frias e aquecidas não se misturam, rótulos `custom@lat6` e `l1-l2,cold` | `make test` |
+| `tests/test_custom_units_e2e.py` | `insn_latency` em cadeia e em cadeias independentes na minor e na o3-edge: unidades e pipeline não mudam a cadeia; sem pipeline triplica as independentes; 2 unidades recuperam; montagem das unidades no `config.ini` da o3-edge | `make e2e-test` |
 | `tests/test_config.py::test_cache_tuning` e os casos de erro | Ajustes no modelo e nos argumentos do gem5; padrões escritos ou omitidos dão a mesma configuração resolvida; geometria, faixas e prefetcher inválidos; cenários sem ajustes | `make test` |
 | `tests/test_cache_tuning_e2e.py` | Cada ajuste chega ao `config.ini`; caches explícitas sem ajustes = cenário `l1-l2` e os padrões de antes; o stride acelera o maxpool L custom sem L2 | `make e2e-test` |
 | `tests/test_scenarios_e2e.py` | Latência pelo `insn_latency` (minor, o3, o3-edge), fc S nos quatro cenários de memória, caches frias (timing e o3-edge), parâmetros e IPC da `o3-edge` × `o3` | `make e2e-test` |
@@ -233,6 +260,6 @@ Mudar qualquer um deles exige editar `configs/gem5/se_riscv_configurable.py`. Mu
 - As medições desta página são ilustrações de 26/10/2026, não resultados da campanha, que depende da matriz (RCB-22) e da execução em lote (RCB-19).
 - A tabela "o que cabe" foi medida só na variante de referência. As três variantes têm os mesmos dados, mas os padrões de acesso diferem.
 - Nas CPUs `timing`, `minor` e `o3-edge`, a validação roda só os tamanhos S, pelo tempo de simulação. As quatro operações afetadas pelo defeito da RVV na `o3-edge` foram conferidas também em L, fora dos testes.
-- A latência configurável vale para as três instruções de `CnnMult` juntas. Uma latência diferente para `cnn.rqnt` exigiria outra classe.
+- A latência configurável vale para as três instruções de `CnnMult` juntas. Uma latência diferente para `cnn.rqnt` exigiria outra classe. O mesmo vale para o `cnn.max8`, que está em `IntAlu`: mudar a latência dele exige uma classe nova no fork do gem5 e recompilá-lo (registrado na RCB-34, issue #70).
 - A unidade própria de `CnnMult` na Minor muda a disputa com o `mul` em relação ao padrão do fork (unidade compartilhada).
 - Com `cold`, o gem5 drena o sistema antes de esvaziar as caches, então a ROI começa com o pipeline vazio. Com `warm`, ela começa logo depois das m5ops, que também esvaziam o pipeline por serem serializantes.

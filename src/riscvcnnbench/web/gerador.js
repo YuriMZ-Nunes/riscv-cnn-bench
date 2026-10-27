@@ -22,6 +22,7 @@ const RCB = (() => {
   // YAML ------------------------------------------------------------------------
 
   function scalar(value) {
+    if (value === null) return "null";
     if (typeof value === "number" || typeof value === "boolean") return String(value);
     const text = String(value);
     return PLAIN.test(text) && !RESERVED.has(text.toLowerCase()) ? text : JSON.stringify(text);
@@ -43,7 +44,8 @@ const RCB = (() => {
     const lines = [];
     for (const [key, value] of Object.entries(doc)) {
       if (isEmpty(value)) continue;
-      if (Array.isArray(value) && value.length && typeof value[0] === "object" && !Array.isArray(value[0])) {
+      const mappings = value.length && value[0] !== null && typeof value[0] === "object";
+      if (Array.isArray(value) && mappings && !Array.isArray(value[0])) {
         lines.push(`${indent}${key}:`);
         for (const item of value) {
           const body = toYaml(item, indent + "    ").split("\n");
@@ -154,11 +156,13 @@ const RCB = (() => {
       state.cpus,
       memories(state, data),
       latencyMatters(state, data) ? state.latencies : [data.latency.default],
+      latencyMatters(state, data) ? state.units : [null],
+      latencyMatters(state, data) ? state.pipelined : [true],
       state.variants.includes("rvv") ? state.vlens : [data.vlen.default],
       flagLists(state, data),
       state.cacheStates,
     ];
-    for (const [op, size, variant, cpu, memory, latency, vlen, flags, cacheState] of product(lists)) {
+    for (const [op, size, variant, cpu, memory, latency, units, pipelined, vlen, flags, cacheState] of product(lists)) {
       const info = opInfo(data, op);
       if (!info || !info.sizes[size] || !info.variants.includes(variant)) continue;
       const combo = {
@@ -175,6 +179,10 @@ const RCB = (() => {
         clock: state.clock,
         flags,
         latency: variant === "custom" && cpuInfo(data, cpu).latency ? latency : data.latency.default,
+        // Unidades e pipeline (RCB-33): só na custom com unidades funcionais; na
+        // minor, 1 unidade é a montagem padrão.
+        units: variant === "custom" && cpuInfo(data, cpu).latency && !(cpu === "minor" && units === 1) ? units : null,
+        pipelined: variant === "custom" && cpuInfo(data, cpu).latency ? pipelined : true,
         vlen: variant === "rvv" ? vlen : data.vlen.default,
       };
       found.set(JSON.stringify(combo), combo);
@@ -246,6 +254,12 @@ const RCB = (() => {
     if (latencyMatters(state, data) && !state.latencies.length) {
       found.push("Escolha pelo menos uma latência para as instruções personalizadas.");
     }
+    if (latencyMatters(state, data) && !state.units.length) {
+      found.push("Escolha pelo menos uma opção de unidades para as instruções personalizadas.");
+    }
+    if (latencyMatters(state, data) && !state.pipelined.length) {
+      found.push("Escolha com ou sem pipeline para as instruções personalizadas.");
+    }
     if (state.variants.includes("rvv") && !state.vlens.length) found.push("Escolha pelo menos uma VLEN.");
     for (const latency of state.latencies) {
       if (!Number.isInteger(latency) || latency < data.latency.min || latency > data.latency.max) {
@@ -305,6 +319,8 @@ const RCB = (() => {
         clock: combo.clock !== data.clock.default ? combo.clock : undefined,
         vlen: combo.vlen !== data.vlen.default ? combo.vlen : undefined,
         custom_latency: combo.latency !== data.latency.default ? combo.latency : undefined,
+        custom_units: combo.units !== null ? combo.units : undefined,
+        custom_pipelined: combo.pipelined ? undefined : false,
       },
       ...memoryDocument(combo, data),
     };
@@ -330,6 +346,8 @@ const RCB = (() => {
       ["benchmark.variant", state.variants, null],
       ["cpu.model", state.cpus, null],
       ["cpu.custom_latency", latencyMatters(state, data) ? state.latencies : [], data.latency.default],
+      ["cpu.custom_units", latencyMatters(state, data) ? state.units : [], null],
+      ["cpu.custom_pipelined", latencyMatters(state, data) ? state.pipelined : [], true],
       ["cpu.vlen", state.variants.includes("rvv") ? state.vlens : [], data.vlen.default],
       ["compiler.flags", flagLists(state, data), [data.flags.default]],
       ["benchmark.cache_state", state.cacheStates, "warm"],
@@ -544,6 +562,27 @@ if (typeof document !== "undefined") {
       [String(DATA.latency.default)]
     );
     choice(
+      $("units"),
+      "checkbox",
+      "units",
+      DATA.units.options.map((v) => ({
+        value: v === null ? "" : String(v),
+        title: v === null ? "padrão" : `${v} própria${v === 1 ? "" : "s"}`,
+        detail: v === null ? DATA.units.default : "",
+      })),
+      [""]
+    );
+    choice(
+      $("pipelined"),
+      "checkbox",
+      "pipelined",
+      [
+        { value: "true", title: "com pipeline", detail: "aceita uma instrução por ciclo (padrão)" },
+        { value: "false", title: "sem pipeline", detail: "só aceita outra depois da latência inteira" },
+      ],
+      ["true"]
+    );
+    choice(
       $("vlens"),
       "checkbox",
       "vlens",
@@ -659,6 +698,8 @@ if (typeof document !== "undefined") {
       scenarios: picked("scenarios"),
       custom: customState(),
       latencies: [...new Set(latencies)],
+      units: picked("units").map((v) => (v === "" ? null : Number(v))),
+      pipelined: picked("pipelined").map((v) => v === "true"),
       vlens: picked("vlens").map(Number),
       flags: picked("flags"),
       datasets: picked("datasets"),
