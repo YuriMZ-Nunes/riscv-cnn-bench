@@ -1,0 +1,95 @@
+# Matriz final da campanha (RCB-22). Formato e regras em docs/campaigns.md; a
+# justificativa de cada grupo, a tabela das execuções e a estimativa de tempo, em
+# docs/matrix.md.
+#
+#   uv run riscvcnnbench campaign plan campaigns/final.yaml
+#   uv run riscvcnnbench campaign estimate campaigns/final.yaml -m <medições> --csv ...
+#   make campaign MATRIX=campaigns/final.yaml JOBS=4
+#
+# Fixos em todas as combinações (decisões da RCB-18): caches aquecidas no início
+# da região de interesse (warm, o padrão), R = 1 (os argumentos de experiments/),
+# VLEN 256, clock de 1GHz, -O2 (menos no grupo compilador) e a O3 de borda
+# (o3-edge) como CPU fora de ordem.
+
+name: final
+description: >-
+  Sete operações int8 em S e L, nas três variantes, nas CPUs timing, minor e
+  o3-edge, nos quatro cenários de memória; latência 3 e 6 na personalizada;
+  contraste -O2 × -O3 mínimo.
+
+# Antes da primeira simulação: pytest -m validation (equivalência das variantes,
+# RCB-15, e as três variantes nas CPUs com tempo, RCB-18).
+validate: true
+
+groups:
+  - name: principal
+    description: >-
+      Objetivos específicos 3 e 4. Fatorial completo de variante × CPU × cenário
+      de memória, nos dois tamanhos. Cada comparação muda um fator e mantém os
+      outros: a variante (ref × custom, ref × rvv, custom × rvv na mesma CPU e no
+      mesmo cenário: o efeito das instruções), a CPU (o mesmo par em timing, minor
+      e o3-edge: quando a redução de instruções vira ciclos) e o cenário (o mesmo
+      par nos quatro cenários, inclusive os em que os dados não cabem: quando a
+      memória limita o ganho).
+    experiments:
+      - conv3x3_direct_s
+      - conv3x3_direct_l
+      - conv3x3_im2col_s
+      - conv3x3_im2col_l
+      - depthwise3x3_s
+      - depthwise3x3_l
+      - pointwise1x1_s
+      - pointwise1x1_l
+      - maxpool2x2_s
+      - maxpool2x2_l
+      - requant_relu_s
+      - requant_relu_l
+      - fc_s
+      - fc_l
+    vary:
+      benchmark.variant: [ref, custom, rvv]
+      cpu.model: [timing, minor, o3-edge]
+      scenario: [sem-cache, l1, l1-l2, reduzido]
+
+  - name: latencia
+    description: >-
+      Objetivo específico 4. Isola a latência das instruções personalizadas
+      (classe CnnMult: 3, a de um mul, e 6), só na custom e só nas CPUs que
+      modelam a latência das unidades funcionais (minor e o3-edge); a ref e a
+      rvv não dependem dela. A latência 3 coincide com o grupo principal.
+    experiments:
+      - conv3x3_direct_s
+      - conv3x3_direct_l
+      - conv3x3_im2col_s
+      - conv3x3_im2col_l
+      - depthwise3x3_s
+      - depthwise3x3_l
+      - pointwise1x1_s
+      - pointwise1x1_l
+      - maxpool2x2_s
+      - maxpool2x2_l
+      - requant_relu_s
+      - requant_relu_l
+      - fc_s
+      - fc_l
+    set:
+      benchmark.variant: custom
+    vary:
+      cpu.model: [minor, o3-edge]
+      scenario: [sem-cache, l1, l1-l2, reduzido]
+      cpu.custom_latency: [3, 6]
+
+  - name: compilador
+    description: >-
+      Sumário executivo da proposta ("otimizações de compilador"). Isola as flags
+      de compilação: -O2 (a base de todos os grupos) × -O3, na ref e na custom.
+      As duas operações são as em que o -O3 mais mudou as instruções da custom
+      na atomic (conv direta 7% a menos, im2col 6% a mais; na ref, menos de 1%
+      em todas). Uma CPU e um cenário: minor, l1-l2, S.
+    experiments: [conv3x3_direct_s, conv3x3_im2col_s]
+    set:
+      cpu.model: minor
+      scenario: l1-l2
+    vary:
+      benchmark.variant: [ref, custom]
+      compiler.flags: [[-O2], [-O3]]
