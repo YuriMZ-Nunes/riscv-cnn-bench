@@ -53,8 +53,13 @@
   .table-wrap { overflow-x: auto; }
   select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
   .custom { border-left: 3px solid var(--accent-soft); padding-left: 12px; margin: 6px 0 12px; }
-  .levels { display: grid; grid-template-columns: 70px minmax(0, 2fr) minmax(0, 1fr); gap: 4px 10px; align-items: end; }
-  .level { display: flex; gap: 6px; align-items: center; padding-bottom: 8px; font-weight: 600; }
+  .level-block { border-top: 1px solid var(--line); padding: 8px 0 4px; }
+  .level { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+  .level-fields { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .level-fields .field { flex: 1 1 64px; }
+  .level-fields .field.wide { flex: 2 1 130px; }
+  .level-fields input { width: 100%; min-width: 0; }
+  .prefetchers { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
   input:disabled { opacity: .45; }
 </style>
 </head>
@@ -98,17 +103,40 @@
       <div class="grid" id="scenarios"></div>
       <label class="choice"><input type="checkbox" id="useCustom"><span><strong>memória personalizada</strong><small>tamanhos e associatividade de cada cache, tipo e tamanho da memória</small></span></label>
       <div id="customBox" class="custom">
-        <p class="muted">Vários tamanhos separados por vírgula viram uma varredura (por exemplo, <code>8KiB, 16KiB, 32KiB</code>). Desmarque um nível para tirá-lo; a L2 exige a L1i e a L1d.</p>
-        <div class="levels">
+        <p class="muted">Vários tamanhos separados por vírgula viram uma varredura (por exemplo, <code>8KiB, 16KiB, 32KiB</code>), e marcar mais de um prefetcher compara com e sem ele. Desmarque um nível para tirá-lo; a L2 exige a L1i e a L1d. Latência, MSHRs e alvos começam nos valores de sempre e só entram no YAML quando mudam (docs/scenarios.md, "Ajustes das caches").</p>
+        <label class="field"><span>Linha das caches</span><select id="cacheLine"></select></label>
+        <div class="level-block">
           <label class="level"><input type="checkbox" id="l1iOn" checked> L1i</label>
-          <label class="field"><span>tamanho(s)</span><input type="text" id="l1iSize"></label>
-          <label class="field"><span>associatividade</span><input type="number" id="l1iAssoc" min="1"></label>
+          <div class="level-fields">
+            <label class="field wide"><span>tamanho(s)</span><input type="text" id="l1iSize"></label>
+            <label class="field"><span>associatividade</span><input type="number" id="l1iAssoc" min="1"></label>
+            <label class="field"><span>latência</span><input type="number" id="l1iLatency" min="1"></label>
+            <label class="field"><span>MSHRs</span><input type="number" id="l1iMshrs" min="1"></label>
+            <label class="field"><span>alvos/MSHR</span><input type="number" id="l1iTargets" min="1"></label>
+          </div>
+          <div class="grid prefetchers" id="l1iPrefetchers"></div>
+        </div>
+        <div class="level-block">
           <label class="level"><input type="checkbox" id="l1dOn" checked> L1d</label>
-          <label class="field"><span>tamanho(s)</span><input type="text" id="l1dSize"></label>
-          <label class="field"><span>associatividade</span><input type="number" id="l1dAssoc" min="1"></label>
+          <div class="level-fields">
+            <label class="field wide"><span>tamanho(s)</span><input type="text" id="l1dSize"></label>
+            <label class="field"><span>associatividade</span><input type="number" id="l1dAssoc" min="1"></label>
+            <label class="field"><span>latência</span><input type="number" id="l1dLatency" min="1"></label>
+            <label class="field"><span>MSHRs</span><input type="number" id="l1dMshrs" min="1"></label>
+            <label class="field"><span>alvos/MSHR</span><input type="number" id="l1dTargets" min="1"></label>
+          </div>
+          <div class="grid prefetchers" id="l1dPrefetchers"></div>
+        </div>
+        <div class="level-block">
           <label class="level"><input type="checkbox" id="l2On" checked> L2</label>
-          <label class="field"><span>tamanho(s)</span><input type="text" id="l2Size"></label>
-          <label class="field"><span>associatividade</span><input type="number" id="l2Assoc" min="1"></label>
+          <div class="level-fields">
+            <label class="field wide"><span>tamanho(s)</span><input type="text" id="l2Size"></label>
+            <label class="field"><span>associatividade</span><input type="number" id="l2Assoc" min="1"></label>
+            <label class="field"><span>latência</span><input type="number" id="l2Latency" min="1"></label>
+            <label class="field"><span>MSHRs</span><input type="number" id="l2Mshrs" min="1"></label>
+            <label class="field"><span>alvos/MSHR</span><input type="number" id="l2Targets" min="1"></label>
+          </div>
+          <div class="grid prefetchers" id="l2Prefetchers"></div>
         </div>
         <div class="row">
           <label class="field"><span>Memória principal</span><select id="memoryType"></select></label>

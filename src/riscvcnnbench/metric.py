@@ -457,9 +457,32 @@ def parameters_label(item: RunMetrics) -> str:
     return params + (f",data={data}" if data and data != "random" else "")
 
 
-def scenario_label(resolved: dict) -> str:
+# Ajustes das caches (RCB-32) e o nome curto de cada um no rótulo do cenário.
+CACHE_TUNING = (("latency", "lat"), ("mshrs", "mshrs"), ("targets", "tgts"), ("prefetcher", "pf"))
+
+
+def cache_tuning(resolved: dict) -> str:
+    """Os ajustes das caches que não são o padrão, como line=128,l1d.pf=stride.
+
+    A configuração resolvida só tem esses campos quando mudam (config.CacheConfig).
+    """
+    cache = resolved.get("cache") or {}
+    parts = [f"line={cache['line']}"] if cache.get("line") else []
+    for level in ("l1i", "l1d", "l2"):
+        values = cache.get(level) or {}
+        parts += [
+            f"{level}.{short}={values[key]}"
+            for key, short in CACHE_TUNING
+            if values.get(key) not in (None, "none")
+        ]
+    return ",".join(parts)
+
+
+def scenario_label(resolved: dict, tuning: str | None = None) -> str:
     """Caches e memória numa palavra só: o nome do cenário, como l1-l2, ou os
-    tamanhos, como l1i=32KiB,l1d=32KiB,ddr4; com caches frias, mais ",cold"."""
+    tamanhos, como l1i=32KiB,l1d=32KiB,ddr4, mais os ajustes das caches que não são
+    o padrão (`tuning`, por padrão os da própria configuração); com caches frias,
+    mais ",cold"."""
     if resolved.get("scenario"):
         label = resolved["scenario"]
     else:
@@ -468,6 +491,7 @@ def scenario_label(resolved: dict) -> str:
             f"{level}={cache[level]['size']}" for level in ("l1i", "l1d", "l2") if cache.get(level)
         ]
         memory = (resolved.get("memory") or {}).get("type", "?")
-        label = ",".join([*(levels or ["sem-cache"]), memory])
+        extra = cache_tuning(resolved) if tuning is None else tuning
+        label = ",".join([*(levels or ["sem-cache"]), memory, *([extra] if extra else [])])
     cold = (resolved.get("benchmark") or {}).get("cache_state") == "cold"
     return label + (",cold" if cold else "")

@@ -228,7 +228,9 @@ def run_scenario(row: dict[str, str]) -> str:
             "cache": cache,
             "memory": {"type": row["memory"] or "?"},
             "benchmark": {"cache_state": row["cache_state"]},
-        }
+        },
+        # Coluna da RCB-32; um runs.csv anterior não a tem e não tem ajustes.
+        tuning=row.get("cache_tuning") or "",
     )
 
 

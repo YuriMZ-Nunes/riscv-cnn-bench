@@ -80,6 +80,7 @@ pairs = pairs[pairs["problem"].isna()]
 | `l1i_size`, `l1i_assoc`, `l1d_size`, `l1d_assoc`, `l2_size`, `l2_assoc` | Caches; vazias se o nível não existe |
 | `memory`, `memory_size` | `simple` ou `ddr4` e o tamanho |
 | `cache_state` | `warm` ou `cold` no início da ROI |
+| `cache_tuning` | Ajustes das caches que não são o padrão (RCB-32), como `line=128,l1d.pf=stride,l2.lat=20`; vazio sem ajustes. Entra no rótulo do cenário ([scenarios.md](scenarios.md#ajustes-das-caches)) |
 | `checksum`, `mismatches` | Da linha `RESULT` |
 | `program_exit_code` | Código com que o programa simulado terminou |
 

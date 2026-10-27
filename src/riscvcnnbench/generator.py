@@ -20,18 +20,26 @@ import yaml
 
 from riscvcnnbench import __version__
 from riscvcnnbench.config import (
+    CACHE_LATENCY,
+    CACHE_LINE,
+    CACHE_MSHRS,
+    CACHE_TARGETS,
     CLOCK_PATTERN,
     FORMAT_HINTS,
     MUL_LATENCY,
     NAME_PATTERN,
+    NO_PREFETCHER,
     PROJECT_ROOT,
     SIZE_PATTERN,
     BenchmarkConfig,
+    CacheConfig,
+    CacheLevelConfig,
     CompilerConfig,
     CpuConfig,
     MemoryConfig,
     available_variants,
     load_scenarios,
+    size_bytes,
 )
 from riscvcnnbench.estimate import fit, samples
 from riscvcnnbench.metric import scenario_label
@@ -42,10 +50,6 @@ WEB_DIR = Path(__file__).parent / "web"
 BENCHMARKS_DIR = PROJECT_ROOT / "benchmarks"
 EXPERIMENTS_DIR = PROJECT_ROOT / "experiments"
 DATA_HEADER = BENCHMARKS_DIR / "common" / "rcb_data.h"
-UNITS = {"KiB": 1024, "MiB": 1024**2, "GiB": 1024**3}
-# Linha de cache do gem5 (docs/scenarios.md, "Parâmetros fixos"): o número de
-# conjuntos, tamanho ÷ (linha × associatividade), tem de ser potência de 2.
-CACHE_LINE = 64
 # Memória personalizada começa igual ao cenário de referência.
 CUSTOM_BASE = "l1-l2"
 SIZES = ("S", "L")
@@ -99,12 +103,6 @@ ARG_NAMES = re.compile(r"#\s*args:\s*\[([^\]]*)\]")
 
 class GeneratorError(Exception):
     """Saída que já existe ou pasta de medições ausente."""
-
-
-def size_bytes(text: str) -> int:
-    """32KiB → 32768 (o formato de SIZE_PATTERN)."""
-    number, unit = re.fullmatch(r"(\d+)(KiB|MiB|GiB)", text).groups()  # type: ignore[union-attr]
-    return int(number) * UNITS[unit]
 
 
 def _choices(model: type, field: str) -> list[Any]:
@@ -180,13 +178,33 @@ def memory_options() -> dict[str, Any]:
     default = MemoryConfig()
     base = load_scenarios()[CUSTOM_BASE]
     levels = {
-        level: {"size": getattr(base.cache, level).size, "assoc": getattr(base.cache, level).assoc}
+        level: {
+            "size": getattr(base.cache, level).size,
+            "assoc": getattr(base.cache, level).assoc,
+            "latency": CACHE_LATENCY[level],
+            "mshrs": CACHE_MSHRS,
+            "targets": CACHE_TARGETS,
+        }
         for level in ("l1i", "l1d", "l2")
     }
+    fields = CacheLevelConfig.model_fields
+    bounds = {
+        name: {
+            type(m).__name__: getattr(m, type(m).__name__.lower()) for m in fields[name].metadata
+        }
+        for name in ("latency", "mshrs", "targets")
+    }
+    # cache.line é Literal[...] | None: as opções estão no Literal.
+    literal = next(arg for arg in _choices(CacheConfig, "line") if get_args(arg))
+    line_options = list(get_args(literal))
     return {
         "default": {"type": default.type, "size": default.size},
         "types": _choices(MemoryConfig, "type"),
         "line": CACHE_LINE,
+        "lines": sorted(line_options),
+        "prefetchers": _choices(CacheLevelConfig, "prefetcher"),
+        "noPrefetcher": NO_PREFETCHER,
+        "bounds": {name: [b["Ge"], b["Le"]] for name, b in bounds.items()},
         "custom": {**levels, "type": base.memory.type},
     }
 

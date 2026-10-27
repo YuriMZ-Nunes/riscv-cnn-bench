@@ -63,12 +63,16 @@ def state(**changes: Any) -> dict[str, Any]:
 
 
 def custom(**levels: Any) -> dict[str, Any]:
-    """Memória personalizada: cada nível como (tamanhos, associatividade) ou None."""
-    memory = {"memoryType": levels.pop("memory_type", "ddr4"), "memorySize": "512MiB"}
-    memory["memorySize"] = levels.pop("memory_size", "512MiB")
+    """Memória personalizada: cada nível como (tamanhos, associatividade[, ajustes]) ou None."""
+    memory = {
+        "memoryType": levels.pop("memory_type", "ddr4"),
+        "memorySize": levels.pop("memory_size", "512MiB"),
+        "line": levels.pop("line", 64),
+    }
     for level in ("l1i", "l1d", "l2"):
         value = levels.get(level)
-        memory[level] = {"sizes": value[0], "assoc": value[1]} if value else None
+        extra = value[2] if value and len(value) > 2 else {}
+        memory[level] = {"sizes": value[0], "assoc": value[1], **extra} if value else None
     return memory
 
 
@@ -116,7 +120,20 @@ def test_page_data_comes_from_the_code() -> None:
         ("satneg", "-DRCB_DATA=2"),
     ]
     assert DATA["memory"]["default"] == {"type": "simple", "size": "512MiB"}
-    assert DATA["memory"]["custom"]["l2"] == {"size": "256KiB", "assoc": 8}
+    assert DATA["memory"]["custom"]["l2"] == {
+        "size": "256KiB",
+        "assoc": 8,
+        "latency": 10,
+        "mshrs": 16,
+        "targets": 20,
+    }
+    assert DATA["memory"]["lines"] == [32, 64, 128]
+    assert DATA["memory"]["prefetchers"] == ["none", "stride", "tagged"]
+    assert DATA["memory"]["bounds"] == {
+        "latency": [1, 1000],
+        "mshrs": [1, 1024],
+        "targets": [1, 1024],
+    }
 
 
 def test_footprint_and_residence_match_the_scenarios_doc(js: quickjs.Context) -> None:
@@ -234,6 +251,20 @@ CAMPAIGNS = [
             l1i=(["32KiB"], 4), l1d=(["8KiB", "16KiB", "32KiB"], 4), l2=(["128KiB", "256KiB"], 8)
         ),
     ),
+    # Ajustes das caches (RCB-32): linha, latência, MSHRs e prefetcher com e sem.
+    state(
+        ops=["fc", "maxpool2x2"],
+        sizes=["L"],
+        variants=["ref", "custom", "rvv"],
+        cpus=["minor", "o3-edge"],
+        scenarios=[],
+        custom=custom(
+            line=128,
+            l1i=(["32KiB"], 4),
+            l1d=(["32KiB"], 4, {"mshrs": 8, "prefetchers": ["none", "stride", "tagged"]}),
+            l2=(["256KiB"], 8, {"latency": 20, "targets": 20, "prefetchers": ["none", "stride"]}),
+        ),
+    ),
     # Só memória personalizada, sem caches, com caches frias de fora.
     state(
         variants=["ref", "rvv"],
@@ -259,13 +290,28 @@ def test_many_choices_are_a_valid_campaign(
     assert plan.invalid == []
     assert len(plan.runs) == len(result["combinations"])
 
-    def memory_of(scenario: str, cache: dict | None, memory: tuple) -> tuple:
+    defaults = {"l1i": 2, "l1d": 2, "l2": 10}
+
+    def memory_of(scenario: str, cache: dict | None, line: int | None, memory: tuple) -> tuple:
+        """A memória com os ajustes iguais ao padrão normalizados, como no config.py."""
         if scenario:
-            return (scenario, None, None)
-        levels = tuple(
-            sorted((level, v["size"], v.get("assoc", 4)) for level, v in (cache or {}).items() if v)
-        )
-        return ("", levels, memory)
+            return (scenario, None, None, None)
+        levels = []
+        for level, v in sorted((cache or {}).items()):
+            if not isinstance(v, dict):
+                continue
+            levels.append(
+                (
+                    level,
+                    v["size"],
+                    v.get("assoc", 4),
+                    None if v.get("latency") in (None, defaults[level]) else v["latency"],
+                    None if v.get("mshrs") in (None, 16) else v["mshrs"],
+                    None if v.get("targets") in (None, 20) else v["targets"],
+                    v.get("prefetcher") or "none",
+                )
+            )
+        return ("", tuple(levels), None if line in (None, 64) else line, memory)
 
     def key(base: str, data: dict) -> tuple:
         cpu = data.get("cpu") or {}
@@ -278,6 +324,7 @@ def test_many_choices_are_a_valid_campaign(
             memory_of(
                 data.get("scenario") or "",
                 data.get("cache"),
+                (data.get("cache") or {}).get("line"),
                 (memory.get("type", "simple"), memory.get("size", "512MiB")),
             ),
             cpu.get("custom_latency", 3),
@@ -293,7 +340,7 @@ def test_many_choices_are_a_valid_campaign(
             f"{c['op']}_{c['size'].lower()}",
             c["variant"],
             c["cpu"],
-            memory_of(c["scenario"], c["cache"], (c["memoryType"], c["memorySize"])),
+            memory_of(c["scenario"], c["cache"], c["line"], (c["memoryType"], c["memorySize"])),
             c["latency"],
             c["vlen"],
             tuple(c["flags"]),
@@ -313,6 +360,45 @@ def test_many_choices_are_a_valid_campaign(
             yaml.safe_load(path.read_text(encoding="utf-8"))["description"]
             == (selected["description"])
         )
+
+
+def test_cache_tuning_experiment(js: quickjs.Context, tmp_path: Path) -> None:
+    tuning = {"latency": 3, "mshrs": 4, "targets": 8, "prefetchers": ["stride"]}
+    selected = state(
+        scenarios=[],
+        custom=custom(
+            line=128,
+            l1i=(["32KiB"], 4, {"latency": 2, "mshrs": 16}),  # os padrões não aparecem
+            l1d=(["32KiB"], 4, tuning),
+            l2=(["256KiB"], 8, {"latency": 20}),
+        ),
+    )
+    result = call(js, "build", selected, DATA)
+    assert (result["kind"], result["problems"]) == ("experiment", [])
+    [combo] = result["combinations"]
+    document = yaml.safe_load(result["yaml"])
+    assert document["cache"] == {
+        "line": 128,
+        "l1i": {"size": "32KiB", "assoc": 4},
+        "l1d": {
+            "size": "32KiB",
+            "assoc": 4,
+            "latency": 3,
+            "mshrs": 4,
+            "targets": 8,
+            "prefetcher": "stride",
+        },
+        "l2": {"size": "256KiB", "assoc": 8, "latency": 20},
+    }
+    experiment = load_experiment(write(tmp_path / "ajustes.yaml", result["yaml"]))
+    resolved = resolved_config(experiment)
+
+    assert resolved["cache"] == document["cache"]
+    assert call(js, "speedKey", combo, DATA) == "|".join(speed_key(resolved))
+    assert speed_key(resolved)[2] == (
+        "l1i=32KiB,l1d=32KiB,l2=256KiB,ddr4,line=128,"
+        "l1d.lat=3,l1d.mshrs=4,l1d.tgts=8,l1d.pf=stride,l2.lat=20"
+    )
 
 
 def test_custom_memory_experiment(js: quickjs.Context, tmp_path: Path) -> None:
@@ -388,9 +474,27 @@ def test_final_matrix_size(js: quickjs.Context) -> None:
         ({"custom": custom(l2=(["256KiB"], 8))}, "A L2 exige a L1i e a L1d."),
         (
             {"custom": custom(l1d=(["48KiB"], 4))},
-            "L1d: 48KiB com associatividade 4 não dá um número de conjuntos potência de 2 "
-            "(tamanho ÷ (64 × associatividade)).",
+            "L1d: 48KiB com associatividade 4 e linha de 64 bytes não dá um número de conjuntos "
+            "potência de 2 (tamanho ÷ (linha × associatividade)).",
         ),
+        (
+            {"custom": custom(line=128, l1d=(["1KiB"], 16))},
+            "L1d: 1KiB com associatividade 16 e linha de 128 bytes não dá um número de conjuntos "
+            "potência de 2 (tamanho ÷ (linha × associatividade)).",
+        ),
+        (
+            {"custom": custom(l1d=(["32KiB"], 4, {"latency": 0}))},
+            "L1d: latência deve ser um inteiro de 1 a 1000.",
+        ),
+        (
+            {"custom": custom(l2=(["256KiB"], 8, {"mshrs": 2000}))},
+            "L2: MSHRs deve ser um inteiro de 1 a 1024.",
+        ),
+        (
+            {"custom": custom(l1d=(["32KiB"], 4, {"prefetchers": []}))},
+            "L1d: escolha pelo menos um prefetcher (ou nenhum).",
+        ),
+        ({"custom": custom(line=96)}, "Linha: use 32, 64, 128 bytes."),
         (
             {"custom": custom(l1d=(["32 KB"], 4))},
             'L1d: "32 KB": use um tamanho como 32KiB, 512MiB ou 1GiB.',

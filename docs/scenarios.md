@@ -4,7 +4,7 @@ Os cenários arquiteturais das comparações (RCB-18). O objetivo específico 4 
 
 | Fator | Eixo | Campo do YAML |
 | --- | --- | --- |
-| Hierarquia de memória | Quatro [cenários de memória](#cenários-de-memória) nomeados e o [estado das caches](#estado-das-caches-no-início-da-roi) no início da ROI | `scenario`, `benchmark.cache_state` |
+| Hierarquia de memória | Quatro [cenários de memória](#cenários-de-memória) nomeados, o [estado das caches](#estado-das-caches-no-início-da-roi) no início da ROI e os [ajustes das caches](#ajustes-das-caches) (latência, MSHRs, prefetcher, linha) | `scenario`, `benchmark.cache_state`, `cache.<nível>.latency` e outros |
 | Organização da CPU | timing, minor e uma [O3 de borda](#o3-de-borda-o3-edge) | `cpu.model` |
 | Latência das instruções | [Latência](#latência-das-instruções-personalizadas) de `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` | `cpu.custom_latency` |
 
@@ -16,7 +16,8 @@ Os cenários arquiteturais das comparações (RCB-18). O objetivo específico 4 
 | Caches frias no início da ROI (`benchmark.cache_state: cold`) | Existente |
 | Benchmark [`insn_latency`](../benchmarks/insn_latency/main.c), testes e2e e validação nas CPUs com tempo | Existente |
 | Execução em lote da matriz (operações × variantes × CPUs × cenários) | Planejado (RCB-19) |
-| Escolha final da matriz (quais latências, se haverá caches frias) | Planejado (RCB-22) |
+| Escolha final da matriz (quais latências, se haverá caches frias) | Existente (RCB-22, [matrix.md](matrix.md)) |
+| Ajustes das caches no YAML: latência, MSHRs, alvos, prefetcher e linha | Existente (RCB-32) |
 
 As medições citadas aqui são de 26/10/2026, com o gem5 do fork em `ce03244`, e servem só de ilustração. Não são resultados da campanha.
 
@@ -181,18 +182,32 @@ Num kernel real o efeito depende de quanto a CPU esconde a latência. Ciclos da 
 | `conv3x3_direct` | minor | 551.814 | 698.942 | +26,7% |
 | | o3-edge | 411.831 | 411.829 | 0,0% |
 
+## Ajustes das caches
+
+Desde a RCB-32, os parâmetros das caches que eram fixos viraram campos opcionais do YAML ([experiments.md](experiments.md#campos)). Os padrões são os de antes, então a campanha final e todos os cenários continuam iguais:
+
+| Campo | Padrão | No gem5 |
+| --- | --- | --- |
+| `cache.<nível>.latency` | 2 ciclos na L1i e na L1d, 10 na L2 | `tag_latency`, `data_latency` e `response_latency` |
+| `cache.<nível>.mshrs` | 16 | `mshrs` |
+| `cache.<nível>.targets` | 20 | `tgts_per_mshr` |
+| `cache.<nível>.prefetcher` | `none` | `stride` = `StridePrefetcher`; `tagged` = `TaggedPrefetcher` (as próximas linhas) |
+| `cache.line` | 64 bytes | `system.cache_line_size`, em todas as caches |
+
+- **Só com `cache` explícito.** Um `scenario` define `cache` e `memory` e não aceita ajustes. Para estudar um ajuste nas caches do `l1-l2`, escreva as caches à mão (L1i e L1d de 32KiB com 4 vias, L2 de 256KiB com 8 vias, `ddr4`) e mude só o ajuste. O gerador de experimentos faz isso pela memória personalizada ([generator.md](generator.md)).
+- **Um ajuste igual ao padrão é tratado como omitido.** Ele não aparece na configuração resolvida, não muda a chave da campanha nem gera argumento para o gem5. Com caches explícitas e sem ajustes, o `config.ini` é idêntico ao do cenário equivalente (`tests/test_cache_tuning_e2e.py`).
+- **O rótulo do cenário mostra os ajustes**, depois da memória, como `l1i=32KiB,l1d=32KiB,l2=256KiB,ddr4,l1d.pf=stride,l2.lat=20`. O `runs.csv` tem a coluna `cache_tuning`, e o `plot` e o `analyze` separam as execuções ajustadas das que não são.
+- **Geometria.** O número de conjuntos, tamanho ÷ (linha × associatividade), tem de ser potência de 2. O gem5 encerra com `fatal` se não for (`src/mem/cache/tags/indexing_policies/base.hh`), e o `validate` já recusa antes.
+
+Ilustração, não resultado de campanha. Em 27/10/2026, a FC L custom na minor, com as caches do `l1-l2`, levou 1.083.594 ciclos na região de interesse. Com prefetcher stride na L1d, linha de 128 bytes, 4 MSHRs na L1d e latência 20 na L2, ao mesmo tempo, levou 611.483 ciclos. Os ajustes misturam efeitos e não isolam o do prefetcher. O teste e2e mostra só o do prefetcher: no maxpool L custom, sem L2, o stride na L1d tira mais de 10% dos ciclos.
+
 ## Parâmetros fixos
 
-Ficam fixos na configuração gem5 e documentados como limitação, sem campo no YAML. O clock é campo (`cpu.clock`), mas todos os cenários usam 1GHz.
+Ficam fixos na configuração gem5 e documentados como limitação, sem campo no YAML. O clock é campo (`cpu.clock`), mas todos os cenários usam 1GHz. Linha, latências, MSHRs, alvos e prefetcher eram fixos até a RCB-32; hoje são [ajustes](#ajustes-das-caches) com os mesmos padrões (linha de 64 bytes, latências de 2 e 10 ciclos, 16 MSHRs e 20 alvos, sem prefetcher).
 
 | Parâmetro | Valor | Onde |
 | --- | --- | --- |
-| Linha de cache | 64 bytes | Padrão do gem5 (`cache_line_size`) |
-| Latências da L1 (tag, dados, resposta) | 2 ciclos | `make_cache` |
-| Latências da L2 | 10 ciclos | `make_cache` |
-| MSHRs e alvos por MSHR | 16 e 20, em todos os níveis | `make_cache` |
 | Substituição | LRU | Padrão do gem5 |
-| Prefetcher | Nenhum | Padrão do gem5 |
 | Inclusão da L2 | `mostly_incl` | Padrão do gem5 |
 | DRAM | DDR4-2400, `DDR4_2400_8x8` (1 canal, 2 ranks, 8 chips por rank) | `MemCtrl` |
 | Latência da memória `simple` | 30ns | Padrão do gem5; fora dos cenários |
@@ -208,6 +223,8 @@ Mudar qualquer um deles exige editar `configs/gem5/se_riscv_configurable.py`. Mu
 | --- | --- | --- |
 | `tests/test_config.py` | `scenario` (expansão, nome desconhecido com sugestão, conflito com `cache`/`memory`), `cpu.custom_latency` (faixa, recusa na atomic e timing), `benchmark.cache_state` (recusa sem caches e sem ROI), `o3-edge` nos argumentos do gem5, os quatro cenários do arquivo | `make test` |
 | `tests/test_metric.py` | A latência não entra na chave de ref e rvv (uma ref pareia com a custom de cada latência), caches frias e aquecidas não se misturam, rótulos `custom@lat6` e `l1-l2,cold` | `make test` |
+| `tests/test_config.py::test_cache_tuning` e os casos de erro | Ajustes no modelo e nos argumentos do gem5; padrões escritos ou omitidos dão a mesma configuração resolvida; geometria, faixas e prefetcher inválidos; cenários sem ajustes | `make test` |
+| `tests/test_cache_tuning_e2e.py` | Cada ajuste chega ao `config.ini`; caches explícitas sem ajustes = cenário `l1-l2` e os padrões de antes; o stride acelera o maxpool L custom sem L2 | `make e2e-test` |
 | `tests/test_scenarios_e2e.py` | Latência pelo `insn_latency` (minor, o3, o3-edge), fc S nos quatro cenários de memória, caches frias (timing e o3-edge), parâmetros e IPC da `o3-edge` × `o3` | `make e2e-test` |
 | `tests/test_validation.py::test_variants_pass_on_detailed_cpus` | As três variantes das sete operações em S, nas CPUs timing, minor e o3-edge, no cenário `l1-l2`, com `mismatches=0` e o checksum da atomic | `make validate` |
 

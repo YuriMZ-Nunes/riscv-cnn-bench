@@ -49,7 +49,12 @@ benchmark:
 | `cpu.clock` | `1GHz` | Número seguido de `MHz` ou `GHz`. |
 | `cpu.vlen` | `256` | VLEN da extensão V, em bits: `128`, `256`, `512` ou `1024`. Só a variante `rvv` usa registradores vetoriais. O padrão é o do gem5. |
 | `cpu.custom_latency` | `3` | Latência, em ciclos (1 a 64), de `cnn.dot8`, `cnn.dwmac` e `cnn.rqnt[.relu]` nas CPUs `minor`, `o3` e `o3-edge`. O padrão é a do `mul`. Nas `atomic` e `timing`, que não modelam a latência das unidades, só o padrão é aceito. Ver [scenarios.md](scenarios.md#latência-das-instruções-personalizadas). |
-| `cache.l1i`, `cache.l1d`, `cache.l2` | sem cache | Cada nível tem `size` (`KiB`/`MiB`/`GiB`) e `assoc` (padrão 4). A L2 exige L1i e L1d. |
+| `cache.l1i`, `cache.l1d`, `cache.l2` | sem cache | Cada nível tem `size` (`KiB`/`MiB`/`GiB`) e `assoc` (padrão 4). A L2 exige L1i e L1d. O número de conjuntos, `size` ÷ (linha × `assoc`), tem de ser potência de 2, como o gem5 exige. |
+| `cache.<nível>.latency` | 2 na L1i e na L1d, 10 na L2 | Ciclos de tag, dados e resposta (1 a 1000). |
+| `cache.<nível>.mshrs` | 16 | Faltas pendentes ao mesmo tempo (1 a 1024). |
+| `cache.<nível>.targets` | 20 | Acessos à espera por MSHR (1 a 1024). |
+| `cache.<nível>.prefetcher` | `none` | `none`, `stride` (`StridePrefetcher`: detecta passos constantes por instrução) ou `tagged` (`TaggedPrefetcher`: as próximas linhas). |
+| `cache.line` | 64 | Linha de todas as caches, em bytes: 32, 64 ou 128. |
 | `memory.type` | `simple` | `simple` (latência fixa) ou `ddr4` (DDR4-2400 com controlador). |
 | `memory.size` | `512MiB` | `KiB`/`MiB`/`GiB`. |
 | `output.dir` | `results/<name>` | Pasta onde cada execução cria sua subpasta `<run_id>`. Caminho relativo parte da raiz do projeto. |
@@ -179,6 +184,7 @@ Além disso, são detectados:
 | Benchmark inexistente | Lista os benchmarks disponíveis em `benchmarks/` |
 | Variante que o benchmark não tem | `o benchmark 'hello_riscv' não tem a variante 'rvv'; disponíveis: ref` |
 | L2 sem L1i/L1d | `cache.l2 requer cache.l1i e cache.l1d` |
+| Conjuntos que não são potência de 2 | `cache.l1d: 48KiB com associatividade 4 e linha de 64 bytes não dá um número de conjuntos potência de 2, como o gem5 exige (...)` |
 | Cenário inexistente | `cenário 'l1l2' não existe em configs/scenarios.yaml; você quis dizer 'l1-l2'?` |
 | `scenario` junto com `cache` ou `memory` | `não use junto com scenario (l1), que já define cache e memory; tire um dos dois` |
 | Latência própria na atomic ou timing | `cpu.custom_latency só tem efeito nas CPUs minor, o3 e o3-edge; ...` |
@@ -191,5 +197,6 @@ No código, `load_experiment()` levanta `ConfigError`, cujo atributo `problems` 
 ## Limitações
 
 - Um experimento descreve **uma** execução. Para varrer valores (variantes, CPUs, cenários, latências), use uma campanha: [campaigns.md](campaigns.md).
-- Latências de cache, MSHRs e parâmetros internos de CPU, fora a latência das instruções personalizadas, usam valores fixos da configuração gem5, não configuráveis pelo YAML ([scenarios.md](scenarios.md#parâmetros-fixos)).
+- Os ajustes das caches (`latency`, `mshrs`, `targets`, `prefetcher`, `line`) só existem com `cache` explícito; um `scenario` usa os padrões ([scenarios.md](scenarios.md#ajustes-das-caches)). Os parâmetros internos da CPU, a política de substituição, a inclusão e a DRAM continuam fixos na configuração gem5 ([scenarios.md](scenarios.md#parâmetros-fixos)).
+- Um ajuste igual ao padrão é tratado como omitido: ele não aparece na configuração resolvida nem muda a chave da campanha. Assim, as execuções anteriores à RCB-32 continuam com a mesma chave.
 - Os YAMLs das operações (`experiments/<operação>_{s,l}.yaml`) usam a CPU atomic, para validação funcional. Para medir, escolha a CPU e um `scenario`, como em `fc_s_cenario.yaml`.

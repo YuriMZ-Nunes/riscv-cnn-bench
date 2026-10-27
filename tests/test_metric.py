@@ -9,6 +9,7 @@ from riscvcnnbench.metric import (
     WORK,
     Result,
     RunMetrics,
+    cache_tuning,
     collect,
     compare,
     derive,
@@ -305,6 +306,22 @@ def test_scenario_label() -> None:
     cold = {**resolved, "scenario": "l1-l2", "benchmark": {"cache_state": "cold"}}
     assert scenario_label(cold) == "l1-l2,cold"
     assert scenario_label({"memory": {"type": "simple"}}) == "sem-cache,simple"
+    # Ajustes das caches (RCB-32): só os que não são o padrão, depois da memória.
+    tuned = {
+        **resolved,
+        "cache": {
+            **resolved["cache"],
+            "line": 128,
+            "l1d": {"size": "4KiB", "latency": 3, "prefetcher": "stride"},
+        },
+    }
+    assert cache_tuning(tuned) == "line=128,l1d.lat=3,l1d.pf=stride"
+    assert scenario_label(tuned) == "l1i=32KiB,l1d=4KiB,ddr4,line=128,l1d.lat=3,l1d.pf=stride"
+    assert scenario_label({**tuned, "benchmark": {"cache_state": "cold"}}).endswith(
+        "pf=stride,cold"
+    )
+    assert scenario_label(resolved, tuning="l2.lat=20") == "l1i=32KiB,l1d=4KiB,ddr4,l2.lat=20"
+    assert cache_tuning(resolved) == ""
 
 
 def test_compiler_pairs_keep_the_other_flags() -> None:

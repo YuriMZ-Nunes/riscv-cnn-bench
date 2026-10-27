@@ -186,6 +186,9 @@ def test_orders_and_labels() -> None:
         "benchmark": {"cache_state": "cold"},
     }
     assert run_scenario(explicit) == scenario_label(resolved) == "l1i=32KiB,l1d=16KiB,simple,cold"
+    # A coluna cache_tuning do runs.csv (RCB-32) entra no rótulo; sem ela, nada muda.
+    tuned = {**explicit, "cache_tuning": "l1d.pf=stride"}
+    assert run_scenario(tuned) == "l1i=32KiB,l1d=16KiB,simple,l1d.pf=stride,cold"
 
 
 def test_styles_readable_in_black_and_white() -> None:

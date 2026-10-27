@@ -235,7 +235,8 @@ As hipóteses da RCB-10, como foram formuladas na issue RCB-25:
 ## Limitações
 
 - **Modo SE do gem5**: sem sistema operacional; as chamadas de sistema são emuladas.
-- **Latências fixas**: as de cache e DRAM são as do gem5. A latência das instruções personalizadas é uma suposição, avaliada em dois valores (3 e 6).
+- **Latências fixas**: as de cache e DRAM são as do gem5. A latência das instruções personalizadas é uma suposição, avaliada em dois valores (3 e 6). Desde a RCB-32, latências, MSHRs, prefetcher e linha das caches são configuráveis ([scenarios.md](scenarios.md#ajustes-das-caches)), mas a campanha usou os padrões e não tem prefetcher.
+- **Caminho da pasta**: reproduzir uma execução numa pasta com caminho de outro comprimento pode mudar os ciclos em cerca de 0,04% ([pilot.md](pilot.md#determinismo)).
 - **O3 de borda**: a `o3-edge` foi configurada a partir das larguras e filas do MediumBOOM, sem corresponder a um núcleo comercial específico ([scenarios.md](scenarios.md)).
 - **Contorno da redução RVV na O3CPU** do gem5 ([kernels.md](kernels.md#limitação-do-gem5-reduções-rvv-na-o3cpu)): a RVV reduz em LMUL 1 e soma o valor inicial no escalar, o que pode custar instruções que um simulador sem o defeito não pediria.
 - **Classes de unidade diferentes**: as instruções personalizadas usam `CnnMult` e `IntAlu`, e a RVV usa as classes `Simd*` do gem5, com latências próprias.

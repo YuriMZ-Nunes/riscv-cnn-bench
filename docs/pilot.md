@@ -60,6 +60,14 @@ Doze combinações rodaram duas vezes com as mesmas entradas, com `riscvcnnbench
 
 O que muda de uma execução para outra é só o tempo do host: `hostSeconds`, `hostTickRate`, `hostMemory`, `hostInstRate` e `hostOpRate`, e as durações do `metadata.json`. Também muda o cabeçalho do gem5 no `stdout.log`: hora de início, host, pid e caminhos da pasta. Por isso `R = 1` basta na campanha, e uma execução repetida vale tanto quanto a primeira (`current` = a mais recente).
 
+**O caminho da pasta da execução entra no resultado** (observado na RCB-32, em 27/10/2026). O binário roda a partir de `<pasta da execução>/inputs/`, e esse caminho vai para o `argv` do programa simulado. O comprimento dele desloca a pilha e muda um pouco o comportamento das caches. Num teste, a FC L custom na minor com as caches do `l1-l2` levou:
+
+- 1.083.594 ciclos numa pasta de `build/`;
+- 1.084.004 ciclos na pasta da campanha final, 0,04% a mais, com o `config.ini` idêntico fora dos caminhos;
+- 1.084.004 ciclos, exatos, ao rodar de novo numa pasta de `build/` com caminho do mesmo comprimento.
+
+A repetição dentro da mesma pasta de combinação, como no piloto, não sofre isso, porque o `run_id` tem sempre o mesmo comprimento. Mas reproduzir uma execução em outra pasta pode dar diferenças dessa ordem.
+
 `parser.stats_differences` faz a comparação, e `tests/test_determinism_e2e.py` a repete em todo `make e2e-test`: a FC S, uma vez com a custom na minor, cenário `reduzido`, latência 6, e outra com a RVV na o3-edge, cenário `l1-l2`, rodam duas vezes.
 
 ## Problemas encontrados
