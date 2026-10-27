@@ -5,8 +5,8 @@ pois precisa da toolchain RISC-V e do gem5 do fork compilado.
 
 Roda pela CLI uma matriz pequena (fc S, ref e custom, atomic e timing) com um
 grupo que falha de propósito (argumento inválido), confere o estado de cada
-combinação, a retomada sem repetir as concluídas, os pares do compare e os CSVs
-do report (RCB-20) sobre a pasta da campanha.
+combinação, a retomada sem repetir as concluídas, os pares do compare, os CSVs
+do report (RCB-20) e as figuras do plot (RCB-21) sobre a pasta da campanha.
 """
 
 import csv
@@ -111,3 +111,21 @@ groups:
         ("ref→custom", "timing"),
     ]
     assert all(float(pair["r_i"]) > 1 for pair in pairs)
+
+    plot = cli("plot", str(root))
+    assert plot.returncode == 0, plot.stderr
+    figures = root / "figures"
+    manifest = json.loads((figures / "figures.json").read_text(encoding="utf-8"))
+    assert [item["name"] for item in manifest["figures"]] == [
+        "variantes_S_timing_l1-l2",
+        "speedup_S_ref-custom",
+        "ri_sc_S_ref-custom",
+    ]
+    assert manifest["skipped"] == {
+        "runs": {"sem ciclos (CPU atomic)": 2, "inválida (problem)": 2},
+        "pairs": {"sem ciclos (CPU atomic)": 1},
+    }
+    files = [figures / name for item in manifest["figures"] for name in item["files"]]
+    assert [path.suffix for path in files] == [".pdf", ".png"] * 3
+    assert all(path.stat().st_size > 0 for path in files)
+    assert (figures / "runs.csv").read_bytes() == (root / "report" / "runs.csv").read_bytes()

@@ -15,6 +15,7 @@ Disponíveis:
 - **Formato de experimentos:** YAML com benchmark, flags, CPU (`atomic`/`timing`/`minor`/`o3`/`o3-edge`), caches L1/L2, memória e saída, validado por `riscvcnnbench validate` (ver [docs/experiments.md](docs/experiments.md)).
 - **Configuração gem5 configurável:** `configs/gem5/se_riscv_configurable.py` monta CPU, caches e memória por argumentos.
 - **Tabelas em CSV:** `riscvcnnbench report <pasta>` grava `runs.csv` (uma linha por execução: identificação, configuração, linha `RESULT`, métricas brutas e derivadas, proveniência) e `pairs.csv` (os pares do `compare`), com ausentes como célula vazia e falhas, resultados inválidos, checksums divergentes e repetidas marcados, não descartados (ver [docs/report.md](docs/report.md)).
+- **Gráficos de comparação:** `riscvcnnbench plot <pasta>` gera, a partir desses CSVs, figuras em PDF e PNG prontas para a monografia: instruções e ciclos por MAC e IPC por operação e variante, speedup em ciclos por cenário de memória e CPU, e redução de instruções contra speedup com a diagonal. Sem título, legíveis em preto e branco, com os CSVs usados copiados junto e um `figures.json` com o contexto e uma legenda sugerida de cada figura (ver [docs/plots.md](docs/plots.md)).
 - **Campanhas (execução em lote):** uma matriz em `campaigns/*.yaml`, com grupos de produtos cartesianos sobre os experimentos de `experiments/`, vira execuções normais agrupadas numa pasta; `riscvcnnbench campaign plan|run|status` mostra o plano, executa em paralelo num só container, retoma sem repetir o que terminou e mostra o estado com o diagnóstico de cada falha, com validação de equivalência opcional antes (ver [docs/campaigns.md](docs/campaigns.md)).
 - **Cenários de CPU e memória:** quatro cenários de memória nomeados (`sem-cache`, `l1`, `l1-l2`, `reduzido`, em `configs/scenarios.yaml`, escolhidos por `scenario` no YAML), uma O3 estreita de borda (`o3-edge`), latência configurável das instruções personalizadas (`cpu.custom_latency`, classe `CnnMult` no fork do gem5) e caches aquecidas ou esvaziadas no início da região de interesse (`benchmark.cache_state`), com a tabela do que cabe em cada nível (ver [docs/scenarios.md](docs/scenarios.md)).
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
@@ -29,7 +30,6 @@ Disponíveis:
 Planejados (ainda não implementados):
 
 - Matriz final da campanha e estimativa de tempo (RCB-22).
-- Gráficos dos resultados (RCB-21).
 
 ---
 
@@ -68,7 +68,8 @@ riscv-cnn-bench/
 │   ├── runner.py             # Execução de um experimento: build e gem5 pelo wrapper
 │   ├── runs.py               # Pastas de execução: listagem, diagnóstico e métricas
 │   ├── metric.py             # Métricas derivadas e comparação entre variantes
-│   └── report.py             # Tabelas em CSV (runs.csv e pairs.csv)
+│   ├── report.py             # Tabelas em CSV (runs.csv e pairs.csv)
+│   └── plot.py               # Gráficos de comparação (PDF e PNG) a partir dos CSVs
 ├── tests/                    # Testes Python
 ├── third_party/gem5/         # Código-fonte do simulador gem5 (submódulo Git)
 ├── build/                    # Gerado; ignorado pelo Git
@@ -158,6 +159,7 @@ uv run riscvcnnbench stats results/hello_param_cache/<run_id>   # todas as métr
 uv run riscvcnnbench compare results      # pares de variantes no mesmo cenário
 uv run riscvcnnbench campaign run campaigns/exemplo.yaml --jobs 4   # matriz em lote
 uv run riscvcnnbench report results/campaigns/exemplo                # runs.csv e pairs.csv
+uv run riscvcnnbench plot results/campaigns/exemplo                  # figuras em <pasta>/figures/
 ```
 
 Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `make runs`, `make stats RUN=<pasta>` e `make compare`. O formato, os campos e a execução estão em [docs/experiments.md](docs/experiments.md).
@@ -176,7 +178,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
-| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`, as comparações entre variantes, os cenários (latência das instruções personalizadas, os quatro cenários de memória, caches frias e a `o3-edge`) e uma campanha pequena com falha proposital, retomada e report em CSV. |
+| `make e2e-test` | Testes de ponta a ponta no gem5: `hello_riscv`, o exemplo `hello_param_cache.yaml`, `riscvcnnbench run` (sucesso, falha de build e de simulação), instruções personalizadas, as sete operações nas três variantes e a leitura das métricas do `stats.txt` nas quatro CPUs, com e sem cache, com DDR4 e com memória `simple`, as comparações entre variantes, os cenários (latência das instruções personalizadas, os quatro cenários de memória, caches frias e a `o3-edge`) e uma campanha pequena com falha proposital, retomada, report em CSV e gráficos. |
 | `make validate` | Validação antes da campanha: e2e mais a equivalência das três variantes em S e L e com dados extremos, no QEMU e no gem5, e as três variantes em S nas CPUs timing, minor e o3-edge (`RCB_JOBS=N` para o paralelismo). |
 | `make lint` | Executa Ruff somente em `src/` e `tests/`. |
 | `make format-check` | Verifica a formatação sem modificar arquivos. |
@@ -195,6 +197,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make campaign MATRIX=<yaml> [JOBS=N] [VALIDATE=1]` | Executa ou retoma uma campanha num só container, `JOBS` simulações em paralelo. |
 | `make campaign-status MATRIX=<yaml>` | Estado de cada combinação, com o diagnóstico das falhas e instruções/ciclos/IPC. |
 | `make report [DIR=results/<name>] [FORCE=1]` | Grava `runs.csv` e `pairs.csv` em `<pasta>/report/`. |
+| `make plot [DIR=results/<name>] [FORCE=1]` | Gera os gráficos (PDF e PNG) a partir de `<pasta>/report/` em `<pasta>/figures/`. |
 | `make compare [DIR=results/<name>]` | Compara as execuções aos pares (variantes e `-O2` × `-O3`): redução de instruções, speedup em ciclos e razão de IPC. |
 | `make smoke-test` | Sincroniza ambiente, testa CLI, executa Pytest e Ruff. |
 | `make clean-results` | Remove resultados gerados sob `results/`. |
@@ -270,5 +273,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Cenários de CPU e memória, latência das instruções e estado das caches](docs/scenarios.md)
 - [Campanhas: execução em lote de uma matriz](docs/campaigns.md)
 - [Tabelas de resultados em CSV](docs/report.md)
+- [Gráficos de comparação](docs/plots.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

@@ -349,7 +349,7 @@ fc        In=512,Out=32,R=1  minor@1GHz   l1i=32KiB,l1d=32KiB,simple  ref(-O2→
 5 par(es) aceito(s), 0 rejeitado(s). ...
 ```
 
-A coluna `CENÁRIO` mostra o nome do cenário quando o YAML usa `scenario` (por exemplo `l1-l2`), ou os tamanhos das caches e o tipo de memória, como acima; com caches frias, acrescenta `,cold`. Depois da tabela vêm, se houver, os pares rejeitados, as execuções fora da comparação e as substituídas, cada uma com o caminho e o motivo. O JSON tem `pairs` (com `kind`, `label`, `a`, `b`, `scenario`, `values`, `missing` e `problem`), `excluded` e `superseded`. Para gravar as execuções e os pares em CSV, use `riscvcnnbench report` ([report.md](report.md)).
+A coluna `CENÁRIO` mostra o nome do cenário quando o YAML usa `scenario` (por exemplo `l1-l2`), ou os tamanhos das caches e o tipo de memória, como acima; com caches frias, acrescenta `,cold`. Depois da tabela vêm, se houver, os pares rejeitados, as execuções fora da comparação e as substituídas, cada uma com o caminho e o motivo. O JSON tem `pairs` (com `kind`, `label`, `a`, `b`, `scenario`, `values`, `missing` e `problem`), `excluded` e `superseded`. Para gravar as execuções e os pares em CSV, use `riscvcnnbench report` ([report.md](report.md)); para os gráficos, `riscvcnnbench plot` ([plots.md](plots.md)).
 
 ## Status e falhas
 

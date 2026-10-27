@@ -21,7 +21,7 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
 	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare \
-	campaign-plan campaign campaign-status report
+	campaign-plan campaign campaign-status report plot
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -72,7 +72,7 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
 
-e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes, a leitura do stats.txt nas quatro CPUs, as comparações entre variantes, os cenários de CPU e memória e uma campanha pequena com o report em CSV; ~7 min).
+e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes, a leitura do stats.txt nas quatro CPUs, as comparações entre variantes, os cenários de CPU e memória e uma campanha pequena com o report em CSV e os gráficos; ~7 min).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 validate: PODMAN_ARGS += $(if $(RCB_JOBS),-e RCB_JOBS=$(RCB_JOBS))
@@ -146,3 +146,6 @@ campaign-status: ## Estado de cada combinação de uma campanha: make campaign-s
 
 report: ## Exporta as execuções em CSV (runs.csv e pairs.csv): make report [DIR=results/campaigns/<nome>] [FORCE=1]
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench report "$(or $(DIR),results)" $(if $(FORCE),--force)'
+
+plot: ## Gráficos em PDF e PNG a partir dos CSVs do report: make plot [DIR=results/campaigns/<nome>] [FORCE=1]
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench plot "$(or $(DIR),results)" $(if $(FORCE),--force)'
