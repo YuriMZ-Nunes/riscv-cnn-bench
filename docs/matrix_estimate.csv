@@ -53,24 +53,24 @@ conv3x3_direct_l__custom__timing__l1-l2,principal,conv3x3_direct_l,custom,timing
 conv3x3_direct_l__custom__timing__reduzido,principal,conv3x3_direct_l,custom,timing,reduzido,3,-O2,49077407,60.0,modelo,
 conv3x3_direct_l__custom__minor__sem-cache,principal latencia,conv3x3_direct_l,custom,minor,sem-cache,3,-O2,49077407,343.7,modelo,
 conv3x3_direct_l__custom__minor__l1,principal latencia,conv3x3_direct_l,custom,minor,l1,3,-O2,49077407,165.2,modelo,
-conv3x3_direct_l__custom__minor__l1-l2,principal latencia,conv3x3_direct_l,custom,minor,l1-l2,3,-O2,49077407,165.5,modelo,
-conv3x3_direct_l__custom__minor__reduzido,principal latencia,conv3x3_direct_l,custom,minor,reduzido,3,-O2,49077407,167.2,modelo,
+conv3x3_direct_l__custom__minor__l1-l2,principal latencia,conv3x3_direct_l,custom,minor,l1-l2,3,-O2,49077407,169.0,modelo,
+conv3x3_direct_l__custom__minor__reduzido,principal latencia,conv3x3_direct_l,custom,minor,reduzido,3,-O2,49077407,175.2,modelo,
 conv3x3_direct_l__custom__o3-edge__sem-cache,principal latencia,conv3x3_direct_l,custom,o3-edge,sem-cache,3,-O2,49077407,622.0,modelo,
 conv3x3_direct_l__custom__o3-edge__l1,principal latencia,conv3x3_direct_l,custom,o3-edge,l1,3,-O2,49077407,187.9,modelo,
-conv3x3_direct_l__custom__o3-edge__l1-l2,principal latencia,conv3x3_direct_l,custom,o3-edge,l1-l2,3,-O2,49077407,191.8,modelo,
-conv3x3_direct_l__custom__o3-edge__reduzido,principal latencia,conv3x3_direct_l,custom,o3-edge,reduzido,3,-O2,49077407,195.0,modelo,
+conv3x3_direct_l__custom__o3-edge__l1-l2,principal latencia,conv3x3_direct_l,custom,o3-edge,l1-l2,3,-O2,49077407,190.7,modelo,
+conv3x3_direct_l__custom__o3-edge__reduzido,principal latencia,conv3x3_direct_l,custom,o3-edge,reduzido,3,-O2,49077407,193.8,modelo,
 conv3x3_direct_l__rvv__timing__sem-cache,principal,conv3x3_direct_l,rvv,timing,sem-cache,,-O2,49497738,235.2,modelo,
 conv3x3_direct_l__rvv__timing__l1,principal,conv3x3_direct_l,rvv,timing,l1,,-O2,49497738,60.5,modelo,
 conv3x3_direct_l__rvv__timing__l1-l2,principal,conv3x3_direct_l,rvv,timing,l1-l2,,-O2,49497738,60.1,modelo,
 conv3x3_direct_l__rvv__timing__reduzido,principal,conv3x3_direct_l,rvv,timing,reduzido,,-O2,49497738,60.4,modelo,
 conv3x3_direct_l__rvv__minor__sem-cache,principal,conv3x3_direct_l,rvv,minor,sem-cache,,-O2,49497738,346.5,modelo,
 conv3x3_direct_l__rvv__minor__l1,principal,conv3x3_direct_l,rvv,minor,l1,,-O2,49497738,166.5,modelo,
-conv3x3_direct_l__rvv__minor__l1-l2,principal,conv3x3_direct_l,rvv,minor,l1-l2,,-O2,49497738,166.8,modelo,
-conv3x3_direct_l__rvv__minor__reduzido,principal,conv3x3_direct_l,rvv,minor,reduzido,,-O2,49497738,168.6,modelo,
+conv3x3_direct_l__rvv__minor__l1-l2,principal,conv3x3_direct_l,rvv,minor,l1-l2,,-O2,49497738,170.4,modelo,
+conv3x3_direct_l__rvv__minor__reduzido,principal,conv3x3_direct_l,rvv,minor,reduzido,,-O2,49497738,176.6,modelo,
 conv3x3_direct_l__rvv__o3-edge__sem-cache,principal,conv3x3_direct_l,rvv,o3-edge,sem-cache,,-O2,49497738,627.2,modelo,
 conv3x3_direct_l__rvv__o3-edge__l1,principal,conv3x3_direct_l,rvv,o3-edge,l1,,-O2,49497738,189.5,modelo,
-conv3x3_direct_l__rvv__o3-edge__l1-l2,principal,conv3x3_direct_l,rvv,o3-edge,l1-l2,,-O2,49497738,193.4,modelo,
-conv3x3_direct_l__rvv__o3-edge__reduzido,principal,conv3x3_direct_l,rvv,o3-edge,reduzido,,-O2,49497738,196.6,modelo,
+conv3x3_direct_l__rvv__o3-edge__l1-l2,principal,conv3x3_direct_l,rvv,o3-edge,l1-l2,,-O2,49497738,192.2,modelo,
+conv3x3_direct_l__rvv__o3-edge__reduzido,principal,conv3x3_direct_l,rvv,o3-edge,reduzido,,-O2,49497738,195.4,modelo,
 conv3x3_im2col_s__ref__timing__sem-cache,principal,conv3x3_im2col_s,ref,timing,sem-cache,,-O2,5399992,31.8,medida,build/rcb21-probe/conferencia/runs/conv3x3_im2col_s__ref__timing__sem-cache/20261026T230800.711716Z-3e859d94
 conv3x3_im2col_s__ref__timing__l1,principal,conv3x3_im2col_s,ref,timing,l1,,-O2,5399992,14.0,medida,build/rcb21-probe/conferencia/runs/conv3x3_im2col_s__ref__timing__l1/20261026T230804.258597Z-0f4f48b2
 conv3x3_im2col_s__ref__timing__l1-l2,principal,conv3x3_im2col_s,ref,timing,l1-l2,,-O2,5399992,12.8,medida,build/rcb21-probe/conferencia/runs/conv3x3_im2col_s__ref__timing__l1-l2/20261026T230808.759971Z-79111c80
@@ -113,180 +113,180 @@ conv3x3_im2col_l__ref__timing__l1-l2,principal,conv3x3_im2col_l,ref,timing,l1-l2
 conv3x3_im2col_l__ref__timing__reduzido,principal,conv3x3_im2col_l,ref,timing,reduzido,,-O2,76129894,89.6,modelo,
 conv3x3_im2col_l__ref__minor__sem-cache,principal,conv3x3_im2col_l,ref,minor,sem-cache,,-O2,76129894,527.4,modelo,
 conv3x3_im2col_l__ref__minor__l1,principal,conv3x3_im2col_l,ref,minor,l1,,-O2,76129894,251.5,modelo,
-conv3x3_im2col_l__ref__minor__l1-l2,principal,conv3x3_im2col_l,ref,minor,l1-l2,,-O2,76129894,252.0,modelo,
-conv3x3_im2col_l__ref__minor__reduzido,principal,conv3x3_im2col_l,ref,minor,reduzido,,-O2,76129894,254.5,modelo,
+conv3x3_im2col_l__ref__minor__l1-l2,principal,conv3x3_im2col_l,ref,minor,l1-l2,,-O2,76129894,258.1,modelo,
+conv3x3_im2col_l__ref__minor__reduzido,principal,conv3x3_im2col_l,ref,minor,reduzido,,-O2,76129894,267.6,modelo,
 conv3x3_im2col_l__ref__o3-edge__sem-cache,principal,conv3x3_im2col_l,ref,o3-edge,sem-cache,,-O2,76129894,954.1,modelo,
 conv3x3_im2col_l__ref__o3-edge__l1,principal,conv3x3_im2col_l,ref,o3-edge,l1,,-O2,76129894,286.4,modelo,
-conv3x3_im2col_l__ref__o3-edge__l1-l2,principal,conv3x3_im2col_l,ref,o3-edge,l1-l2,,-O2,76129894,292.5,modelo,
-conv3x3_im2col_l__ref__o3-edge__reduzido,principal,conv3x3_im2col_l,ref,o3-edge,reduzido,,-O2,76129894,297.3,modelo,
+conv3x3_im2col_l__ref__o3-edge__l1-l2,principal,conv3x3_im2col_l,ref,o3-edge,l1-l2,,-O2,76129894,291.4,modelo,
+conv3x3_im2col_l__ref__o3-edge__reduzido,principal,conv3x3_im2col_l,ref,o3-edge,reduzido,,-O2,76129894,296.0,modelo,
 conv3x3_im2col_l__custom__timing__sem-cache,principal,conv3x3_im2col_l,custom,timing,sem-cache,3,-O2,47000888,223.8,modelo,
 conv3x3_im2col_l__custom__timing__l1,principal,conv3x3_im2col_l,custom,timing,l1,3,-O2,47000888,57.8,modelo,
 conv3x3_im2col_l__custom__timing__l1-l2,principal,conv3x3_im2col_l,custom,timing,l1-l2,3,-O2,47000888,57.4,modelo,
 conv3x3_im2col_l__custom__timing__reduzido,principal,conv3x3_im2col_l,custom,timing,reduzido,3,-O2,47000888,57.7,modelo,
 conv3x3_im2col_l__custom__minor__sem-cache,principal latencia,conv3x3_im2col_l,custom,minor,sem-cache,3,-O2,47000888,329.6,modelo,
 conv3x3_im2col_l__custom__minor__l1,principal latencia,conv3x3_im2col_l,custom,minor,l1,3,-O2,47000888,158.5,modelo,
-conv3x3_im2col_l__custom__minor__l1-l2,principal latencia,conv3x3_im2col_l,custom,minor,l1-l2,3,-O2,47000888,158.9,modelo,
-conv3x3_im2col_l__custom__minor__reduzido,principal latencia,conv3x3_im2col_l,custom,minor,reduzido,3,-O2,47000888,160.5,modelo,
+conv3x3_im2col_l__custom__minor__l1-l2,principal latencia,conv3x3_im2col_l,custom,minor,l1-l2,3,-O2,47000888,162.2,modelo,
+conv3x3_im2col_l__custom__minor__reduzido,principal latencia,conv3x3_im2col_l,custom,minor,reduzido,3,-O2,47000888,168.1,modelo,
 conv3x3_im2col_l__custom__o3-edge__sem-cache,principal latencia,conv3x3_im2col_l,custom,o3-edge,sem-cache,3,-O2,47000888,596.5,modelo,
 conv3x3_im2col_l__custom__o3-edge__l1,principal latencia,conv3x3_im2col_l,custom,o3-edge,l1,3,-O2,47000888,180.4,modelo,
-conv3x3_im2col_l__custom__o3-edge__l1-l2,principal latencia,conv3x3_im2col_l,custom,o3-edge,l1-l2,3,-O2,47000888,184.1,modelo,
-conv3x3_im2col_l__custom__o3-edge__reduzido,principal latencia,conv3x3_im2col_l,custom,o3-edge,reduzido,3,-O2,47000888,187.1,modelo,
+conv3x3_im2col_l__custom__o3-edge__l1-l2,principal latencia,conv3x3_im2col_l,custom,o3-edge,l1-l2,3,-O2,47000888,182.9,modelo,
+conv3x3_im2col_l__custom__o3-edge__reduzido,principal latencia,conv3x3_im2col_l,custom,o3-edge,reduzido,3,-O2,47000888,186.0,modelo,
 conv3x3_im2col_l__rvv__timing__sem-cache,principal,conv3x3_im2col_l,rvv,timing,sem-cache,,-O2,45621881,217.5,modelo,
 conv3x3_im2col_l__rvv__timing__l1,principal,conv3x3_im2col_l,rvv,timing,l1,,-O2,45621881,56.3,modelo,
 conv3x3_im2col_l__rvv__timing__l1-l2,principal,conv3x3_im2col_l,rvv,timing,l1-l2,,-O2,45621881,55.9,modelo,
 conv3x3_im2col_l__rvv__timing__reduzido,principal,conv3x3_im2col_l,rvv,timing,reduzido,,-O2,45621881,56.2,modelo,
 conv3x3_im2col_l__rvv__minor__sem-cache,principal,conv3x3_im2col_l,rvv,minor,sem-cache,,-O2,45621881,320.2,modelo,
 conv3x3_im2col_l__rvv__minor__l1,principal,conv3x3_im2col_l,rvv,minor,l1,,-O2,45621881,154.1,modelo,
-conv3x3_im2col_l__rvv__minor__l1-l2,principal,conv3x3_im2col_l,rvv,minor,l1-l2,,-O2,45621881,154.5,modelo,
-conv3x3_im2col_l__rvv__minor__reduzido,principal,conv3x3_im2col_l,rvv,minor,reduzido,,-O2,45621881,156.1,modelo,
+conv3x3_im2col_l__rvv__minor__l1-l2,principal,conv3x3_im2col_l,rvv,minor,l1-l2,,-O2,45621881,157.6,modelo,
+conv3x3_im2col_l__rvv__minor__reduzido,principal,conv3x3_im2col_l,rvv,minor,reduzido,,-O2,45621881,163.4,modelo,
 conv3x3_im2col_l__rvv__o3-edge__sem-cache,principal,conv3x3_im2col_l,rvv,o3-edge,sem-cache,,-O2,45621881,579.6,modelo,
 conv3x3_im2col_l__rvv__o3-edge__l1,principal,conv3x3_im2col_l,rvv,o3-edge,l1,,-O2,45621881,175.4,modelo,
-conv3x3_im2col_l__rvv__o3-edge__l1-l2,principal,conv3x3_im2col_l,rvv,o3-edge,l1-l2,,-O2,45621881,178.9,modelo,
-conv3x3_im2col_l__rvv__o3-edge__reduzido,principal,conv3x3_im2col_l,rvv,o3-edge,reduzido,,-O2,45621881,181.9,modelo,
-depthwise3x3_s__ref__timing__sem-cache,principal,depthwise3x3_s,ref,timing,sem-cache,,-O2,2721359,20.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__sem-cache/20261026T231241.550190Z-886ded65
-depthwise3x3_s__ref__timing__l1,principal,depthwise3x3_s,ref,timing,l1,,-O2,2721359,8.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__l1/20261026T231244.527033Z-df4bd850
-depthwise3x3_s__ref__timing__l1-l2,principal,depthwise3x3_s,ref,timing,l1-l2,,-O2,2721359,7.2,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__l1-l2/20261026T231253.146184Z-bc7c0597
-depthwise3x3_s__ref__timing__reduzido,principal,depthwise3x3_s,ref,timing,reduzido,,-O2,2721359,6.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__reduzido/20261026T231253.489932Z-f31afd4c
-depthwise3x3_s__ref__minor__sem-cache,principal,depthwise3x3_s,ref,minor,sem-cache,,-O2,2721359,24.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__minor__sem-cache/20261026T231300.258820Z-3bd530af
-depthwise3x3_s__ref__minor__l1,principal,depthwise3x3_s,ref,minor,l1,,-O2,2721359,14.4,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__minor__l1/20261026T231300.407828Z-0d3ac411
-depthwise3x3_s__ref__minor__l1-l2,principal,depthwise3x3_s,ref,minor,l1-l2,,-O2,2721359,14.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__minor__l1-l2/20261026T231302.349190Z-c9c27a44
-depthwise3x3_s__ref__minor__reduzido,principal,depthwise3x3_s,ref,minor,reduzido,,-O2,2721359,16.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__minor__reduzido/20261026T231314.855483Z-bd139d60
-depthwise3x3_s__ref__o3-edge__sem-cache,principal,depthwise3x3_s,ref,o3-edge,sem-cache,,-O2,2721359,53.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__o3-edge__sem-cache/20261026T231317.434119Z-f707b784
-depthwise3x3_s__ref__o3-edge__l1,principal,depthwise3x3_s,ref,o3-edge,l1,,-O2,2721359,18.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__o3-edge__l1/20261026T231322.328359Z-7ce7f45c
-depthwise3x3_s__ref__o3-edge__l1-l2,principal,depthwise3x3_s,ref,o3-edge,l1-l2,,-O2,2721359,17.6,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__o3-edge__l1-l2/20261026T231325.131228Z-db71e21b
-depthwise3x3_s__ref__o3-edge__reduzido,principal,depthwise3x3_s,ref,o3-edge,reduzido,,-O2,2721359,18.4,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__o3-edge__reduzido/20261026T231331.717970Z-3db0fde6
-depthwise3x3_s__custom__timing__sem-cache,principal,depthwise3x3_s,custom,timing,sem-cache,3,-O2,1906773,18.2,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__sem-cache/20261026T231340.934470Z-0792b17e
-depthwise3x3_s__custom__timing__l1,principal,depthwise3x3_s,custom,timing,l1,3,-O2,1906773,10.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__l1/20261026T231342.929027Z-903ba1d1
-depthwise3x3_s__custom__timing__l1-l2,principal,depthwise3x3_s,custom,timing,l1-l2,3,-O2,1906773,8.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__l1-l2/20261026T231350.304112Z-f695a3b2
-depthwise3x3_s__custom__timing__reduzido,principal,depthwise3x3_s,custom,timing,reduzido,3,-O2,1906773,8.3,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__reduzido/20261026T231353.757269Z-3a1cfc00
-depthwise3x3_s__custom__minor__sem-cache,principal latencia,depthwise3x3_s,custom,minor,sem-cache,3,-O2,1906773,20.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__sem-cache/20261026T231359.111019Z-eb9cc497
-depthwise3x3_s__custom__minor__l1,principal latencia,depthwise3x3_s,custom,minor,l1,3,-O2,1906773,15.3,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__l1/20261026T231402.098636Z-170092d7
-depthwise3x3_s__custom__minor__l1-l2,principal latencia,depthwise3x3_s,custom,minor,l1-l2,3,-O2,1906773,15.1,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__l1-l2/20261026T231417.513355Z-50b21ca2
-depthwise3x3_s__custom__minor__reduzido,principal latencia,depthwise3x3_s,custom,minor,reduzido,3,-O2,1906773,13.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__reduzido/20261026T231420.160034Z-b7827871
-depthwise3x3_s__custom__o3-edge__sem-cache,principal latencia,depthwise3x3_s,custom,o3-edge,sem-cache,3,-O2,1906773,41.4,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__sem-cache/20261026T231432.699960Z-1e36750d
-depthwise3x3_s__custom__o3-edge__l1,principal latencia,depthwise3x3_s,custom,o3-edge,l1,3,-O2,1906773,13.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__l1/20261026T231435.779491Z-1f4da4cf
-depthwise3x3_s__custom__o3-edge__l1-l2,principal latencia,depthwise3x3_s,custom,o3-edge,l1-l2,3,-O2,1906773,11.3,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__l1-l2/20261026T231449.832106Z-5ec0d044
-depthwise3x3_s__custom__o3-edge__reduzido,principal latencia,depthwise3x3_s,custom,o3-edge,reduzido,3,-O2,1906773,17.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__reduzido/20261026T231501.318903Z-10998f55
+conv3x3_im2col_l__rvv__o3-edge__l1-l2,principal,conv3x3_im2col_l,rvv,o3-edge,l1-l2,,-O2,45621881,177.8,modelo,
+conv3x3_im2col_l__rvv__o3-edge__reduzido,principal,conv3x3_im2col_l,rvv,o3-edge,reduzido,,-O2,45621881,180.8,modelo,
+depthwise3x3_s__ref__timing__sem-cache,principal,depthwise3x3_s,ref,timing,sem-cache,,-O2,2721360,20.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__sem-cache/20261026T231241.550190Z-886ded65
+depthwise3x3_s__ref__timing__l1,principal,depthwise3x3_s,ref,timing,l1,,-O2,2721360,8.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__l1/20261026T231244.527033Z-df4bd850
+depthwise3x3_s__ref__timing__l1-l2,principal,depthwise3x3_s,ref,timing,l1-l2,,-O2,2721360,7.2,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__l1-l2/20261026T231253.146184Z-bc7c0597
+depthwise3x3_s__ref__timing__reduzido,principal,depthwise3x3_s,ref,timing,reduzido,,-O2,2721360,6.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__timing__reduzido/20261026T231253.489932Z-f31afd4c
+depthwise3x3_s__ref__minor__sem-cache,principal,depthwise3x3_s,ref,minor,sem-cache,,-O2,2721360,24.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__minor__sem-cache/20261026T231300.258820Z-3bd530af
+depthwise3x3_s__ref__minor__l1,principal,depthwise3x3_s,ref,minor,l1,,-O2,2721360,14.4,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__minor__l1/20261026T231300.407828Z-0d3ac411
+depthwise3x3_s__ref__minor__l1-l2,principal,depthwise3x3_s,ref,minor,l1-l2,,-O2,2721360,12.4,medida,results/campaigns/piloto/runs/depthwise3x3_s__ref__minor__l1-l2/20261027T133901.531641Z-ece5bd2e
+depthwise3x3_s__ref__minor__reduzido,principal,depthwise3x3_s,ref,minor,reduzido,,-O2,2721360,12.5,medida,results/campaigns/piloto/runs/depthwise3x3_s__ref__minor__reduzido/20261027T133901.531880Z-8a8b6348
+depthwise3x3_s__ref__o3-edge__sem-cache,principal,depthwise3x3_s,ref,o3-edge,sem-cache,,-O2,2721360,53.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__o3-edge__sem-cache/20261026T231317.434119Z-f707b784
+depthwise3x3_s__ref__o3-edge__l1,principal,depthwise3x3_s,ref,o3-edge,l1,,-O2,2721360,18.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__ref__o3-edge__l1/20261026T231322.328359Z-7ce7f45c
+depthwise3x3_s__ref__o3-edge__l1-l2,principal,depthwise3x3_s,ref,o3-edge,l1-l2,,-O2,2721360,15.0,medida,results/campaigns/piloto/runs/depthwise3x3_s__ref__o3-edge__l1-l2/20261027T133901.532128Z-a6d69464
+depthwise3x3_s__ref__o3-edge__reduzido,principal,depthwise3x3_s,ref,o3-edge,reduzido,,-O2,2721360,14.7,medida,results/campaigns/piloto/runs/depthwise3x3_s__ref__o3-edge__reduzido/20261027T133901.532077Z-5e349a16
+depthwise3x3_s__custom__timing__sem-cache,principal,depthwise3x3_s,custom,timing,sem-cache,3,-O2,1906774,18.2,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__sem-cache/20261026T231340.934470Z-0792b17e
+depthwise3x3_s__custom__timing__l1,principal,depthwise3x3_s,custom,timing,l1,3,-O2,1906774,10.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__l1/20261026T231342.929027Z-903ba1d1
+depthwise3x3_s__custom__timing__l1-l2,principal,depthwise3x3_s,custom,timing,l1-l2,3,-O2,1906774,8.7,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__l1-l2/20261026T231350.304112Z-f695a3b2
+depthwise3x3_s__custom__timing__reduzido,principal,depthwise3x3_s,custom,timing,reduzido,3,-O2,1906774,8.3,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__timing__reduzido/20261026T231353.757269Z-3a1cfc00
+depthwise3x3_s__custom__minor__sem-cache,principal latencia,depthwise3x3_s,custom,minor,sem-cache,3,-O2,1906774,20.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__sem-cache/20261026T231359.111019Z-eb9cc497
+depthwise3x3_s__custom__minor__l1,principal latencia,depthwise3x3_s,custom,minor,l1,3,-O2,1906774,15.3,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__l1/20261026T231402.098636Z-170092d7
+depthwise3x3_s__custom__minor__l1-l2,principal latencia,depthwise3x3_s,custom,minor,l1-l2,3,-O2,1906774,9.9,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__minor__l1-l2/20261027T133914.039605Z-fc44a92e
+depthwise3x3_s__custom__minor__reduzido,principal latencia,depthwise3x3_s,custom,minor,reduzido,3,-O2,1906774,9.5,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__minor__reduzido/20261027T133916.286728Z-29d5594f
+depthwise3x3_s__custom__o3-edge__sem-cache,principal latencia,depthwise3x3_s,custom,o3-edge,sem-cache,3,-O2,1906774,41.4,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__sem-cache/20261026T231432.699960Z-1e36750d
+depthwise3x3_s__custom__o3-edge__l1,principal latencia,depthwise3x3_s,custom,o3-edge,l1,3,-O2,1906774,13.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__l1/20261026T231435.779491Z-1f4da4cf
+depthwise3x3_s__custom__o3-edge__l1-l2,principal latencia,depthwise3x3_s,custom,o3-edge,l1-l2,3,-O2,1906774,14.1,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__o3-edge__l1-l2/20261027T133924.065851Z-86a9d288
+depthwise3x3_s__custom__o3-edge__reduzido,principal latencia,depthwise3x3_s,custom,o3-edge,reduzido,3,-O2,1906774,14.6,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__o3-edge__reduzido/20261027T135826.207124Z-536bdd75
 depthwise3x3_s__rvv__timing__sem-cache,principal,depthwise3x3_s,rvv,timing,sem-cache,,-O2,1791393,15.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__timing__sem-cache/20261026T231510.516472Z-6f407b2b
 depthwise3x3_s__rvv__timing__l1,principal,depthwise3x3_s,rvv,timing,l1,,-O2,1791393,7.1,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__timing__l1/20261026T231514.247178Z-5cdbecc1
 depthwise3x3_s__rvv__timing__l1-l2,principal,depthwise3x3_s,rvv,timing,l1-l2,,-O2,1791393,8.4,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__timing__l1-l2/20261026T231519.327028Z-a0c628dd
 depthwise3x3_s__rvv__timing__reduzido,principal,depthwise3x3_s,rvv,timing,reduzido,,-O2,1791393,8.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__timing__reduzido/20261026T231521.519683Z-d9939f42
 depthwise3x3_s__rvv__minor__sem-cache,principal,depthwise3x3_s,rvv,minor,sem-cache,,-O2,1791393,20.1,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__minor__sem-cache/20261026T231526.302324Z-a2d5558a
 depthwise3x3_s__rvv__minor__l1,principal,depthwise3x3_s,rvv,minor,l1,,-O2,1791393,14.0,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__minor__l1/20261026T231526.538943Z-c41e414d
-depthwise3x3_s__rvv__minor__l1-l2,principal,depthwise3x3_s,rvv,minor,l1-l2,,-O2,1791393,14.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__minor__l1-l2/20261026T231527.926912Z-84b0981f
-depthwise3x3_s__rvv__minor__reduzido,principal,depthwise3x3_s,rvv,minor,reduzido,,-O2,1791393,14.4,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__minor__reduzido/20261026T231530.488050Z-62311096
+depthwise3x3_s__rvv__minor__l1-l2,principal,depthwise3x3_s,rvv,minor,l1-l2,,-O2,1791393,14.3,medida,results/campaigns/piloto/runs/depthwise3x3_s__rvv__minor__l1-l2/20261027T135754.943412Z-8917d9f5
+depthwise3x3_s__rvv__minor__reduzido,principal,depthwise3x3_s,rvv,minor,reduzido,,-O2,1791393,12.7,medida,results/campaigns/piloto/runs/depthwise3x3_s__rvv__minor__reduzido/20261027T135805.770022Z-558a0fcd
 depthwise3x3_s__rvv__o3-edge__sem-cache,principal,depthwise3x3_s,rvv,o3-edge,sem-cache,,-O2,1791393,34.2,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__o3-edge__sem-cache/20261026T231540.661117Z-68715018
 depthwise3x3_s__rvv__o3-edge__l1,principal,depthwise3x3_s,rvv,o3-edge,l1,,-O2,1791393,13.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__o3-edge__l1/20261026T231542.637320Z-3e21773e
-depthwise3x3_s__rvv__o3-edge__l1-l2,principal,depthwise3x3_s,rvv,o3-edge,l1-l2,,-O2,1791393,14.6,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__o3-edge__l1-l2/20261026T231545.042249Z-39303e7c
-depthwise3x3_s__rvv__o3-edge__reduzido,principal,depthwise3x3_s,rvv,o3-edge,reduzido,,-O2,1791393,12.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__rvv__o3-edge__reduzido/20261026T231546.587934Z-c22d658e
+depthwise3x3_s__rvv__o3-edge__l1-l2,principal,depthwise3x3_s,rvv,o3-edge,l1-l2,,-O2,1791393,15.7,medida,results/campaigns/piloto/runs/depthwise3x3_s__rvv__o3-edge__l1-l2/20261027T135809.764112Z-e6db2d5a
+depthwise3x3_s__rvv__o3-edge__reduzido,principal,depthwise3x3_s,rvv,o3-edge,reduzido,,-O2,1791393,16.0,medida,results/campaigns/piloto/runs/depthwise3x3_s__rvv__o3-edge__reduzido/20261027T135812.749761Z-8fc9842b
 depthwise3x3_l__ref__timing__sem-cache,principal,depthwise3x3_l,ref,timing,sem-cache,,-O2,22048519,109.8,modelo,
 depthwise3x3_l__ref__timing__l1,principal,depthwise3x3_l,ref,timing,l1,,-O2,22048519,30.4,modelo,
 depthwise3x3_l__ref__timing__l1-l2,principal,depthwise3x3_l,ref,timing,l1-l2,,-O2,22048519,30.2,modelo,
 depthwise3x3_l__ref__timing__reduzido,principal,depthwise3x3_l,ref,timing,reduzido,,-O2,22048519,30.4,modelo,
 depthwise3x3_l__ref__minor__sem-cache,principal,depthwise3x3_l,ref,minor,sem-cache,,-O2,22048519,160.1,modelo,
 depthwise3x3_l__ref__minor__l1,principal,depthwise3x3_l,ref,minor,l1,,-O2,22048519,78.9,modelo,
-depthwise3x3_l__ref__minor__l1-l2,principal,depthwise3x3_l,ref,minor,l1-l2,,-O2,22048519,79.1,modelo,
-depthwise3x3_l__ref__minor__reduzido,principal,depthwise3x3_l,ref,minor,reduzido,,-O2,22048519,80.0,modelo,
+depthwise3x3_l__ref__minor__l1-l2,principal,depthwise3x3_l,ref,minor,l1-l2,,-O2,22048519,90.6,medida,results/campaigns/piloto/runs/depthwise3x3_l__ref__minor__l1-l2/20261027T135623.696465Z-5f3e4e9f
+depthwise3x3_l__ref__minor__reduzido,principal,depthwise3x3_l,ref,minor,reduzido,,-O2,22048519,101.6,medida,results/campaigns/piloto/runs/depthwise3x3_l__ref__minor__reduzido/20261027T135623.365678Z-fb6ebe8e
 depthwise3x3_l__ref__o3-edge__sem-cache,principal,depthwise3x3_l,ref,o3-edge,sem-cache,,-O2,22048519,290.2,modelo,
 depthwise3x3_l__ref__o3-edge__l1,principal,depthwise3x3_l,ref,o3-edge,l1,,-O2,22048519,89.6,modelo,
-depthwise3x3_l__ref__o3-edge__l1-l2,principal,depthwise3x3_l,ref,o3-edge,l1-l2,,-O2,22048519,91.2,modelo,
-depthwise3x3_l__ref__o3-edge__reduzido,principal,depthwise3x3_l,ref,o3-edge,reduzido,,-O2,22048519,92.8,modelo,
-depthwise3x3_l__custom__timing__sem-cache,principal,depthwise3x3_l,custom,timing,sem-cache,3,-O2,15339345,79.2,modelo,
-depthwise3x3_l__custom__timing__l1,principal,depthwise3x3_l,custom,timing,l1,3,-O2,15339345,23.0,modelo,
-depthwise3x3_l__custom__timing__l1-l2,principal,depthwise3x3_l,custom,timing,l1-l2,3,-O2,15339345,22.9,modelo,
-depthwise3x3_l__custom__timing__reduzido,principal,depthwise3x3_l,custom,timing,reduzido,3,-O2,15339345,23.1,modelo,
-depthwise3x3_l__custom__minor__sem-cache,principal latencia,depthwise3x3_l,custom,minor,sem-cache,3,-O2,15339345,114.5,modelo,
-depthwise3x3_l__custom__minor__l1,principal latencia,depthwise3x3_l,custom,minor,l1,3,-O2,15339345,57.5,modelo,
-depthwise3x3_l__custom__minor__l1-l2,principal latencia,depthwise3x3_l,custom,minor,l1-l2,3,-O2,15339345,57.7,modelo,
-depthwise3x3_l__custom__minor__reduzido,principal latencia,depthwise3x3_l,custom,minor,reduzido,3,-O2,15339345,58.3,modelo,
-depthwise3x3_l__custom__o3-edge__sem-cache,principal latencia,depthwise3x3_l,custom,o3-edge,sem-cache,3,-O2,15339345,207.8,modelo,
-depthwise3x3_l__custom__o3-edge__l1,principal latencia,depthwise3x3_l,custom,o3-edge,l1,3,-O2,15339345,65.1,modelo,
-depthwise3x3_l__custom__o3-edge__l1-l2,principal latencia,depthwise3x3_l,custom,o3-edge,l1-l2,3,-O2,15339345,66.2,modelo,
-depthwise3x3_l__custom__o3-edge__reduzido,principal latencia,depthwise3x3_l,custom,o3-edge,reduzido,3,-O2,15339345,67.5,modelo,
-depthwise3x3_l__rvv__timing__sem-cache,principal,depthwise3x3_l,rvv,timing,sem-cache,,-O2,14395384,74.9,modelo,
-depthwise3x3_l__rvv__timing__l1,principal,depthwise3x3_l,rvv,timing,l1,,-O2,14395384,22.0,modelo,
-depthwise3x3_l__rvv__timing__l1-l2,principal,depthwise3x3_l,rvv,timing,l1-l2,,-O2,14395384,21.9,modelo,
-depthwise3x3_l__rvv__timing__reduzido,principal,depthwise3x3_l,rvv,timing,reduzido,,-O2,14395384,22.0,modelo,
-depthwise3x3_l__rvv__minor__sem-cache,principal,depthwise3x3_l,rvv,minor,sem-cache,,-O2,14395384,108.1,modelo,
-depthwise3x3_l__rvv__minor__l1,principal,depthwise3x3_l,rvv,minor,l1,,-O2,14395384,54.5,modelo,
-depthwise3x3_l__rvv__minor__l1-l2,principal,depthwise3x3_l,rvv,minor,l1-l2,,-O2,14395384,54.7,modelo,
-depthwise3x3_l__rvv__minor__reduzido,principal,depthwise3x3_l,rvv,minor,reduzido,,-O2,14395384,55.3,modelo,
-depthwise3x3_l__rvv__o3-edge__sem-cache,principal,depthwise3x3_l,rvv,o3-edge,sem-cache,,-O2,14395384,196.2,modelo,
-depthwise3x3_l__rvv__o3-edge__l1,principal,depthwise3x3_l,rvv,o3-edge,l1,,-O2,14395384,61.7,modelo,
-depthwise3x3_l__rvv__o3-edge__l1-l2,principal,depthwise3x3_l,rvv,o3-edge,l1-l2,,-O2,14395384,62.7,modelo,
-depthwise3x3_l__rvv__o3-edge__reduzido,principal,depthwise3x3_l,rvv,o3-edge,reduzido,,-O2,14395384,63.9,modelo,
-pointwise1x1_s__ref__timing__sem-cache,principal,pointwise1x1_s,ref,timing,sem-cache,,-O2,4089375,28.1,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__sem-cache/20261026T231556.536386Z-9fe832f2
-pointwise1x1_s__ref__timing__l1,principal,pointwise1x1_s,ref,timing,l1,,-O2,4089375,9.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__l1/20261026T231559.507413Z-08360dcf
-pointwise1x1_s__ref__timing__l1-l2,principal,pointwise1x1_s,ref,timing,l1-l2,,-O2,4089375,11.2,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__l1-l2/20261026T231559.760345Z-6b395c4f
-pointwise1x1_s__ref__timing__reduzido,principal,pointwise1x1_s,ref,timing,reduzido,,-O2,4089375,11.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__reduzido/20261026T231608.590624Z-666e9e9d
-pointwise1x1_s__ref__minor__sem-cache,principal,pointwise1x1_s,ref,minor,sem-cache,,-O2,4089375,37.5,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__minor__sem-cache/20261026T231611.181777Z-b24a7747
-pointwise1x1_s__ref__minor__l1,principal,pointwise1x1_s,ref,minor,l1,,-O2,4089375,20.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__minor__l1/20261026T231614.921794Z-8b44f748
-pointwise1x1_s__ref__minor__l1-l2,principal,pointwise1x1_s,ref,minor,l1-l2,,-O2,4089375,20.9,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__minor__l1-l2/20261026T231620.015796Z-5ca7de18
-pointwise1x1_s__ref__minor__reduzido,principal,pointwise1x1_s,ref,minor,reduzido,,-O2,4089375,20.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__minor__reduzido/20261026T231624.755154Z-e852a6e1
-pointwise1x1_s__ref__o3-edge__sem-cache,principal,pointwise1x1_s,ref,o3-edge,sem-cache,,-O2,4089375,68.7,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__o3-edge__sem-cache/20261026T231635.285243Z-6c0fd60a
-pointwise1x1_s__ref__o3-edge__l1,principal,pointwise1x1_s,ref,o3-edge,l1,,-O2,4089375,25.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__o3-edge__l1/20261026T231641.065847Z-d8936427
-pointwise1x1_s__ref__o3-edge__l1-l2,principal,pointwise1x1_s,ref,o3-edge,l1-l2,,-O2,4089375,24.8,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__o3-edge__l1-l2/20261026T231644.958966Z-be3528ec
-pointwise1x1_s__ref__o3-edge__reduzido,principal,pointwise1x1_s,ref,o3-edge,reduzido,,-O2,4089375,25.8,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__o3-edge__reduzido/20261026T231648.944373Z-80cad8fe
+depthwise3x3_l__ref__o3-edge__l1-l2,principal,depthwise3x3_l,ref,o3-edge,l1-l2,,-O2,22048519,108.5,medida,results/campaigns/piloto/runs/depthwise3x3_l__ref__o3-edge__l1-l2/20261027T135623.510154Z-0529d455
+depthwise3x3_l__ref__o3-edge__reduzido,principal,depthwise3x3_l,ref,o3-edge,reduzido,,-O2,22048519,119.0,medida,results/campaigns/piloto/runs/depthwise3x3_l__ref__o3-edge__reduzido/20261027T135623.489113Z-33fca1dc
+depthwise3x3_l__custom__timing__sem-cache,principal,depthwise3x3_l,custom,timing,sem-cache,3,-O2,15339346,79.2,modelo,
+depthwise3x3_l__custom__timing__l1,principal,depthwise3x3_l,custom,timing,l1,3,-O2,15339346,23.0,modelo,
+depthwise3x3_l__custom__timing__l1-l2,principal,depthwise3x3_l,custom,timing,l1-l2,3,-O2,15339346,22.9,modelo,
+depthwise3x3_l__custom__timing__reduzido,principal,depthwise3x3_l,custom,timing,reduzido,3,-O2,15339346,23.1,modelo,
+depthwise3x3_l__custom__minor__sem-cache,principal latencia,depthwise3x3_l,custom,minor,sem-cache,3,-O2,15339346,114.5,modelo,
+depthwise3x3_l__custom__minor__l1,principal latencia,depthwise3x3_l,custom,minor,l1,3,-O2,15339346,57.5,modelo,
+depthwise3x3_l__custom__minor__l1-l2,principal latencia,depthwise3x3_l,custom,minor,l1-l2,3,-O2,15339346,51.1,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__minor__l1-l2/20261027T134109.458214Z-6f1804a3
+depthwise3x3_l__custom__minor__reduzido,principal latencia,depthwise3x3_l,custom,minor,reduzido,3,-O2,15339346,51.5,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__minor__reduzido/20261027T134124.368794Z-ca1dd829
+depthwise3x3_l__custom__o3-edge__sem-cache,principal latencia,depthwise3x3_l,custom,o3-edge,sem-cache,3,-O2,15339346,207.8,modelo,
+depthwise3x3_l__custom__o3-edge__l1,principal latencia,depthwise3x3_l,custom,o3-edge,l1,3,-O2,15339346,65.1,modelo,
+depthwise3x3_l__custom__o3-edge__l1-l2,principal latencia,depthwise3x3_l,custom,o3-edge,l1-l2,3,-O2,15339346,59.7,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__o3-edge__l1-l2/20261027T134200.577772Z-46770646
+depthwise3x3_l__custom__o3-edge__reduzido,principal latencia,depthwise3x3_l,custom,o3-edge,reduzido,3,-O2,15339346,64.0,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__o3-edge__reduzido/20261027T134215.898130Z-aa49894f
+depthwise3x3_l__rvv__timing__sem-cache,principal,depthwise3x3_l,rvv,timing,sem-cache,,-O2,14395385,74.9,modelo,
+depthwise3x3_l__rvv__timing__l1,principal,depthwise3x3_l,rvv,timing,l1,,-O2,14395385,22.0,modelo,
+depthwise3x3_l__rvv__timing__l1-l2,principal,depthwise3x3_l,rvv,timing,l1-l2,,-O2,14395385,21.9,modelo,
+depthwise3x3_l__rvv__timing__reduzido,principal,depthwise3x3_l,rvv,timing,reduzido,,-O2,14395385,22.0,modelo,
+depthwise3x3_l__rvv__minor__sem-cache,principal,depthwise3x3_l,rvv,minor,sem-cache,,-O2,14395385,108.1,modelo,
+depthwise3x3_l__rvv__minor__l1,principal,depthwise3x3_l,rvv,minor,l1,,-O2,14395385,54.5,modelo,
+depthwise3x3_l__rvv__minor__l1-l2,principal,depthwise3x3_l,rvv,minor,l1-l2,,-O2,14395385,45.1,medida,results/campaigns/piloto/runs/depthwise3x3_l__rvv__minor__l1-l2/20261027T134300.388834Z-ea82f4d1
+depthwise3x3_l__rvv__minor__reduzido,principal,depthwise3x3_l,rvv,minor,reduzido,,-O2,14395385,48.6,medida,results/campaigns/piloto/runs/depthwise3x3_l__rvv__minor__reduzido/20261027T134306.914501Z-a680da90
+depthwise3x3_l__rvv__o3-edge__sem-cache,principal,depthwise3x3_l,rvv,o3-edge,sem-cache,,-O2,14395385,196.2,modelo,
+depthwise3x3_l__rvv__o3-edge__l1,principal,depthwise3x3_l,rvv,o3-edge,l1,,-O2,14395385,61.7,modelo,
+depthwise3x3_l__rvv__o3-edge__l1-l2,principal,depthwise3x3_l,rvv,o3-edge,l1-l2,,-O2,14395385,52.9,medida,results/campaigns/piloto/runs/depthwise3x3_l__rvv__o3-edge__l1-l2/20261027T134319.976941Z-3757f992
+depthwise3x3_l__rvv__o3-edge__reduzido,principal,depthwise3x3_l,rvv,o3-edge,reduzido,,-O2,14395385,57.2,medida,results/campaigns/piloto/runs/depthwise3x3_l__rvv__o3-edge__reduzido/20261027T134328.210766Z-4cc919de
+pointwise1x1_s__ref__timing__sem-cache,principal,pointwise1x1_s,ref,timing,sem-cache,,-O2,4089376,28.1,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__sem-cache/20261026T231556.536386Z-9fe832f2
+pointwise1x1_s__ref__timing__l1,principal,pointwise1x1_s,ref,timing,l1,,-O2,4089376,9.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__l1/20261026T231559.507413Z-08360dcf
+pointwise1x1_s__ref__timing__l1-l2,principal,pointwise1x1_s,ref,timing,l1-l2,,-O2,4089376,11.2,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__l1-l2/20261026T231559.760345Z-6b395c4f
+pointwise1x1_s__ref__timing__reduzido,principal,pointwise1x1_s,ref,timing,reduzido,,-O2,4089376,11.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__timing__reduzido/20261026T231608.590624Z-666e9e9d
+pointwise1x1_s__ref__minor__sem-cache,principal,pointwise1x1_s,ref,minor,sem-cache,,-O2,4089376,37.5,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__minor__sem-cache/20261026T231611.181777Z-b24a7747
+pointwise1x1_s__ref__minor__l1,principal,pointwise1x1_s,ref,minor,l1,,-O2,4089376,20.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__minor__l1/20261026T231614.921794Z-8b44f748
+pointwise1x1_s__ref__minor__l1-l2,principal,pointwise1x1_s,ref,minor,l1-l2,,-O2,4089376,17.6,medida,results/campaigns/piloto/runs/pointwise1x1_s__ref__minor__l1-l2/20261027T134345.591313Z-727a2646
+pointwise1x1_s__ref__minor__reduzido,principal,pointwise1x1_s,ref,minor,reduzido,,-O2,4089376,17.2,medida,results/campaigns/piloto/runs/pointwise1x1_s__ref__minor__reduzido/20261027T134355.551332Z-1821ce30
+pointwise1x1_s__ref__o3-edge__sem-cache,principal,pointwise1x1_s,ref,o3-edge,sem-cache,,-O2,4089376,68.7,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__o3-edge__sem-cache/20261026T231635.285243Z-6c0fd60a
+pointwise1x1_s__ref__o3-edge__l1,principal,pointwise1x1_s,ref,o3-edge,l1,,-O2,4089376,25.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__ref__o3-edge__l1/20261026T231641.065847Z-d8936427
+pointwise1x1_s__ref__o3-edge__l1-l2,principal,pointwise1x1_s,ref,o3-edge,l1-l2,,-O2,4089376,19.6,medida,results/campaigns/piloto/runs/pointwise1x1_s__ref__o3-edge__l1-l2/20261027T134403.275733Z-c8f572df
+pointwise1x1_s__ref__o3-edge__reduzido,principal,pointwise1x1_s,ref,o3-edge,reduzido,,-O2,4089376,19.4,medida,results/campaigns/piloto/runs/pointwise1x1_s__ref__o3-edge__reduzido/20261027T134412.815252Z-04f1a73d
 pointwise1x1_s__custom__timing__sem-cache,principal,pointwise1x1_s,custom,timing,sem-cache,3,-O2,2418184,15.9,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__timing__sem-cache/20261026T231706.453313Z-8ced3203
 pointwise1x1_s__custom__timing__l1,principal,pointwise1x1_s,custom,timing,l1,3,-O2,2418184,8.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__timing__l1/20261026T231709.879220Z-e9f1333e
 pointwise1x1_s__custom__timing__l1-l2,principal,pointwise1x1_s,custom,timing,l1-l2,3,-O2,2418184,7.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__timing__l1-l2/20261026T231714.895500Z-44aa2142
 pointwise1x1_s__custom__timing__reduzido,principal,pointwise1x1_s,custom,timing,reduzido,3,-O2,2418184,7.2,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__timing__reduzido/20261026T231717.997905Z-9665ed8f
 pointwise1x1_s__custom__minor__sem-cache,principal latencia,pointwise1x1_s,custom,minor,sem-cache,3,-O2,2418184,21.2,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__sem-cache/20261026T231722.107317Z-200010d5
 pointwise1x1_s__custom__minor__l1,principal latencia,pointwise1x1_s,custom,minor,l1,3,-O2,2418184,13.2,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__l1/20261026T231725.260662Z-91f2a41f
-pointwise1x1_s__custom__minor__l1-l2,principal latencia,pointwise1x1_s,custom,minor,l1-l2,3,-O2,2418184,16.4,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__l1-l2/20261026T231743.435771Z-7649117a
-pointwise1x1_s__custom__minor__reduzido,principal latencia,pointwise1x1_s,custom,minor,reduzido,3,-O2,2418184,14.6,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__reduzido/20261026T231745.027743Z-288c58f9
+pointwise1x1_s__custom__minor__l1-l2,principal latencia,pointwise1x1_s,custom,minor,l1-l2,3,-O2,2418184,12.0,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__minor__l1-l2/20261027T134412.982684Z-a4e0399a
+pointwise1x1_s__custom__minor__reduzido,principal latencia,pointwise1x1_s,custom,minor,reduzido,3,-O2,2418184,13.0,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__minor__reduzido/20261027T134425.049093Z-753b310b
 pointwise1x1_s__custom__o3-edge__sem-cache,principal latencia,pointwise1x1_s,custom,o3-edge,sem-cache,3,-O2,2418184,43.9,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__sem-cache/20261026T231759.711212Z-9e3d94d1
 pointwise1x1_s__custom__o3-edge__l1,principal latencia,pointwise1x1_s,custom,o3-edge,l1,3,-O2,2418184,17.2,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__l1/20261026T231759.877609Z-0d42b7df
-pointwise1x1_s__custom__o3-edge__l1-l2,principal latencia,pointwise1x1_s,custom,o3-edge,l1-l2,3,-O2,2418184,17.4,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__l1-l2/20261026T231817.130109Z-6784815a
-pointwise1x1_s__custom__o3-edge__reduzido,principal latencia,pointwise1x1_s,custom,o3-edge,reduzido,3,-O2,2418184,19.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__reduzido/20261026T231834.653969Z-97fa7859
+pointwise1x1_s__custom__o3-edge__l1-l2,principal latencia,pointwise1x1_s,custom,o3-edge,l1-l2,3,-O2,2418184,13.1,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__o3-edge__l1-l2/20261027T134432.293460Z-f9b2d6a4
+pointwise1x1_s__custom__o3-edge__reduzido,principal latencia,pointwise1x1_s,custom,o3-edge,reduzido,3,-O2,2418184,13.5,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__o3-edge__reduzido/20261027T134438.132819Z-53979550
 pointwise1x1_s__rvv__timing__sem-cache,principal,pointwise1x1_s,rvv,timing,sem-cache,,-O2,2426162,18.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__timing__sem-cache/20261026T231843.737093Z-a2365318
 pointwise1x1_s__rvv__timing__l1,principal,pointwise1x1_s,rvv,timing,l1,,-O2,2426162,8.2,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__timing__l1/20261026T231847.724056Z-5fb2ec17
 pointwise1x1_s__rvv__timing__l1-l2,principal,pointwise1x1_s,rvv,timing,l1-l2,,-O2,2426162,7.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__timing__l1-l2/20261026T231853.761250Z-1d32db53
 pointwise1x1_s__rvv__timing__reduzido,principal,pointwise1x1_s,rvv,timing,reduzido,,-O2,2426162,8.4,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__timing__reduzido/20261026T231856.058295Z-9e5ae1bc
 pointwise1x1_s__rvv__minor__sem-cache,principal,pointwise1x1_s,rvv,minor,sem-cache,,-O2,2426162,24.8,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__minor__sem-cache/20261026T231901.139900Z-6b148322
 pointwise1x1_s__rvv__minor__l1,principal,pointwise1x1_s,rvv,minor,l1,,-O2,2426162,15.8,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__minor__l1/20261026T231901.620313Z-0fd8ce71
-pointwise1x1_s__rvv__minor__l1-l2,principal,pointwise1x1_s,rvv,minor,l1-l2,,-O2,2426162,15.4,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__minor__l1-l2/20261026T231902.114147Z-1c899d2a
-pointwise1x1_s__rvv__minor__reduzido,principal,pointwise1x1_s,rvv,minor,reduzido,,-O2,2426162,15.3,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__minor__reduzido/20261026T231904.585539Z-5946204d
+pointwise1x1_s__rvv__minor__l1-l2,principal,pointwise1x1_s,rvv,minor,l1-l2,,-O2,2426162,13.5,medida,results/campaigns/piloto/runs/pointwise1x1_s__rvv__minor__l1-l2/20261027T134445.470593Z-3dc5192d
+pointwise1x1_s__rvv__minor__reduzido,principal,pointwise1x1_s,rvv,minor,reduzido,,-O2,2426162,14.2,medida,results/campaigns/piloto/runs/pointwise1x1_s__rvv__minor__reduzido/20261027T134449.008150Z-d7626972
 pointwise1x1_s__rvv__o3-edge__sem-cache,principal,pointwise1x1_s,rvv,o3-edge,sem-cache,,-O2,2426162,44.7,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__o3-edge__sem-cache/20261026T231917.502030Z-e9b1eb16
 pointwise1x1_s__rvv__o3-edge__l1,principal,pointwise1x1_s,rvv,o3-edge,l1,,-O2,2426162,18.1,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__o3-edge__l1/20261026T231917.622801Z-1cddf37c
-pointwise1x1_s__rvv__o3-edge__l1-l2,principal,pointwise1x1_s,rvv,o3-edge,l1-l2,,-O2,2426162,16.6,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__o3-edge__l1-l2/20261026T231919.988418Z-c793e341
-pointwise1x1_s__rvv__o3-edge__reduzido,principal,pointwise1x1_s,rvv,o3-edge,reduzido,,-O2,2426162,17.8,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__rvv__o3-edge__reduzido/20261026T231925.988539Z-b2a9262e
+pointwise1x1_s__rvv__o3-edge__l1-l2,principal,pointwise1x1_s,rvv,o3-edge,l1-l2,,-O2,2426162,15.2,medida,results/campaigns/piloto/runs/pointwise1x1_s__rvv__o3-edge__l1-l2/20261027T134451.667090Z-8d7a2422
+pointwise1x1_s__rvv__o3-edge__reduzido,principal,pointwise1x1_s,rvv,o3-edge,reduzido,,-O2,2426162,14.9,medida,results/campaigns/piloto/runs/pointwise1x1_s__rvv__o3-edge__reduzido/20261027T134452.061609Z-7a787bb7
 pointwise1x1_l__ref__timing__sem-cache,principal,pointwise1x1_l,ref,timing,sem-cache,,-O2,61957865,292.1,modelo,
 pointwise1x1_l__ref__timing__l1,principal,pointwise1x1_l,ref,timing,l1,,-O2,61957865,74.2,modelo,
 pointwise1x1_l__ref__timing__l1-l2,principal,pointwise1x1_l,ref,timing,l1-l2,,-O2,61957865,73.7,modelo,
 pointwise1x1_l__ref__timing__reduzido,principal,pointwise1x1_l,ref,timing,reduzido,,-O2,61957865,74.1,modelo,
 pointwise1x1_l__ref__minor__sem-cache,principal,pointwise1x1_l,ref,minor,sem-cache,,-O2,61957865,431.2,modelo,
 pointwise1x1_l__ref__minor__l1,principal,pointwise1x1_l,ref,minor,l1,,-O2,61957865,206.3,modelo,
-pointwise1x1_l__ref__minor__l1-l2,principal,pointwise1x1_l,ref,minor,l1-l2,,-O2,61957865,206.7,modelo,
-pointwise1x1_l__ref__minor__reduzido,principal,pointwise1x1_l,ref,minor,reduzido,,-O2,61957865,208.8,modelo,
+pointwise1x1_l__ref__minor__l1-l2,principal,pointwise1x1_l,ref,minor,l1-l2,,-O2,61957865,197.0,medida,results/campaigns/piloto/runs/pointwise1x1_l__ref__minor__l1-l2/20261027T135829.571914Z-31a82b91
+pointwise1x1_l__ref__minor__reduzido,principal,pointwise1x1_l,ref,minor,reduzido,,-O2,61957865,237.0,medida,results/campaigns/piloto/runs/pointwise1x1_l__ref__minor__reduzido/20261027T134503.302820Z-fb897ea5
 pointwise1x1_l__ref__o3-edge__sem-cache,principal,pointwise1x1_l,ref,o3-edge,sem-cache,,-O2,61957865,780.1,modelo,
 pointwise1x1_l__ref__o3-edge__l1,principal,pointwise1x1_l,ref,o3-edge,l1,,-O2,61957865,234.8,modelo,
-pointwise1x1_l__ref__o3-edge__l1-l2,principal,pointwise1x1_l,ref,o3-edge,l1-l2,,-O2,61957865,239.8,modelo,
-pointwise1x1_l__ref__o3-edge__reduzido,principal,pointwise1x1_l,ref,o3-edge,reduzido,,-O2,61957865,243.7,modelo,
-pointwise1x1_l__custom__timing__sem-cache,principal,pointwise1x1_l,custom,timing,sem-cache,3,-O2,35745389,172.4,modelo,
-pointwise1x1_l__custom__timing__l1,principal,pointwise1x1_l,custom,timing,l1,3,-O2,35745389,45.4,modelo,
-pointwise1x1_l__custom__timing__l1-l2,principal,pointwise1x1_l,custom,timing,l1-l2,3,-O2,35745389,45.1,modelo,
-pointwise1x1_l__custom__timing__reduzido,principal,pointwise1x1_l,custom,timing,reduzido,3,-O2,35745389,45.4,modelo,
-pointwise1x1_l__custom__minor__sem-cache,principal latencia,pointwise1x1_l,custom,minor,sem-cache,3,-O2,35745389,253.1,modelo,
-pointwise1x1_l__custom__minor__l1,principal latencia,pointwise1x1_l,custom,minor,l1,3,-O2,35745389,122.6,modelo,
-pointwise1x1_l__custom__minor__l1-l2,principal latencia,pointwise1x1_l,custom,minor,l1-l2,3,-O2,35745389,122.9,modelo,
-pointwise1x1_l__custom__minor__reduzido,principal latencia,pointwise1x1_l,custom,minor,reduzido,3,-O2,35745389,124.2,modelo,
-pointwise1x1_l__custom__o3-edge__sem-cache,principal latencia,pointwise1x1_l,custom,o3-edge,sem-cache,3,-O2,35745389,458.3,modelo,
-pointwise1x1_l__custom__o3-edge__l1,principal latencia,pointwise1x1_l,custom,o3-edge,l1,3,-O2,35745389,139.4,modelo,
-pointwise1x1_l__custom__o3-edge__l1-l2,principal latencia,pointwise1x1_l,custom,o3-edge,l1-l2,3,-O2,35745389,142.2,modelo,
-pointwise1x1_l__custom__o3-edge__reduzido,principal latencia,pointwise1x1_l,custom,o3-edge,reduzido,3,-O2,35745389,144.6,modelo,
-pointwise1x1_l__rvv__timing__sem-cache,principal,pointwise1x1_l,rvv,timing,sem-cache,,-O2,34890491,168.5,modelo,
-pointwise1x1_l__rvv__timing__l1,principal,pointwise1x1_l,rvv,timing,l1,,-O2,34890491,44.5,modelo,
-pointwise1x1_l__rvv__timing__l1-l2,principal,pointwise1x1_l,rvv,timing,l1-l2,,-O2,34890491,44.2,modelo,
-pointwise1x1_l__rvv__timing__reduzido,principal,pointwise1x1_l,rvv,timing,reduzido,,-O2,34890491,44.5,modelo,
-pointwise1x1_l__rvv__minor__sem-cache,principal,pointwise1x1_l,rvv,minor,sem-cache,,-O2,34890491,247.3,modelo,
-pointwise1x1_l__rvv__minor__l1,principal,pointwise1x1_l,rvv,minor,l1,,-O2,34890491,119.9,modelo,
-pointwise1x1_l__rvv__minor__l1-l2,principal,pointwise1x1_l,rvv,minor,l1-l2,,-O2,34890491,120.2,modelo,
-pointwise1x1_l__rvv__minor__reduzido,principal,pointwise1x1_l,rvv,minor,reduzido,,-O2,34890491,121.4,modelo,
-pointwise1x1_l__rvv__o3-edge__sem-cache,principal,pointwise1x1_l,rvv,o3-edge,sem-cache,,-O2,34890491,447.8,modelo,
-pointwise1x1_l__rvv__o3-edge__l1,principal,pointwise1x1_l,rvv,o3-edge,l1,,-O2,34890491,136.3,modelo,
-pointwise1x1_l__rvv__o3-edge__l1-l2,principal,pointwise1x1_l,rvv,o3-edge,l1-l2,,-O2,34890491,139.0,modelo,
-pointwise1x1_l__rvv__o3-edge__reduzido,principal,pointwise1x1_l,rvv,o3-edge,reduzido,,-O2,34890491,141.4,modelo,
+pointwise1x1_l__ref__o3-edge__l1-l2,principal,pointwise1x1_l,ref,o3-edge,l1-l2,,-O2,61957865,258.2,medida,results/campaigns/piloto/runs/pointwise1x1_l__ref__o3-edge__l1-l2/20261027T134506.917320Z-a0709df1
+pointwise1x1_l__ref__o3-edge__reduzido,principal,pointwise1x1_l,ref,o3-edge,reduzido,,-O2,61957865,261.0,medida,results/campaigns/piloto/runs/pointwise1x1_l__ref__o3-edge__reduzido/20261027T134507.059493Z-7d40ba3b
+pointwise1x1_l__custom__timing__sem-cache,principal,pointwise1x1_l,custom,timing,sem-cache,3,-O2,35745390,172.4,modelo,
+pointwise1x1_l__custom__timing__l1,principal,pointwise1x1_l,custom,timing,l1,3,-O2,35745390,45.4,modelo,
+pointwise1x1_l__custom__timing__l1-l2,principal,pointwise1x1_l,custom,timing,l1-l2,3,-O2,35745390,45.1,modelo,
+pointwise1x1_l__custom__timing__reduzido,principal,pointwise1x1_l,custom,timing,reduzido,3,-O2,35745390,45.4,modelo,
+pointwise1x1_l__custom__minor__sem-cache,principal latencia,pointwise1x1_l,custom,minor,sem-cache,3,-O2,35745390,253.1,modelo,
+pointwise1x1_l__custom__minor__l1,principal latencia,pointwise1x1_l,custom,minor,l1,3,-O2,35745390,122.6,modelo,
+pointwise1x1_l__custom__minor__l1-l2,principal latencia,pointwise1x1_l,custom,minor,l1-l2,3,-O2,35745390,125.1,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__minor__l1-l2/20261027T134852.563108Z-4cd1195b
+pointwise1x1_l__custom__minor__reduzido,principal latencia,pointwise1x1_l,custom,minor,reduzido,3,-O2,35745390,126.9,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__minor__reduzido/20261027T134925.172602Z-546d66b2
+pointwise1x1_l__custom__o3-edge__sem-cache,principal latencia,pointwise1x1_l,custom,o3-edge,sem-cache,3,-O2,35745390,458.3,modelo,
+pointwise1x1_l__custom__o3-edge__l1,principal latencia,pointwise1x1_l,custom,o3-edge,l1,3,-O2,35745390,139.4,modelo,
+pointwise1x1_l__custom__o3-edge__l1-l2,principal latencia,pointwise1x1_l,custom,o3-edge,l1-l2,3,-O2,35745390,124.8,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__o3-edge__l1-l2/20261027T135057.687892Z-5ff0e8fa
+pointwise1x1_l__custom__o3-edge__reduzido,principal latencia,pointwise1x1_l,custom,o3-edge,reduzido,3,-O2,35745390,130.7,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__o3-edge__reduzido/20261027T135132.141971Z-0f146ee8
+pointwise1x1_l__rvv__timing__sem-cache,principal,pointwise1x1_l,rvv,timing,sem-cache,,-O2,34890492,168.5,modelo,
+pointwise1x1_l__rvv__timing__l1,principal,pointwise1x1_l,rvv,timing,l1,,-O2,34890492,44.5,modelo,
+pointwise1x1_l__rvv__timing__l1-l2,principal,pointwise1x1_l,rvv,timing,l1-l2,,-O2,34890492,44.2,modelo,
+pointwise1x1_l__rvv__timing__reduzido,principal,pointwise1x1_l,rvv,timing,reduzido,,-O2,34890492,44.5,modelo,
+pointwise1x1_l__rvv__minor__sem-cache,principal,pointwise1x1_l,rvv,minor,sem-cache,,-O2,34890492,247.3,modelo,
+pointwise1x1_l__rvv__minor__l1,principal,pointwise1x1_l,rvv,minor,l1,,-O2,34890492,119.9,modelo,
+pointwise1x1_l__rvv__minor__l1-l2,principal,pointwise1x1_l,rvv,minor,l1-l2,,-O2,34890492,125.6,medida,results/campaigns/piloto/runs/pointwise1x1_l__rvv__minor__l1-l2/20261027T135302.676398Z-d4e73f27
+pointwise1x1_l__rvv__minor__reduzido,principal,pointwise1x1_l,rvv,minor,reduzido,,-O2,34890492,127.6,medida,results/campaigns/piloto/runs/pointwise1x1_l__rvv__minor__reduzido/20261027T135319.505911Z-cad0646d
+pointwise1x1_l__rvv__o3-edge__sem-cache,principal,pointwise1x1_l,rvv,o3-edge,sem-cache,,-O2,34890492,447.8,modelo,
+pointwise1x1_l__rvv__o3-edge__l1,principal,pointwise1x1_l,rvv,o3-edge,l1,,-O2,34890492,136.3,modelo,
+pointwise1x1_l__rvv__o3-edge__l1-l2,principal,pointwise1x1_l,rvv,o3-edge,l1-l2,,-O2,34890492,124.8,medida,results/campaigns/piloto/runs/pointwise1x1_l__rvv__o3-edge__l1-l2/20261027T135342.866626Z-cd219900
+pointwise1x1_l__rvv__o3-edge__reduzido,principal,pointwise1x1_l,rvv,o3-edge,reduzido,,-O2,34890492,130.0,medida,results/campaigns/piloto/runs/pointwise1x1_l__rvv__o3-edge__reduzido/20261027T135344.745382Z-6e33c07a
 maxpool2x2_s__ref__timing__sem-cache,principal,maxpool2x2_s,ref,timing,sem-cache,,-O2,257681,6.2,medida,build/rcb21-probe/conferencia/runs/maxpool2x2_s__ref__timing__sem-cache/20261026T231935.800798Z-43f6bb44
 maxpool2x2_s__ref__timing__l1,principal,maxpool2x2_s,ref,timing,l1,,-O2,257681,4.3,medida,build/rcb21-probe/conferencia/runs/maxpool2x2_s__ref__timing__l1/20261026T231936.700950Z-0406df98
 maxpool2x2_s__ref__timing__l1-l2,principal,maxpool2x2_s,ref,timing,l1-l2,,-O2,257681,4.3,medida,build/rcb21-probe/conferencia/runs/maxpool2x2_s__ref__timing__l1-l2/20261026T231941.171215Z-1e53a77d
@@ -329,36 +329,36 @@ maxpool2x2_l__ref__timing__l1-l2,principal,maxpool2x2_l,ref,timing,l1-l2,,-O2,19
 maxpool2x2_l__ref__timing__reduzido,principal,maxpool2x2_l,ref,timing,reduzido,,-O2,1946483,8.4,modelo,
 maxpool2x2_l__ref__minor__sem-cache,principal,maxpool2x2_l,ref,minor,sem-cache,,-O2,1946483,23.5,modelo,
 maxpool2x2_l__ref__minor__l1,principal,maxpool2x2_l,ref,minor,l1,,-O2,1946483,14.7,modelo,
-maxpool2x2_l__ref__minor__l1-l2,principal,maxpool2x2_l,ref,minor,l1-l2,,-O2,1946483,14.9,modelo,
-maxpool2x2_l__ref__minor__reduzido,principal,maxpool2x2_l,ref,minor,reduzido,,-O2,1946483,15.1,modelo,
+maxpool2x2_l__ref__minor__l1-l2,principal,maxpool2x2_l,ref,minor,l1-l2,,-O2,1946483,13.8,modelo,
+maxpool2x2_l__ref__minor__reduzido,principal,maxpool2x2_l,ref,minor,reduzido,,-O2,1946483,14.2,modelo,
 maxpool2x2_l__ref__o3-edge__sem-cache,principal,maxpool2x2_l,ref,o3-edge,sem-cache,,-O2,1946483,43.4,modelo,
 maxpool2x2_l__ref__o3-edge__l1,principal,maxpool2x2_l,ref,o3-edge,l1,,-O2,1946483,16.4,modelo,
-maxpool2x2_l__ref__o3-edge__l1-l2,principal,maxpool2x2_l,ref,o3-edge,l1-l2,,-O2,1946483,16.4,modelo,
-maxpool2x2_l__ref__o3-edge__reduzido,principal,maxpool2x2_l,ref,o3-edge,reduzido,,-O2,1946483,16.8,modelo,
+maxpool2x2_l__ref__o3-edge__l1-l2,principal,maxpool2x2_l,ref,o3-edge,l1-l2,,-O2,1946483,15.1,modelo,
+maxpool2x2_l__ref__o3-edge__reduzido,principal,maxpool2x2_l,ref,o3-edge,reduzido,,-O2,1946483,15.7,modelo,
 maxpool2x2_l__custom__timing__sem-cache,principal,maxpool2x2_l,custom,timing,sem-cache,3,-O2,1118810,14.2,modelo,
 maxpool2x2_l__custom__timing__l1,principal,maxpool2x2_l,custom,timing,l1,3,-O2,1118810,7.4,modelo,
 maxpool2x2_l__custom__timing__l1-l2,principal,maxpool2x2_l,custom,timing,l1-l2,3,-O2,1118810,7.4,modelo,
 maxpool2x2_l__custom__timing__reduzido,principal,maxpool2x2_l,custom,timing,reduzido,3,-O2,1118810,7.5,modelo,
 maxpool2x2_l__custom__minor__sem-cache,principal latencia,maxpool2x2_l,custom,minor,sem-cache,3,-O2,1118810,17.9,modelo,
 maxpool2x2_l__custom__minor__l1,principal latencia,maxpool2x2_l,custom,minor,l1,3,-O2,1118810,12.1,modelo,
-maxpool2x2_l__custom__minor__l1-l2,principal latencia,maxpool2x2_l,custom,minor,l1-l2,3,-O2,1118810,12.2,modelo,
-maxpool2x2_l__custom__minor__reduzido,principal latencia,maxpool2x2_l,custom,minor,reduzido,3,-O2,1118810,12.4,modelo,
+maxpool2x2_l__custom__minor__l1-l2,principal latencia,maxpool2x2_l,custom,minor,l1-l2,3,-O2,1118810,11.1,modelo,
+maxpool2x2_l__custom__minor__reduzido,principal latencia,maxpool2x2_l,custom,minor,reduzido,3,-O2,1118810,11.3,modelo,
 maxpool2x2_l__custom__o3-edge__sem-cache,principal latencia,maxpool2x2_l,custom,o3-edge,sem-cache,3,-O2,1118810,33.2,modelo,
 maxpool2x2_l__custom__o3-edge__l1,principal latencia,maxpool2x2_l,custom,o3-edge,l1,3,-O2,1118810,13.4,modelo,
-maxpool2x2_l__custom__o3-edge__l1-l2,principal latencia,maxpool2x2_l,custom,o3-edge,l1-l2,3,-O2,1118810,13.3,modelo,
-maxpool2x2_l__custom__o3-edge__reduzido,principal latencia,maxpool2x2_l,custom,o3-edge,reduzido,3,-O2,1118810,13.7,modelo,
+maxpool2x2_l__custom__o3-edge__l1-l2,principal latencia,maxpool2x2_l,custom,o3-edge,l1-l2,3,-O2,1118810,12.0,modelo,
+maxpool2x2_l__custom__o3-edge__reduzido,principal latencia,maxpool2x2_l,custom,o3-edge,reduzido,3,-O2,1118810,12.6,modelo,
 maxpool2x2_l__rvv__timing__sem-cache,principal,maxpool2x2_l,rvv,timing,sem-cache,,-O2,1074505,14.0,modelo,
 maxpool2x2_l__rvv__timing__l1,principal,maxpool2x2_l,rvv,timing,l1,,-O2,1074505,7.4,modelo,
 maxpool2x2_l__rvv__timing__l1-l2,principal,maxpool2x2_l,rvv,timing,l1-l2,,-O2,1074505,7.4,modelo,
 maxpool2x2_l__rvv__timing__reduzido,principal,maxpool2x2_l,rvv,timing,reduzido,,-O2,1074505,7.5,modelo,
 maxpool2x2_l__rvv__minor__sem-cache,principal,maxpool2x2_l,rvv,minor,sem-cache,,-O2,1074505,17.6,modelo,
 maxpool2x2_l__rvv__minor__l1,principal,maxpool2x2_l,rvv,minor,l1,,-O2,1074505,12.0,modelo,
-maxpool2x2_l__rvv__minor__l1-l2,principal,maxpool2x2_l,rvv,minor,l1-l2,,-O2,1074505,12.1,modelo,
-maxpool2x2_l__rvv__minor__reduzido,principal,maxpool2x2_l,rvv,minor,reduzido,,-O2,1074505,12.3,modelo,
+maxpool2x2_l__rvv__minor__l1-l2,principal,maxpool2x2_l,rvv,minor,l1-l2,,-O2,1074505,11.0,modelo,
+maxpool2x2_l__rvv__minor__reduzido,principal,maxpool2x2_l,rvv,minor,reduzido,,-O2,1074505,11.2,modelo,
 maxpool2x2_l__rvv__o3-edge__sem-cache,principal,maxpool2x2_l,rvv,o3-edge,sem-cache,,-O2,1074505,32.7,modelo,
 maxpool2x2_l__rvv__o3-edge__l1,principal,maxpool2x2_l,rvv,o3-edge,l1,,-O2,1074505,13.2,modelo,
-maxpool2x2_l__rvv__o3-edge__l1-l2,principal,maxpool2x2_l,rvv,o3-edge,l1-l2,,-O2,1074505,13.1,modelo,
-maxpool2x2_l__rvv__o3-edge__reduzido,principal,maxpool2x2_l,rvv,o3-edge,reduzido,,-O2,1074505,13.5,modelo,
+maxpool2x2_l__rvv__o3-edge__l1-l2,principal,maxpool2x2_l,rvv,o3-edge,l1-l2,,-O2,1074505,11.9,modelo,
+maxpool2x2_l__rvv__o3-edge__reduzido,principal,maxpool2x2_l,rvv,o3-edge,reduzido,,-O2,1074505,12.4,modelo,
 requant_relu_s__ref__timing__sem-cache,principal,requant_relu_s,ref,timing,sem-cache,,-O2,156681,6.1,medida,build/rcb21-probe/conferencia/runs/requant_relu_s__ref__timing__sem-cache/20261026T232100.511653Z-bfd96b20
 requant_relu_s__ref__timing__l1,principal,requant_relu_s,ref,timing,l1,,-O2,156681,6.2,medida,build/rcb21-probe/conferencia/runs/requant_relu_s__ref__timing__l1/20261026T232101.321272Z-2273a8b4
 requant_relu_s__ref__timing__l1-l2,principal,requant_relu_s,ref,timing,l1-l2,,-O2,156681,5.2,medida,build/rcb21-probe/conferencia/runs/requant_relu_s__ref__timing__l1-l2/20261026T232101.844872Z-26940fb9
@@ -401,36 +401,36 @@ requant_relu_l__ref__timing__l1-l2,principal,requant_relu_l,ref,timing,l1-l2,,-O
 requant_relu_l__ref__timing__reduzido,principal,requant_relu_l,ref,timing,reduzido,,-O2,1182611,7.6,modelo,
 requant_relu_l__ref__minor__sem-cache,principal,requant_relu_l,ref,minor,sem-cache,,-O2,1182611,18.3,modelo,
 requant_relu_l__ref__minor__l1,principal,requant_relu_l,ref,minor,l1,,-O2,1182611,12.3,modelo,
-requant_relu_l__ref__minor__l1-l2,principal,requant_relu_l,ref,minor,l1-l2,,-O2,1182611,12.4,modelo,
-requant_relu_l__ref__minor__reduzido,principal,requant_relu_l,ref,minor,reduzido,,-O2,1182611,12.7,modelo,
+requant_relu_l__ref__minor__l1-l2,principal,requant_relu_l,ref,minor,l1-l2,,-O2,1182611,11.3,modelo,
+requant_relu_l__ref__minor__reduzido,principal,requant_relu_l,ref,minor,reduzido,,-O2,1182611,11.6,modelo,
 requant_relu_l__ref__o3-edge__sem-cache,principal,requant_relu_l,ref,o3-edge,sem-cache,,-O2,1182611,34.0,modelo,
 requant_relu_l__ref__o3-edge__l1,principal,requant_relu_l,ref,o3-edge,l1,,-O2,1182611,13.6,modelo,
-requant_relu_l__ref__o3-edge__l1-l2,principal,requant_relu_l,ref,o3-edge,l1-l2,,-O2,1182611,13.5,modelo,
-requant_relu_l__ref__o3-edge__reduzido,principal,requant_relu_l,ref,o3-edge,reduzido,,-O2,1182611,13.9,modelo,
+requant_relu_l__ref__o3-edge__l1-l2,principal,requant_relu_l,ref,o3-edge,l1-l2,,-O2,1182611,12.3,modelo,
+requant_relu_l__ref__o3-edge__reduzido,principal,requant_relu_l,ref,o3-edge,reduzido,,-O2,1182611,12.9,modelo,
 requant_relu_l__custom__timing__sem-cache,principal,requant_relu_l,custom,timing,sem-cache,3,-O2,986130,13.6,modelo,
 requant_relu_l__custom__timing__l1,principal,requant_relu_l,custom,timing,l1,3,-O2,986130,7.3,modelo,
 requant_relu_l__custom__timing__l1-l2,principal,requant_relu_l,custom,timing,l1-l2,3,-O2,986130,7.3,modelo,
 requant_relu_l__custom__timing__reduzido,principal,requant_relu_l,custom,timing,reduzido,3,-O2,986130,7.4,modelo,
 requant_relu_l__custom__minor__sem-cache,principal latencia,requant_relu_l,custom,minor,sem-cache,3,-O2,986130,17.0,modelo,
 requant_relu_l__custom__minor__l1,principal latencia,requant_relu_l,custom,minor,l1,3,-O2,986130,11.7,modelo,
-requant_relu_l__custom__minor__l1-l2,principal latencia,requant_relu_l,custom,minor,l1-l2,3,-O2,986130,11.8,modelo,
-requant_relu_l__custom__minor__reduzido,principal latencia,requant_relu_l,custom,minor,reduzido,3,-O2,986130,12.0,modelo,
+requant_relu_l__custom__minor__l1-l2,principal latencia,requant_relu_l,custom,minor,l1-l2,3,-O2,986130,10.7,modelo,
+requant_relu_l__custom__minor__reduzido,principal latencia,requant_relu_l,custom,minor,reduzido,3,-O2,986130,10.9,modelo,
 requant_relu_l__custom__o3-edge__sem-cache,principal latencia,requant_relu_l,custom,o3-edge,sem-cache,3,-O2,986130,31.6,modelo,
 requant_relu_l__custom__o3-edge__l1,principal latencia,requant_relu_l,custom,o3-edge,l1,3,-O2,986130,12.9,modelo,
-requant_relu_l__custom__o3-edge__l1-l2,principal latencia,requant_relu_l,custom,o3-edge,l1-l2,3,-O2,986130,12.8,modelo,
-requant_relu_l__custom__o3-edge__reduzido,principal latencia,requant_relu_l,custom,o3-edge,reduzido,3,-O2,986130,13.2,modelo,
+requant_relu_l__custom__o3-edge__l1-l2,principal latencia,requant_relu_l,custom,o3-edge,l1-l2,3,-O2,986130,11.5,modelo,
+requant_relu_l__custom__o3-edge__reduzido,principal latencia,requant_relu_l,custom,o3-edge,reduzido,3,-O2,986130,12.1,modelo,
 requant_relu_l__rvv__timing__sem-cache,principal,requant_relu_l,rvv,timing,sem-cache,,-O2,809887,12.8,modelo,
 requant_relu_l__rvv__timing__l1,principal,requant_relu_l,rvv,timing,l1,,-O2,809887,7.1,modelo,
 requant_relu_l__rvv__timing__l1-l2,principal,requant_relu_l,rvv,timing,l1-l2,,-O2,809887,7.1,modelo,
 requant_relu_l__rvv__timing__reduzido,principal,requant_relu_l,rvv,timing,reduzido,,-O2,809887,7.2,modelo,
 requant_relu_l__rvv__minor__sem-cache,principal,requant_relu_l,rvv,minor,sem-cache,,-O2,809887,15.8,modelo,
 requant_relu_l__rvv__minor__l1,principal,requant_relu_l,rvv,minor,l1,,-O2,809887,11.1,modelo,
-requant_relu_l__rvv__minor__l1-l2,principal,requant_relu_l,rvv,minor,l1-l2,,-O2,809887,11.2,modelo,
-requant_relu_l__rvv__minor__reduzido,principal,requant_relu_l,rvv,minor,reduzido,,-O2,809887,11.5,modelo,
+requant_relu_l__rvv__minor__l1-l2,principal,requant_relu_l,rvv,minor,l1-l2,,-O2,809887,10.1,modelo,
+requant_relu_l__rvv__minor__reduzido,principal,requant_relu_l,rvv,minor,reduzido,,-O2,809887,10.3,modelo,
 requant_relu_l__rvv__o3-edge__sem-cache,principal,requant_relu_l,rvv,o3-edge,sem-cache,,-O2,809887,29.4,modelo,
 requant_relu_l__rvv__o3-edge__l1,principal,requant_relu_l,rvv,o3-edge,l1,,-O2,809887,12.3,modelo,
-requant_relu_l__rvv__o3-edge__l1-l2,principal,requant_relu_l,rvv,o3-edge,l1-l2,,-O2,809887,12.2,modelo,
-requant_relu_l__rvv__o3-edge__reduzido,principal,requant_relu_l,rvv,o3-edge,reduzido,,-O2,809887,12.5,modelo,
+requant_relu_l__rvv__o3-edge__l1-l2,principal,requant_relu_l,rvv,o3-edge,l1-l2,,-O2,809887,10.9,modelo,
+requant_relu_l__rvv__o3-edge__reduzido,principal,requant_relu_l,rvv,o3-edge,reduzido,,-O2,809887,11.4,modelo,
 fc_s__ref__timing__sem-cache,principal,fc_s,ref,timing,sem-cache,,-O2,241482,6.2,medida,build/rcb21-probe/conferencia/runs/fc_s__ref__timing__sem-cache/20261026T232217.686328Z-17d76fc6
 fc_s__ref__timing__l1,principal,fc_s,ref,timing,l1,,-O2,241482,5.5,medida,build/rcb21-probe/conferencia/runs/fc_s__ref__timing__l1/20261026T232218.616892Z-36cac161
 fc_s__ref__timing__l1-l2,principal,fc_s,ref,timing,l1-l2,,-O2,241482,5.2,medida,build/rcb21-probe/conferencia/runs/fc_s__ref__timing__l1-l2/20261026T232220.303423Z-1058d310
@@ -485,24 +485,24 @@ fc_l__custom__timing__l1-l2,principal,fc_l,custom,timing,l1-l2,3,-O2,4094496,10.
 fc_l__custom__timing__reduzido,principal,fc_l,custom,timing,reduzido,3,-O2,4094496,10.8,modelo,
 fc_l__custom__minor__sem-cache,principal latencia,fc_l,custom,minor,sem-cache,3,-O2,4094496,38.1,modelo,
 fc_l__custom__minor__l1,principal latencia,fc_l,custom,minor,l1,3,-O2,4094496,21.6,modelo,
-fc_l__custom__minor__l1-l2,principal latencia,fc_l,custom,minor,l1-l2,3,-O2,4094496,21.7,modelo,
-fc_l__custom__minor__reduzido,principal latencia,fc_l,custom,minor,reduzido,3,-O2,4094496,22.1,modelo,
+fc_l__custom__minor__l1-l2,principal latencia,fc_l,custom,minor,l1-l2,3,-O2,4094496,20.9,modelo,
+fc_l__custom__minor__reduzido,principal latencia,fc_l,custom,minor,reduzido,3,-O2,4094496,21.5,modelo,
 fc_l__custom__o3-edge__sem-cache,principal latencia,fc_l,custom,o3-edge,sem-cache,3,-O2,4094496,69.7,modelo,
 fc_l__custom__o3-edge__l1,principal latencia,fc_l,custom,o3-edge,l1,3,-O2,4094496,24.2,modelo,
-fc_l__custom__o3-edge__l1-l2,principal latencia,fc_l,custom,o3-edge,l1-l2,3,-O2,4094496,24.4,modelo,
-fc_l__custom__o3-edge__reduzido,principal latencia,fc_l,custom,o3-edge,reduzido,3,-O2,4094496,25.0,modelo,
+fc_l__custom__o3-edge__l1-l2,principal latencia,fc_l,custom,o3-edge,l1-l2,3,-O2,4094496,23.1,modelo,
+fc_l__custom__o3-edge__reduzido,principal latencia,fc_l,custom,o3-edge,reduzido,3,-O2,4094496,23.9,modelo,
 fc_l__rvv__timing__sem-cache,principal,fc_l,rvv,timing,sem-cache,,-O2,3921295,27.0,modelo,
 fc_l__rvv__timing__l1,principal,fc_l,rvv,timing,l1,,-O2,3921295,10.5,modelo,
 fc_l__rvv__timing__l1-l2,principal,fc_l,rvv,timing,l1-l2,,-O2,3921295,10.5,modelo,
 fc_l__rvv__timing__reduzido,principal,fc_l,rvv,timing,reduzido,,-O2,3921295,10.6,modelo,
 fc_l__rvv__minor__sem-cache,principal,fc_l,rvv,minor,sem-cache,,-O2,3921295,36.9,modelo,
 fc_l__rvv__minor__l1,principal,fc_l,rvv,minor,l1,,-O2,3921295,21.0,modelo,
-fc_l__rvv__minor__l1-l2,principal,fc_l,rvv,minor,l1-l2,,-O2,3921295,21.2,modelo,
-fc_l__rvv__minor__reduzido,principal,fc_l,rvv,minor,reduzido,,-O2,3921295,21.5,modelo,
+fc_l__rvv__minor__l1-l2,principal,fc_l,rvv,minor,l1-l2,,-O2,3921295,20.3,modelo,
+fc_l__rvv__minor__reduzido,principal,fc_l,rvv,minor,reduzido,,-O2,3921295,20.9,modelo,
 fc_l__rvv__o3-edge__sem-cache,principal,fc_l,rvv,o3-edge,sem-cache,,-O2,3921295,67.6,modelo,
 fc_l__rvv__o3-edge__l1,principal,fc_l,rvv,o3-edge,l1,,-O2,3921295,23.6,modelo,
-fc_l__rvv__o3-edge__l1-l2,principal,fc_l,rvv,o3-edge,l1-l2,,-O2,3921295,23.7,modelo,
-fc_l__rvv__o3-edge__reduzido,principal,fc_l,rvv,o3-edge,reduzido,,-O2,3921295,24.3,modelo,
+fc_l__rvv__o3-edge__l1-l2,principal,fc_l,rvv,o3-edge,l1-l2,,-O2,3921295,22.5,modelo,
+fc_l__rvv__o3-edge__reduzido,principal,fc_l,rvv,o3-edge,reduzido,,-O2,3921295,23.2,modelo,
 conv3x3_direct_s__custom__minor__sem-cache__lat6,latencia,conv3x3_direct_s,custom,minor,sem-cache,6,-O2,3795075,42.8,medida,build/rcb21-probe/conferencia/runs/conv3x3_direct_s__custom__minor__sem-cache__lat6/20261026T230419.407005Z-07aae899
 conv3x3_direct_s__custom__minor__l1__lat6,latencia,conv3x3_direct_s,custom,minor,l1,6,-O2,3795075,24.8,medida,build/rcb21-probe/conferencia/runs/conv3x3_direct_s__custom__minor__l1__lat6/20261026T230447.523965Z-c3fb11a8
 conv3x3_direct_s__custom__minor__l1-l2__lat6,latencia,conv3x3_direct_s,custom,minor,l1-l2,6,-O2,3795075,22.4,medida,build/rcb21-probe/conferencia/runs/conv3x3_direct_s__custom__minor__l1-l2__lat6/20261026T230454.785284Z-5b8f3352
@@ -513,12 +513,12 @@ conv3x3_direct_s__custom__o3-edge__l1-l2__lat6,latencia,conv3x3_direct_s,custom,
 conv3x3_direct_s__custom__o3-edge__reduzido__lat6,latencia,conv3x3_direct_s,custom,o3-edge,reduzido,6,-O2,3795075,27.8,medida,build/rcb21-probe/conferencia/runs/conv3x3_direct_s__custom__o3-edge__reduzido__lat6/20261026T230626.991716Z-ef279c76
 conv3x3_direct_l__custom__minor__sem-cache__lat6,latencia,conv3x3_direct_l,custom,minor,sem-cache,6,-O2,49077407,343.7,modelo,
 conv3x3_direct_l__custom__minor__l1__lat6,latencia,conv3x3_direct_l,custom,minor,l1,6,-O2,49077407,165.2,modelo,
-conv3x3_direct_l__custom__minor__l1-l2__lat6,latencia,conv3x3_direct_l,custom,minor,l1-l2,6,-O2,49077407,165.5,modelo,
-conv3x3_direct_l__custom__minor__reduzido__lat6,latencia,conv3x3_direct_l,custom,minor,reduzido,6,-O2,49077407,167.2,modelo,
+conv3x3_direct_l__custom__minor__l1-l2__lat6,latencia,conv3x3_direct_l,custom,minor,l1-l2,6,-O2,49077407,169.0,modelo,
+conv3x3_direct_l__custom__minor__reduzido__lat6,latencia,conv3x3_direct_l,custom,minor,reduzido,6,-O2,49077407,175.2,modelo,
 conv3x3_direct_l__custom__o3-edge__sem-cache__lat6,latencia,conv3x3_direct_l,custom,o3-edge,sem-cache,6,-O2,49077407,622.0,modelo,
 conv3x3_direct_l__custom__o3-edge__l1__lat6,latencia,conv3x3_direct_l,custom,o3-edge,l1,6,-O2,49077407,187.9,modelo,
-conv3x3_direct_l__custom__o3-edge__l1-l2__lat6,latencia,conv3x3_direct_l,custom,o3-edge,l1-l2,6,-O2,49077407,191.8,modelo,
-conv3x3_direct_l__custom__o3-edge__reduzido__lat6,latencia,conv3x3_direct_l,custom,o3-edge,reduzido,6,-O2,49077407,195.0,modelo,
+conv3x3_direct_l__custom__o3-edge__l1-l2__lat6,latencia,conv3x3_direct_l,custom,o3-edge,l1-l2,6,-O2,49077407,190.7,modelo,
+conv3x3_direct_l__custom__o3-edge__reduzido__lat6,latencia,conv3x3_direct_l,custom,o3-edge,reduzido,6,-O2,49077407,193.8,modelo,
 conv3x3_im2col_s__custom__minor__sem-cache__lat6,latencia,conv3x3_im2col_s,custom,minor,sem-cache,6,-O2,3564987,34.8,medida,build/rcb21-probe/conferencia/runs/conv3x3_im2col_s__custom__minor__sem-cache__lat6/20261026T230948.367361Z-88fc5630
 conv3x3_im2col_s__custom__minor__l1__lat6,latencia,conv3x3_im2col_s,custom,minor,l1,6,-O2,3564987,19.1,medida,build/rcb21-probe/conferencia/runs/conv3x3_im2col_s__custom__minor__l1__lat6/20261026T231013.016729Z-fe16fc09
 conv3x3_im2col_s__custom__minor__l1-l2__lat6,latencia,conv3x3_im2col_s,custom,minor,l1-l2,6,-O2,3564987,16.6,medida,build/rcb21-probe/conferencia/runs/conv3x3_im2col_s__custom__minor__l1-l2__lat6/20261026T231023.125445Z-4c92eddd
@@ -529,44 +529,44 @@ conv3x3_im2col_s__custom__o3-edge__l1-l2__lat6,latencia,conv3x3_im2col_s,custom,
 conv3x3_im2col_s__custom__o3-edge__reduzido__lat6,latencia,conv3x3_im2col_s,custom,o3-edge,reduzido,6,-O2,3564987,21.6,medida,build/rcb21-probe/conferencia/runs/conv3x3_im2col_s__custom__o3-edge__reduzido__lat6/20261026T231135.663066Z-47b5dc07
 conv3x3_im2col_l__custom__minor__sem-cache__lat6,latencia,conv3x3_im2col_l,custom,minor,sem-cache,6,-O2,47000888,329.6,modelo,
 conv3x3_im2col_l__custom__minor__l1__lat6,latencia,conv3x3_im2col_l,custom,minor,l1,6,-O2,47000888,158.5,modelo,
-conv3x3_im2col_l__custom__minor__l1-l2__lat6,latencia,conv3x3_im2col_l,custom,minor,l1-l2,6,-O2,47000888,158.9,modelo,
-conv3x3_im2col_l__custom__minor__reduzido__lat6,latencia,conv3x3_im2col_l,custom,minor,reduzido,6,-O2,47000888,160.5,modelo,
+conv3x3_im2col_l__custom__minor__l1-l2__lat6,latencia,conv3x3_im2col_l,custom,minor,l1-l2,6,-O2,47000888,162.2,modelo,
+conv3x3_im2col_l__custom__minor__reduzido__lat6,latencia,conv3x3_im2col_l,custom,minor,reduzido,6,-O2,47000888,168.1,modelo,
 conv3x3_im2col_l__custom__o3-edge__sem-cache__lat6,latencia,conv3x3_im2col_l,custom,o3-edge,sem-cache,6,-O2,47000888,596.5,modelo,
 conv3x3_im2col_l__custom__o3-edge__l1__lat6,latencia,conv3x3_im2col_l,custom,o3-edge,l1,6,-O2,47000888,180.4,modelo,
-conv3x3_im2col_l__custom__o3-edge__l1-l2__lat6,latencia,conv3x3_im2col_l,custom,o3-edge,l1-l2,6,-O2,47000888,184.1,modelo,
-conv3x3_im2col_l__custom__o3-edge__reduzido__lat6,latencia,conv3x3_im2col_l,custom,o3-edge,reduzido,6,-O2,47000888,187.1,modelo,
-depthwise3x3_s__custom__minor__sem-cache__lat6,latencia,depthwise3x3_s,custom,minor,sem-cache,6,-O2,1906773,20.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__sem-cache__lat6/20261026T231359.220644Z-03e76a6e
-depthwise3x3_s__custom__minor__l1__lat6,latencia,depthwise3x3_s,custom,minor,l1,6,-O2,1906773,13.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__l1__lat6/20261026T231411.069401Z-942a8fd7
-depthwise3x3_s__custom__minor__l1-l2__lat6,latencia,depthwise3x3_s,custom,minor,l1-l2,6,-O2,1906773,15.5,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__l1-l2__lat6/20261026T231420.127020Z-bfec9d01
-depthwise3x3_s__custom__minor__reduzido__lat6,latencia,depthwise3x3_s,custom,minor,reduzido,6,-O2,1906773,14.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__reduzido__lat6/20261026T231425.047737Z-a9578d4b
-depthwise3x3_s__custom__o3-edge__sem-cache__lat6,latencia,depthwise3x3_s,custom,o3-edge,sem-cache,6,-O2,1906773,36.2,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__sem-cache__lat6/20261026T231434.124433Z-3184303e
-depthwise3x3_s__custom__o3-edge__l1__lat6,latencia,depthwise3x3_s,custom,o3-edge,l1,6,-O2,1906773,14.0,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__l1__lat6/20261026T231439.927552Z-2def0662
-depthwise3x3_s__custom__o3-edge__l1-l2__lat6,latencia,depthwise3x3_s,custom,o3-edge,l1-l2,6,-O2,1906773,16.1,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__l1-l2__lat6/20261026T231454.027723Z-c66a76eb
-depthwise3x3_s__custom__o3-edge__reduzido__lat6,latencia,depthwise3x3_s,custom,o3-edge,reduzido,6,-O2,1906773,15.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__reduzido__lat6/20261026T231510.217961Z-ee19e3db
-depthwise3x3_l__custom__minor__sem-cache__lat6,latencia,depthwise3x3_l,custom,minor,sem-cache,6,-O2,15339345,114.5,modelo,
-depthwise3x3_l__custom__minor__l1__lat6,latencia,depthwise3x3_l,custom,minor,l1,6,-O2,15339345,57.5,modelo,
-depthwise3x3_l__custom__minor__l1-l2__lat6,latencia,depthwise3x3_l,custom,minor,l1-l2,6,-O2,15339345,57.7,modelo,
-depthwise3x3_l__custom__minor__reduzido__lat6,latencia,depthwise3x3_l,custom,minor,reduzido,6,-O2,15339345,58.3,modelo,
-depthwise3x3_l__custom__o3-edge__sem-cache__lat6,latencia,depthwise3x3_l,custom,o3-edge,sem-cache,6,-O2,15339345,207.8,modelo,
-depthwise3x3_l__custom__o3-edge__l1__lat6,latencia,depthwise3x3_l,custom,o3-edge,l1,6,-O2,15339345,65.1,modelo,
-depthwise3x3_l__custom__o3-edge__l1-l2__lat6,latencia,depthwise3x3_l,custom,o3-edge,l1-l2,6,-O2,15339345,66.2,modelo,
-depthwise3x3_l__custom__o3-edge__reduzido__lat6,latencia,depthwise3x3_l,custom,o3-edge,reduzido,6,-O2,15339345,67.5,modelo,
+conv3x3_im2col_l__custom__o3-edge__l1-l2__lat6,latencia,conv3x3_im2col_l,custom,o3-edge,l1-l2,6,-O2,47000888,182.9,modelo,
+conv3x3_im2col_l__custom__o3-edge__reduzido__lat6,latencia,conv3x3_im2col_l,custom,o3-edge,reduzido,6,-O2,47000888,186.0,modelo,
+depthwise3x3_s__custom__minor__sem-cache__lat6,latencia,depthwise3x3_s,custom,minor,sem-cache,6,-O2,1906774,20.8,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__sem-cache__lat6/20261026T231359.220644Z-03e76a6e
+depthwise3x3_s__custom__minor__l1__lat6,latencia,depthwise3x3_s,custom,minor,l1,6,-O2,1906774,13.9,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__minor__l1__lat6/20261026T231411.069401Z-942a8fd7
+depthwise3x3_s__custom__minor__l1-l2__lat6,latencia,depthwise3x3_s,custom,minor,l1-l2,6,-O2,1906774,10.2,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__minor__l1-l2__lat6/20261027T133914.081359Z-6eb74c92
+depthwise3x3_s__custom__minor__reduzido__lat6,latencia,depthwise3x3_s,custom,minor,reduzido,6,-O2,1906774,9.9,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__minor__reduzido__lat6/20261027T133916.565207Z-6aaaaa10
+depthwise3x3_s__custom__o3-edge__sem-cache__lat6,latencia,depthwise3x3_s,custom,o3-edge,sem-cache,6,-O2,1906774,36.2,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__sem-cache__lat6/20261026T231434.124433Z-3184303e
+depthwise3x3_s__custom__o3-edge__l1__lat6,latencia,depthwise3x3_s,custom,o3-edge,l1,6,-O2,1906774,14.0,medida,build/rcb21-probe/conferencia/runs/depthwise3x3_s__custom__o3-edge__l1__lat6/20261026T231439.927552Z-2def0662
+depthwise3x3_s__custom__o3-edge__l1-l2__lat6,latencia,depthwise3x3_s,custom,o3-edge,l1-l2,6,-O2,1906774,13.5,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__o3-edge__l1-l2__lat6/20261027T133924.403602Z-fd532d17
+depthwise3x3_s__custom__o3-edge__reduzido__lat6,latencia,depthwise3x3_s,custom,o3-edge,reduzido,6,-O2,1906774,14.0,medida,results/campaigns/piloto/runs/depthwise3x3_s__custom__o3-edge__reduzido__lat6/20261027T133926.526656Z-d5557ecb
+depthwise3x3_l__custom__minor__sem-cache__lat6,latencia,depthwise3x3_l,custom,minor,sem-cache,6,-O2,15339346,114.5,modelo,
+depthwise3x3_l__custom__minor__l1__lat6,latencia,depthwise3x3_l,custom,minor,l1,6,-O2,15339346,57.5,modelo,
+depthwise3x3_l__custom__minor__l1-l2__lat6,latencia,depthwise3x3_l,custom,minor,l1-l2,6,-O2,15339346,48.5,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__minor__l1-l2__lat6/20261027T134118.459973Z-06790b14
+depthwise3x3_l__custom__minor__reduzido__lat6,latencia,depthwise3x3_l,custom,minor,reduzido,6,-O2,15339346,52.0,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__minor__reduzido__lat6/20261027T134134.276508Z-0d8ec45b
+depthwise3x3_l__custom__o3-edge__sem-cache__lat6,latencia,depthwise3x3_l,custom,o3-edge,sem-cache,6,-O2,15339346,207.8,modelo,
+depthwise3x3_l__custom__o3-edge__l1__lat6,latencia,depthwise3x3_l,custom,o3-edge,l1,6,-O2,15339346,65.1,modelo,
+depthwise3x3_l__custom__o3-edge__l1-l2__lat6,latencia,depthwise3x3_l,custom,o3-edge,l1-l2,6,-O2,15339346,59.8,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__o3-edge__l1-l2__lat6/20261027T134207.072606Z-bd1daae7
+depthwise3x3_l__custom__o3-edge__reduzido__lat6,latencia,depthwise3x3_l,custom,o3-edge,reduzido,6,-O2,15339346,61.8,medida,results/campaigns/piloto/runs/depthwise3x3_l__custom__o3-edge__reduzido__lat6/20261027T134226.314724Z-f7c29a33
 pointwise1x1_s__custom__minor__sem-cache__lat6,latencia,pointwise1x1_s,custom,minor,sem-cache,6,-O2,2418184,22.5,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__sem-cache__lat6/20261026T231722.404818Z-b1366038
 pointwise1x1_s__custom__minor__l1__lat6,latencia,pointwise1x1_s,custom,minor,l1,6,-O2,2418184,14.6,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__l1__lat6/20261026T231738.538079Z-5a8fe6c2
-pointwise1x1_s__custom__minor__l1-l2__lat6,latencia,pointwise1x1_s,custom,minor,l1-l2,6,-O2,2418184,15.6,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__l1-l2__lat6/20261026T231744.049918Z-0dfcc9d1
-pointwise1x1_s__custom__minor__reduzido__lat6,latencia,pointwise1x1_s,custom,minor,reduzido,6,-O2,2418184,15.4,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__minor__reduzido__lat6/20261026T231753.193876Z-b6eb6f1d
+pointwise1x1_s__custom__minor__l1-l2__lat6,latencia,pointwise1x1_s,custom,minor,l1-l2,6,-O2,2418184,16.7,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__minor__l1-l2__lat6/20261027T135823.182427Z-d31bdbab
+pointwise1x1_s__custom__minor__reduzido__lat6,latencia,pointwise1x1_s,custom,minor,reduzido,6,-O2,2418184,12.9,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__minor__reduzido__lat6/20261027T134425.470352Z-61a3d109
 pointwise1x1_s__custom__o3-edge__sem-cache__lat6,latencia,pointwise1x1_s,custom,o3-edge,sem-cache,6,-O2,2418184,47.8,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__sem-cache__lat6/20261026T231759.710691Z-874bfbc5
 pointwise1x1_s__custom__o3-edge__l1__lat6,latencia,pointwise1x1_s,custom,o3-edge,l1,6,-O2,2418184,16.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__l1__lat6/20261026T231808.671500Z-cd2f0dd7
-pointwise1x1_s__custom__o3-edge__l1-l2__lat6,latencia,pointwise1x1_s,custom,o3-edge,l1-l2,6,-O2,2418184,18.7,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__l1-l2__lat6/20261026T231824.745694Z-f3c05687
-pointwise1x1_s__custom__o3-edge__reduzido__lat6,latencia,pointwise1x1_s,custom,o3-edge,reduzido,6,-O2,2418184,18.0,medida,build/rcb21-probe/conferencia/runs/pointwise1x1_s__custom__o3-edge__reduzido__lat6/20261026T231843.524902Z-f57445c9
-pointwise1x1_l__custom__minor__sem-cache__lat6,latencia,pointwise1x1_l,custom,minor,sem-cache,6,-O2,35745389,253.1,modelo,
-pointwise1x1_l__custom__minor__l1__lat6,latencia,pointwise1x1_l,custom,minor,l1,6,-O2,35745389,122.6,modelo,
-pointwise1x1_l__custom__minor__l1-l2__lat6,latencia,pointwise1x1_l,custom,minor,l1-l2,6,-O2,35745389,122.9,modelo,
-pointwise1x1_l__custom__minor__reduzido__lat6,latencia,pointwise1x1_l,custom,minor,reduzido,6,-O2,35745389,124.2,modelo,
-pointwise1x1_l__custom__o3-edge__sem-cache__lat6,latencia,pointwise1x1_l,custom,o3-edge,sem-cache,6,-O2,35745389,458.3,modelo,
-pointwise1x1_l__custom__o3-edge__l1__lat6,latencia,pointwise1x1_l,custom,o3-edge,l1,6,-O2,35745389,139.4,modelo,
-pointwise1x1_l__custom__o3-edge__l1-l2__lat6,latencia,pointwise1x1_l,custom,o3-edge,l1-l2,6,-O2,35745389,142.2,modelo,
-pointwise1x1_l__custom__o3-edge__reduzido__lat6,latencia,pointwise1x1_l,custom,o3-edge,reduzido,6,-O2,35745389,144.6,modelo,
+pointwise1x1_s__custom__o3-edge__l1-l2__lat6,latencia,pointwise1x1_s,custom,o3-edge,l1-l2,6,-O2,2418184,13.5,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__o3-edge__l1-l2__lat6/20261027T134435.467583Z-fdaa8f50
+pointwise1x1_s__custom__o3-edge__reduzido__lat6,latencia,pointwise1x1_s,custom,o3-edge,reduzido,6,-O2,2418184,13.6,medida,results/campaigns/piloto/runs/pointwise1x1_s__custom__o3-edge__reduzido__lat6/20261027T134438.415312Z-0e2c3e54
+pointwise1x1_l__custom__minor__sem-cache__lat6,latencia,pointwise1x1_l,custom,minor,sem-cache,6,-O2,35745390,253.1,modelo,
+pointwise1x1_l__custom__minor__l1__lat6,latencia,pointwise1x1_l,custom,minor,l1,6,-O2,35745390,122.6,modelo,
+pointwise1x1_l__custom__minor__l1-l2__lat6,latencia,pointwise1x1_l,custom,minor,l1-l2,6,-O2,35745390,128.8,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__minor__l1-l2__lat6/20261027T134900.398590Z-dda68410
+pointwise1x1_l__custom__minor__reduzido__lat6,latencia,pointwise1x1_l,custom,minor,reduzido,6,-O2,35745390,128.3,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__minor__reduzido__lat6/20261027T134928.111078Z-3d53f25e
+pointwise1x1_l__custom__o3-edge__sem-cache__lat6,latencia,pointwise1x1_l,custom,o3-edge,sem-cache,6,-O2,35745390,458.3,modelo,
+pointwise1x1_l__custom__o3-edge__l1__lat6,latencia,pointwise1x1_l,custom,o3-edge,l1,6,-O2,35745390,139.4,modelo,
+pointwise1x1_l__custom__o3-edge__l1-l2__lat6,latencia,pointwise1x1_l,custom,o3-edge,l1-l2,6,-O2,35745390,130.2,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__o3-edge__l1-l2__lat6/20261027T135109.252200Z-c9dceb5c
+pointwise1x1_l__custom__o3-edge__reduzido__lat6,latencia,pointwise1x1_l,custom,o3-edge,reduzido,6,-O2,35745390,131.2,medida,results/campaigns/piloto/runs/pointwise1x1_l__custom__o3-edge__reduzido__lat6/20261027T135819.202807Z-018c8f0a
 maxpool2x2_s__custom__minor__sem-cache__lat6,latencia,maxpool2x2_s,custom,minor,sem-cache,6,-O2,154193,8.5,medida,build/rcb21-probe/conferencia/runs/maxpool2x2_s__custom__minor__sem-cache__lat6/20261026T232009.422210Z-78731f36
 maxpool2x2_s__custom__minor__l1__lat6,latencia,maxpool2x2_s,custom,minor,l1,6,-O2,154193,6.7,medida,build/rcb21-probe/conferencia/runs/maxpool2x2_s__custom__minor__l1__lat6/20261026T232012.000351Z-52c30ba3
 maxpool2x2_s__custom__minor__l1-l2__lat6,latencia,maxpool2x2_s,custom,minor,l1-l2,6,-O2,154193,6.2,medida,build/rcb21-probe/conferencia/runs/maxpool2x2_s__custom__minor__l1-l2__lat6/20261026T232017.978323Z-74899690
@@ -577,12 +577,12 @@ maxpool2x2_s__custom__o3-edge__l1-l2__lat6,latencia,maxpool2x2_s,custom,o3-edge,
 maxpool2x2_s__custom__o3-edge__reduzido__lat6,latencia,maxpool2x2_s,custom,o3-edge,reduzido,6,-O2,154193,7.2,medida,build/rcb21-probe/conferencia/runs/maxpool2x2_s__custom__o3-edge__reduzido__lat6/20261026T232036.308491Z-d39bd774
 maxpool2x2_l__custom__minor__sem-cache__lat6,latencia,maxpool2x2_l,custom,minor,sem-cache,6,-O2,1118810,17.9,modelo,
 maxpool2x2_l__custom__minor__l1__lat6,latencia,maxpool2x2_l,custom,minor,l1,6,-O2,1118810,12.1,modelo,
-maxpool2x2_l__custom__minor__l1-l2__lat6,latencia,maxpool2x2_l,custom,minor,l1-l2,6,-O2,1118810,12.2,modelo,
-maxpool2x2_l__custom__minor__reduzido__lat6,latencia,maxpool2x2_l,custom,minor,reduzido,6,-O2,1118810,12.4,modelo,
+maxpool2x2_l__custom__minor__l1-l2__lat6,latencia,maxpool2x2_l,custom,minor,l1-l2,6,-O2,1118810,11.1,modelo,
+maxpool2x2_l__custom__minor__reduzido__lat6,latencia,maxpool2x2_l,custom,minor,reduzido,6,-O2,1118810,11.3,modelo,
 maxpool2x2_l__custom__o3-edge__sem-cache__lat6,latencia,maxpool2x2_l,custom,o3-edge,sem-cache,6,-O2,1118810,33.2,modelo,
 maxpool2x2_l__custom__o3-edge__l1__lat6,latencia,maxpool2x2_l,custom,o3-edge,l1,6,-O2,1118810,13.4,modelo,
-maxpool2x2_l__custom__o3-edge__l1-l2__lat6,latencia,maxpool2x2_l,custom,o3-edge,l1-l2,6,-O2,1118810,13.3,modelo,
-maxpool2x2_l__custom__o3-edge__reduzido__lat6,latencia,maxpool2x2_l,custom,o3-edge,reduzido,6,-O2,1118810,13.7,modelo,
+maxpool2x2_l__custom__o3-edge__l1-l2__lat6,latencia,maxpool2x2_l,custom,o3-edge,l1-l2,6,-O2,1118810,12.0,modelo,
+maxpool2x2_l__custom__o3-edge__reduzido__lat6,latencia,maxpool2x2_l,custom,o3-edge,reduzido,6,-O2,1118810,12.6,modelo,
 requant_relu_s__custom__minor__sem-cache__lat6,latencia,requant_relu_s,custom,minor,sem-cache,6,-O2,132256,6.7,medida,build/rcb21-probe/conferencia/runs/requant_relu_s__custom__minor__sem-cache__lat6/20261026T232126.394084Z-4d45504f
 requant_relu_s__custom__minor__l1__lat6,latencia,requant_relu_s,custom,minor,l1,6,-O2,132256,5.2,medida,build/rcb21-probe/conferencia/runs/requant_relu_s__custom__minor__l1__lat6/20261026T232129.063843Z-9c1f3feb
 requant_relu_s__custom__minor__l1-l2__lat6,latencia,requant_relu_s,custom,minor,l1-l2,6,-O2,132256,6.7,medida,build/rcb21-probe/conferencia/runs/requant_relu_s__custom__minor__l1-l2__lat6/20261026T232133.199380Z-626a229c
@@ -593,12 +593,12 @@ requant_relu_s__custom__o3-edge__l1-l2__lat6,latencia,requant_relu_s,custom,o3-e
 requant_relu_s__custom__o3-edge__reduzido__lat6,latencia,requant_relu_s,custom,o3-edge,reduzido,6,-O2,132256,8.1,medida,build/rcb21-probe/conferencia/runs/requant_relu_s__custom__o3-edge__reduzido__lat6/20261026T232151.949803Z-ebf65b92
 requant_relu_l__custom__minor__sem-cache__lat6,latencia,requant_relu_l,custom,minor,sem-cache,6,-O2,986130,17.0,modelo,
 requant_relu_l__custom__minor__l1__lat6,latencia,requant_relu_l,custom,minor,l1,6,-O2,986130,11.7,modelo,
-requant_relu_l__custom__minor__l1-l2__lat6,latencia,requant_relu_l,custom,minor,l1-l2,6,-O2,986130,11.8,modelo,
-requant_relu_l__custom__minor__reduzido__lat6,latencia,requant_relu_l,custom,minor,reduzido,6,-O2,986130,12.0,modelo,
+requant_relu_l__custom__minor__l1-l2__lat6,latencia,requant_relu_l,custom,minor,l1-l2,6,-O2,986130,10.7,modelo,
+requant_relu_l__custom__minor__reduzido__lat6,latencia,requant_relu_l,custom,minor,reduzido,6,-O2,986130,10.9,modelo,
 requant_relu_l__custom__o3-edge__sem-cache__lat6,latencia,requant_relu_l,custom,o3-edge,sem-cache,6,-O2,986130,31.6,modelo,
 requant_relu_l__custom__o3-edge__l1__lat6,latencia,requant_relu_l,custom,o3-edge,l1,6,-O2,986130,12.9,modelo,
-requant_relu_l__custom__o3-edge__l1-l2__lat6,latencia,requant_relu_l,custom,o3-edge,l1-l2,6,-O2,986130,12.8,modelo,
-requant_relu_l__custom__o3-edge__reduzido__lat6,latencia,requant_relu_l,custom,o3-edge,reduzido,6,-O2,986130,13.2,modelo,
+requant_relu_l__custom__o3-edge__l1-l2__lat6,latencia,requant_relu_l,custom,o3-edge,l1-l2,6,-O2,986130,11.5,modelo,
+requant_relu_l__custom__o3-edge__reduzido__lat6,latencia,requant_relu_l,custom,o3-edge,reduzido,6,-O2,986130,12.1,modelo,
 fc_s__custom__minor__sem-cache__lat6,latencia,fc_s,custom,minor,sem-cache,6,-O2,139043,9.2,medida,build/rcb21-probe/conferencia/runs/fc_s__custom__minor__sem-cache__lat6/20261026T232250.543220Z-25b8a666
 fc_s__custom__minor__l1__lat6,latencia,fc_s,custom,minor,l1,6,-O2,139043,8.0,medida,build/rcb21-probe/conferencia/runs/fc_s__custom__minor__l1__lat6/20261026T232256.211043Z-e72cfdda
 fc_s__custom__minor__l1-l2__lat6,latencia,fc_s,custom,minor,l1-l2,6,-O2,139043,8.2,medida,build/rcb21-probe/conferencia/runs/fc_s__custom__minor__l1-l2__lat6/20261026T232259.962117Z-947121d4
@@ -609,13 +609,13 @@ fc_s__custom__o3-edge__l1-l2__lat6,latencia,fc_s,custom,o3-edge,l1-l2,6,-O2,1390
 fc_s__custom__o3-edge__reduzido__lat6,latencia,fc_s,custom,o3-edge,reduzido,6,-O2,139043,7.3,medida,build/rcb21-probe/conferencia/runs/fc_s__custom__o3-edge__reduzido__lat6/20261026T232323.284606Z-4d99d344
 fc_l__custom__minor__sem-cache__lat6,latencia,fc_l,custom,minor,sem-cache,6,-O2,4094496,38.1,modelo,
 fc_l__custom__minor__l1__lat6,latencia,fc_l,custom,minor,l1,6,-O2,4094496,21.6,modelo,
-fc_l__custom__minor__l1-l2__lat6,latencia,fc_l,custom,minor,l1-l2,6,-O2,4094496,21.7,modelo,
-fc_l__custom__minor__reduzido__lat6,latencia,fc_l,custom,minor,reduzido,6,-O2,4094496,22.1,modelo,
+fc_l__custom__minor__l1-l2__lat6,latencia,fc_l,custom,minor,l1-l2,6,-O2,4094496,20.9,modelo,
+fc_l__custom__minor__reduzido__lat6,latencia,fc_l,custom,minor,reduzido,6,-O2,4094496,21.5,modelo,
 fc_l__custom__o3-edge__sem-cache__lat6,latencia,fc_l,custom,o3-edge,sem-cache,6,-O2,4094496,69.7,modelo,
 fc_l__custom__o3-edge__l1__lat6,latencia,fc_l,custom,o3-edge,l1,6,-O2,4094496,24.2,modelo,
-fc_l__custom__o3-edge__l1-l2__lat6,latencia,fc_l,custom,o3-edge,l1-l2,6,-O2,4094496,24.4,modelo,
-fc_l__custom__o3-edge__reduzido__lat6,latencia,fc_l,custom,o3-edge,reduzido,6,-O2,4094496,25.0,modelo,
-conv3x3_direct_s__ref__minor__l1-l2__O3,compilador,conv3x3_direct_s,ref,minor,l1-l2,,-O3,5390382,25.9,modelo,
-conv3x3_direct_s__custom__minor__l1-l2__O3,compilador,conv3x3_direct_s,custom,minor,l1-l2,3,-O3,3580452,20.1,modelo,
-conv3x3_im2col_s__ref__minor__l1-l2__O3,compilador,conv3x3_im2col_s,ref,minor,l1-l2,,-O3,5233577,25.4,modelo,
-conv3x3_im2col_s__custom__minor__l1-l2__O3,compilador,conv3x3_im2col_s,custom,minor,l1-l2,3,-O3,3431340,19.6,modelo,
+fc_l__custom__o3-edge__l1-l2__lat6,latencia,fc_l,custom,o3-edge,l1-l2,6,-O2,4094496,23.1,modelo,
+fc_l__custom__o3-edge__reduzido__lat6,latencia,fc_l,custom,o3-edge,reduzido,6,-O2,4094496,23.9,modelo,
+conv3x3_direct_s__ref__minor__l1-l2__O3,compilador,conv3x3_direct_s,ref,minor,l1-l2,,-O3,5390382,25.2,modelo,
+conv3x3_direct_s__custom__minor__l1-l2__O3,compilador,conv3x3_direct_s,custom,minor,l1-l2,3,-O3,3580452,19.2,modelo,
+conv3x3_im2col_s__ref__minor__l1-l2__O3,compilador,conv3x3_im2col_s,ref,minor,l1-l2,,-O3,5233577,24.7,modelo,
+conv3x3_im2col_s__custom__minor__l1-l2__O3,compilador,conv3x3_im2col_s,custom,minor,l1-l2,3,-O3,3431340,18.7,modelo,

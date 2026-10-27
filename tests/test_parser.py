@@ -11,6 +11,7 @@ from riscvcnnbench.parser import (
     read_region,
     select_block,
     split_blocks,
+    stats_differences,
 )
 
 # Recortes de stats.txt reais do gem5 25.1 (fc S na o3 com L1/L2/DDR4, e
@@ -49,6 +50,25 @@ def test_split_blocks_keeps_order_and_first_value() -> None:
     # Linhas de vetor e distribuição: só o primeiro valor, sem as porcentagens.
     assert blocks[0]["system.cpu.commitStats0.committedInstType::IntAlu"] == "66012"
     assert blocks[0]["system.cpu.dcache.tags.avgRefs"] == "nan"
+
+
+def test_stats_differences_ignore_the_host() -> None:
+    sample = (DATA / "roi_o3_l2_ddr4.txt").read_text(encoding="utf-8")
+    # Outro tempo do host, mesma simulação.
+    rerun = sample.replace("hostSeconds  ", "hostSeconds 9", 1)
+    assert rerun != sample
+
+    compared, differences = stats_differences(sample, rerun)
+
+    assert differences == [] and compared == sum(
+        1 for b in split_blocks(sample) for name in b if not name.startswith("host")
+    )
+    other = stats_text(
+        CPU_LINES, CPU_LINES.replace("numCycles                            5", "numCycles 6")
+    )
+    base = stats_text(CPU_LINES, CPU_LINES)
+    assert stats_differences(base, other)[1] == ["bloco 2, system.cpu.numCycles: 5 × 6"]
+    assert stats_differences(base, stats_text(CPU_LINES)) == (0, ["2 blocos × 1 bloco"])
 
 
 def test_roi_of_o3_with_caches_and_ddr4() -> None:

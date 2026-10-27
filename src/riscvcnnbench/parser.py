@@ -275,6 +275,27 @@ def split_blocks(text: str) -> list[dict[str, str]]:
     return blocks
 
 
+def stats_differences(first: str, second: str) -> tuple[int, list[str]]:
+    """Compara dois stats.txt sem as estatísticas do host (hostSeconds, hostMemory e as
+    taxas por segundo real), que mudam a cada execução. Numa simulação determinística,
+    com as mesmas entradas, o resto se repete: devolve quantas estatísticas foram
+    comparadas e as diferenças (RCB-23)."""
+    blocks = [
+        [{k: v for k, v in block.items() if not k.startswith("host")} for block in split_blocks(t)]
+        for t in (first, second)
+    ]
+    if len(blocks[0]) != len(blocks[1]):
+        return 0, [f"{_blocks(len(blocks[0]))} × {_blocks(len(blocks[1]))}"]
+    compared, differences = 0, []
+    for number, (a, b) in enumerate(zip(*blocks, strict=True), 1):
+        for name in sorted(a.keys() | b.keys()):
+            compared += 1
+            if a.get(name) != b.get(name):
+                values = f"{a.get(name, '(ausente)')} × {b.get(name, '(ausente)')}"
+                differences.append(f"bloco {number}, {name}: {values}")
+    return compared, differences
+
+
 def _blocks(count: int) -> str:
     return f"{count} bloco" if count == 1 else f"{count} blocos"
 

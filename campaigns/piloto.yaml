@@ -1,0 +1,28 @@
+# Experimento piloto (RCB-23): uma versão reduzida da matriz final
+# (campaigns/final.yaml) para achar problemas antes da campanha e medir o tempo
+# de L nas operações que a estimativa da RCB-22 não amostrou. Detalhes em
+# docs/pilot.md.
+#
+#   make campaign MATRIX=campaigns/piloto.yaml JOBS=4
+
+name: piloto
+description: >-
+  Depthwise e pointwise em S e L, nas três variantes e nas duas latências, na
+  minor e na o3-edge, num cenário em que os dados cabem (l1-l2) e noutro em que
+  não cabem (reduzido).
+output:
+  dir: results/campaigns/piloto
+
+groups:
+  - name: piloto
+    description: >-
+      Duas operações que nunca rodaram em L numa CPU com tempo, as três
+      variantes, a latência 3 e 6 da custom, a CPU em ordem e a O3 de borda, e
+      dois cenários de memória: em l1-l2 os dados S e L cabem (L na L2); em
+      reduzido, os S não cabem na L1d e os L não cabem na L2.
+    experiments: [depthwise3x3_s, depthwise3x3_l, pointwise1x1_s, pointwise1x1_l]
+    vary:
+      benchmark.variant: [ref, custom, rvv]
+      cpu.model: [minor, o3-edge]
+      scenario: [l1-l2, reduzido]
+      cpu.custom_latency: [3, 6]

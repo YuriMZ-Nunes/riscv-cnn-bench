@@ -72,7 +72,7 @@ benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
 
-e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes, a leitura do stats.txt nas quatro CPUs, as comparações entre variantes, os cenários de CPU e memória e uma campanha pequena com o report em CSV, os gráficos e a estimativa de tempo; ~7 min).
+e2e-test: ## Testes de ponta a ponta no gem5 (hello_riscv, hello_param_cache, riscvcnnbench run, cnn_insn_semantics, int8_base_example, as sete operações nas três variantes, a leitura do stats.txt nas quatro CPUs, as comparações entre variantes, os cenários de CPU e memória uma campanha pequena com o report em CSV, os gráficos e a estimativa de tempo, e o determinismo do gem5; ~8 min).
 	$(PODMAN_RUN) bash -lc 'uv run pytest -m e2e -v'
 
 validate: PODMAN_ARGS += $(if $(RCB_JOBS),-e RCB_JOBS=$(RCB_JOBS))

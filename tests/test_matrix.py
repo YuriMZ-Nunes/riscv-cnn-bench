@@ -1,6 +1,6 @@
-"""A matriz final da campanha (campaigns/final.yaml, RCB-22) e as medições da
-estimativa (campaigns/medicao.yaml): número de execuções, parâmetros fixados e
-cobertura."""
+"""A matriz final da campanha (campaigns/final.yaml, RCB-22), as medições da
+estimativa (campaigns/medicao.yaml) e o piloto (campaigns/piloto.yaml, RCB-23):
+número de execuções, parâmetros fixados e cobertura."""
 
 from pathlib import Path
 
@@ -76,3 +76,11 @@ def test_measurements_cover_all_of_s(final: tuple[Plan, dict], tmp_path: Path) -
     assert len(s_runs) == 308
     assert all(run.key in measured for run in s_runs)
     assert len(medicao.runs) == 381
+
+
+def test_pilot_is_part_of_the_final_matrix(final: tuple[Plan, dict], tmp_path: Path) -> None:
+    # O piloto (RCB-23) roda só combinações da matriz final: o que ele mede vale nela.
+    plan, _ = final
+    pilot = plan_of(PROJECT_ROOT / "campaigns/piloto.yaml", tmp_path)
+    assert len(pilot.runs) == 64 and not pilot.invalid
+    assert {run.key for run in pilot.runs} <= {run.key for run in plan.runs}
