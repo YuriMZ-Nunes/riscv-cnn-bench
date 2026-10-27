@@ -1,13 +1,13 @@
 # Experimento piloto
 
-Uma versão reduzida da matriz final ([matrix.md](matrix.md)), rodada antes da campanha para achar problemas, medir o tempo real e confirmar o determinismo do gem5 (RCB-23). A matriz é [`campaigns/piloto.yaml`](../campaigns/piloto.yaml). Os resultados ficam em `results/campaigns/piloto/`, que o Git ignora; o destino dos dados publicados é decidido na RCB-24.
+Uma versão reduzida da matriz final ([matrix.md](matrix.md)), rodada antes da campanha para achar problemas, medir o tempo real e confirmar o determinismo do gem5 (RCB-23). A matriz é [`campaigns/piloto.yaml`](../campaigns/piloto.yaml). Os resultados ficam em `results/campaigns/piloto/`, que o Git ignora, e são publicados junto com os da campanha final no pacote de dados ([data.md](data.md)).
 
 | Parte | Situação |
 | --- | --- |
 | Piloto executado (64 combinações e 12 repetições), com CSV e gráficos | Existente, 27/10/2026 |
 | Comparação de `stats.txt` sem o host (`parser.stats_differences`) e teste de determinismo | Existente |
 | Estimativa da matriz final refeita com o piloto | Existente ([matrix.md](matrix.md#estimativa-de-tempo)) |
-| Campanha final | Planejado (RCB-24) |
+| Campanha final | Existente (RCB-24, 27/10/2026, [data.md](data.md)) |
 
 ## O que rodou
 

@@ -21,7 +21,8 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 .PHONY: help image image-clean shell check sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
 	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare \
-	campaign-plan campaign campaign-status campaign-estimate report plot
+	campaign-plan campaign campaign-status campaign-estimate campaign-audit campaign-package \
+	report plot
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -136,6 +137,7 @@ campaign-plan: ## Mostra as combinações de uma campanha: make campaign-plan MA
 	@test -n "$(MATRIX)" || { echo "Informe MATRIX=campaigns/<nome>.yaml"; exit 2; }
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign plan "$(MATRIX)"'
 
+campaign: PODMAN_ARGS += -e RCB_IMAGE="$(IMAGE)" -e RCB_IMAGE_ID="$(IMAGE_ID)"
 campaign: ## Executa ou retoma uma campanha num só container: make campaign MATRIX=campaigns/<nome>.yaml [JOBS=N] [VALIDATE=1]
 	@test -n "$(MATRIX)" || { echo "Informe MATRIX=campaigns/<nome>.yaml"; exit 2; }
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign run "$(MATRIX)" --jobs $(JOBS) $(if $(VALIDATE),--validate)'
@@ -148,6 +150,15 @@ campaign-estimate: ## Tempo estimado de uma campanha a partir de execuções med
 	@test -n "$(MATRIX)" || { echo "Informe MATRIX=campaigns/<nome>.yaml"; exit 2; }
 	@test -n "$(MEASURED)" || { echo "Informe MEASURED=\"<pasta> [<pasta>...]\" com execuções medidas"; exit 2; }
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign estimate "$(MATRIX)" $(foreach d,$(MEASURED),-m "$(d)") --jobs $(JOBS) $(if $(CSV),--csv "$(CSV)")'
+
+campaign-audit: ## Confere se uma campanha vale como resultado: make campaign-audit DIR=results/campaigns/<nome>
+	@test -n "$(DIR)" || { echo "Informe DIR=results/campaigns/<nome>"; exit 2; }
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign audit "$(DIR)"'
+
+campaign-package: ## Pacote de dados para publicação: make campaign-package DIRS="<pastas>" OUT=results/pacotes/<nome>.tar.gz
+	@test -n "$(DIRS)" || { echo "Informe DIRS=\"<pasta> [<pasta>...]\" com as campanhas"; exit 2; }
+	@test -n "$(OUT)" || { echo "Informe OUT=results/pacotes/<nome>.tar.gz"; exit 2; }
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign package $(foreach d,$(DIRS),"$(d)") -o "$(OUT)"'
 
 report: ## Exporta as execuções em CSV (runs.csv e pairs.csv): make report [DIR=results/campaigns/<nome>] [FORCE=1]
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench report "$(or $(DIR),results)" $(if $(FORCE),--force)'

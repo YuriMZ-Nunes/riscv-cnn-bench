@@ -19,6 +19,7 @@ Disponíveis:
 - **Campanhas (execução em lote):** uma matriz em `campaigns/*.yaml`, com grupos de produtos cartesianos sobre os experimentos de `experiments/`, vira execuções normais agrupadas numa pasta; `riscvcnnbench campaign plan|run|status` mostra o plano, executa em paralelo num só container, retoma sem repetir o que terminou e mostra o estado com o diagnóstico de cada falha, com validação de equivalência opcional antes (ver [docs/campaigns.md](docs/campaigns.md)).
 - **Matriz da campanha final e estimativa de tempo:** `campaigns/final.yaml` tem 620 execuções: o fatorial variante × CPU × cenário de memória nas sete operações em S e L, a latência 6 das instruções personalizadas e um contraste `-O2` × `-O3`, cada grupo ligado a um objetivo da proposta. `riscvcnnbench campaign estimate` estima o tempo de cada combinação a partir de execuções medidas: cerca de 2,8 h com 4 tarefas (ver [docs/matrix.md](docs/matrix.md)).
 - **Experimento piloto:** `campaigns/piloto.yaml` (depthwise e pointwise em S e L, nas três variantes, minor e o3-edge, cenários em que os dados cabem e em que não cabem) rodou em 27/10/2026 antes da campanha: 64 combinações válidas em 17 min, tempo L dentro de 0,83–1,14 vez o previsto, IPC da o3-edge entre 0,89 e 1,66, e o determinismo do gem5 confirmado em 12 repetições (ver [docs/pilot.md](docs/pilot.md)).
+- **Campanha final e pacote de dados:** a matriz final rodou em 27/10/2026, com a validação de equivalência antes e 620 simulações válidas em 2 h 52 min com 4 tarefas. `riscvcnnbench campaign audit` confere se uma campanha vale como resultado (concluídas, válidas, árvore limpa, um só commit, executável do gem5 registrado), e `riscvcnnbench campaign package` junta as campanhas num `.tar.gz` com README, licença CC BY 4.0, MANIFEST e SHA256SUMS, para a release do GitHub e o Zenodo (ver [docs/data.md](docs/data.md)).
 - **Cenários de CPU e memória:** quatro cenários de memória nomeados (`sem-cache`, `l1`, `l1-l2`, `reduzido`, em `configs/scenarios.yaml`, escolhidos por `scenario` no YAML), uma O3 estreita de borda (`o3-edge`), latência configurável das instruções personalizadas (`cpu.custom_latency`, classe `CnnMult` no fork do gem5) e caches aquecidas ou esvaziadas no início da região de interesse (`benchmark.cache_state`), com a tabela do que cabe em cada nível (ver [docs/scenarios.md](docs/scenarios.md)).
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5.
@@ -31,7 +32,8 @@ Disponíveis:
 
 Planejados (ainda não implementados):
 
-- Execução da campanha final (RCB-24) e análise dos resultados (RCB-25).
+- Análise dos resultados (RCB-25).
+- Release do GitHub e depósito no Zenodo com o pacote de dados (ver [docs/data.md](docs/data.md#publicação)).
 
 ---
 
@@ -72,6 +74,7 @@ riscv-cnn-bench/
 │   ├── metric.py             # Métricas derivadas e comparação entre variantes
 │   ├── campaign.py           # Campanhas: matriz, plano, execução em lote e estado
 │   ├── estimate.py           # Estimativa de tempo de uma campanha a partir de execuções medidas
+│   ├── package.py            # Auditoria de uma campanha e pacote de dados para publicação
 │   ├── report.py             # Tabelas em CSV (runs.csv e pairs.csv)
 │   └── plot.py               # Gráficos de comparação (PDF e PNG) a partir dos CSVs
 ├── tests/                    # Testes Python
@@ -201,6 +204,8 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make campaign MATRIX=<yaml> [JOBS=N] [VALIDATE=1]` | Executa ou retoma uma campanha num só container, `JOBS` simulações em paralelo. |
 | `make campaign-status MATRIX=<yaml>` | Estado de cada combinação, com o diagnóstico das falhas e instruções/ciclos/IPC. |
 | `make campaign-estimate MATRIX=<yaml> MEASURED="<pastas>" [CSV=<arquivo>]` | Tempo estimado de cada combinação e do total, a partir de execuções medidas. |
+| `make campaign-audit DIR=<pasta>` | Confere se uma campanha vale como resultado: concluídas, válidas, árvore limpa, um só commit. |
+| `make campaign-package DIRS="<pastas>" OUT=<arquivo>` | Pacote `.tar.gz` das campanhas para publicação, com README, licença, MANIFEST e SHA256SUMS. |
 | `make report [DIR=results/<name>] [FORCE=1]` | Grava `runs.csv` e `pairs.csv` em `<pasta>/report/`. |
 | `make plot [DIR=results/<name>] [FORCE=1]` | Gera os gráficos (PDF e PNG) a partir de `<pasta>/report/` em `<pasta>/figures/`. |
 | `make compare [DIR=results/<name>]` | Compara as execuções aos pares (variantes e `-O2` × `-O3`): redução de instruções, speedup em ciclos e razão de IPC. |
@@ -281,5 +286,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Gráficos de comparação](docs/plots.md)
 - [Matriz da campanha final e estimativa de tempo](docs/matrix.md)
 - [Experimento piloto](docs/pilot.md)
+- [Dados da campanha final e publicação](docs/data.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)
