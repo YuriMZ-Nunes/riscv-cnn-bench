@@ -31,7 +31,8 @@ campaign_app = typer.Typer(
     help=(
         "Executa em lote uma matriz de experimentos (campaigns/*.yaml): `plan` mostra as "
         "combinações, `estimate` estima o tempo a partir de execuções medidas, `run` executa "
-        "e retoma, `status` mostra o estado. Veja docs/campaigns.md."
+        "e retoma, `status` mostra o estado, `audit` confere se vale como resultado e "
+        "`package` empacota para publicação. Veja docs/campaigns.md e docs/data.md."
     ),
     no_args_is_help=True,
 )
@@ -772,6 +773,91 @@ def campaign_estimate(
             typer.echo(f"  {item.name}: {item.detail}")
     if table:
         typer.echo(f"\nTabela gravada em {display(table)}")
+
+
+@campaign_app.command("audit")
+def campaign_audit(
+    target: Annotated[Path, typer.Argument(help="Pasta da campanha.")],
+) -> None:
+    """Confere se a campanha vale como resultado, sem executar nada.
+
+    Todas as combinações concluídas e válidas (RESULT com mismatches=0), com
+    project.dirty e gem5_repository.dirty falsos, gem5_build.matches_executable
+    verdadeiro e um só commit do projeto. Validação de equivalência, report e
+    figuras ausentes e execuções a mais aparecem como observações. Saída 0 sem
+    problemas, 1 com. Veja docs/data.md.
+    """
+    from riscvcnnbench.campaign import CampaignError
+    from riscvcnnbench.config import ConfigError
+    from riscvcnnbench.package import audit
+
+    if not target.is_dir():
+        _fail(f"pasta não encontrada: {target}")
+    try:
+        found = audit(target)
+    except (ConfigError, CampaignError) as error:
+        _fail(str(error))
+    typer.echo(f"Campanha {found.name}: {found.done} de {found.combinations} concluída(s)")
+    commits = ", ".join(f"{str(c)[:7]} ({n})" for c, n in found.project_commits.items())
+    gem5 = ", ".join(f"{str(c)[:7]} ({n})" for c, n in found.gem5_commits.items())
+    typer.echo(f"  commit do projeto: {commits or '-'}; do fork do gem5: {gem5 or '-'}")
+    typer.echo(f"  de {found.first_started or '-'} a {found.last_finished or '-'}")
+    if found.validation:
+        typer.echo(
+            f"  validação: aprovada em {found.validation.get('finished_at')} "
+            f"(commit {str(found.validation.get('project_commit'))[:7]})"
+        )
+    for note in found.notes:
+        typer.echo(f"  observação: {note}")
+    if found.problems:
+        typer.echo(f"\n{len(found.problems)} problema(s):")
+        for problem in found.problems:
+            typer.echo(f"  {problem}")
+        raise typer.Exit(code=1)
+    typer.echo("\nSem problemas.")
+
+
+@campaign_app.command("package")
+def campaign_package(
+    targets: Annotated[list[Path], typer.Argument(help="Pastas das campanhas.")],
+    output: Annotated[Path, typer.Option("--output", "-o", help="Arquivo .tar.gz a gravar.")],
+    name: Annotated[
+        str | None,
+        typer.Option(help="Pasta raiz dentro do pacote. Padrão: o nome do arquivo sem .tar.gz."),
+    ] = None,
+    allow_problems: Annotated[
+        bool,
+        typer.Option(
+            "--allow-problems", help="Empacota mesmo com problemas (ficam no README e MANIFEST)."
+        ),
+    ] = False,
+) -> None:
+    """Junta campanhas num .tar.gz para publicação.
+
+    O pacote tem README.md, LICENSE.txt (CC BY 4.0), MANIFEST.json (commits,
+    contagens, validação, observações), SHA256SUMS e as pastas das campanhas
+    inteiras em campanhas/. Antes, faz a auditoria de `campaign audit` e recusa
+    se ela achar problemas. Veja docs/data.md.
+    """
+    from riscvcnnbench.campaign import CampaignError, project_state
+    from riscvcnnbench.config import ConfigError
+    from riscvcnnbench.package import package
+    from riscvcnnbench.runs import display
+
+    for target in targets:
+        if not target.is_dir():
+            _fail(f"pasta não encontrada: {target}")
+    root = name or output.name.removesuffix(".tar.gz").removesuffix(".tgz")
+    try:
+        audits = package(targets, output, root, allow_problems, project_state())
+    except (ConfigError, CampaignError) as error:
+        _fail(str(error))
+    for item in audits:
+        typer.echo(f"  {item.name}: {item.done} de {item.combinations} concluída(s)")
+        for note in [*item.notes, *item.problems]:
+            typer.echo(f"    {note}")
+    size = output.stat().st_size / 1e6
+    typer.echo(f"Pacote gravado em {display(output)} ({size:.1f} MB), pasta raiz {root}/")
 
 
 if __name__ == "__main__":

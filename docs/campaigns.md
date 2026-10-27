@@ -6,8 +6,9 @@ Uma campanha executa uma matriz de experimentos sem montar cada YAML à mão (RC
 | --- | --- |
 | Formato da matriz (`campaigns/*.yaml`), plano, execução em paralelo, retomada, estado e validação antes de começar | Existente (`src/riscvcnnbench/campaign.py`, `riscvcnnbench campaign`) |
 | Matriz de exemplo [`campaigns/exemplo.yaml`](../campaigns/exemplo.yaml) | Existente |
-| Matriz final da campanha [`campaigns/final.yaml`](../campaigns/final.yaml) | Existente (RCB-22, [matrix.md](matrix.md)); a execução é a RCB-24 |
-| Estimativa de tempo por combinação: `riscvcnnbench campaign estimate` | Existente (RCB-22, [matrix.md](matrix.md#como-a-estimativa-é-feita)); a refazer com o piloto (RCB-23) |
+| Matriz final da campanha [`campaigns/final.yaml`](../campaigns/final.yaml) | Existente (RCB-22, [matrix.md](matrix.md)); executada em 27/10/2026 (RCB-24, [data.md](data.md)) |
+| Estimativa de tempo por combinação: `riscvcnnbench campaign estimate` | Existente (RCB-22, [matrix.md](matrix.md#como-a-estimativa-é-feita)); refeita com o piloto (RCB-23) e conferida com a campanha final |
+| Auditoria (`riscvcnnbench campaign audit`) e pacote de dados para publicação (`riscvcnnbench campaign package`) | Existente (RCB-24, [data.md](data.md)) |
 | Exportação em CSV: `riscvcnnbench report <pasta da campanha>` | Existente (RCB-20, [report.md](report.md)); com colunas `campaign` e `groups` |
 | Gráficos: `riscvcnnbench plot <pasta da campanha>` | Existente (RCB-21, [plots.md](plots.md)); lê o `report/` da campanha e grava em `figures/` |
 
@@ -18,9 +19,11 @@ uv run riscvcnnbench campaign plan campaigns/exemplo.yaml            # combinaç
 uv run riscvcnnbench campaign run campaigns/exemplo.yaml --jobs 4     # executa ou retoma
 uv run riscvcnnbench campaign status campaigns/exemplo.yaml          # estado de cada combinação
 uv run riscvcnnbench campaign estimate campaigns/final.yaml -m results/campaigns/medicao   # tempo estimado
+uv run riscvcnnbench campaign audit results/campaigns/final          # vale como resultado?
+uv run riscvcnnbench campaign package results/campaigns/final -o results/pacotes/dados.tar.gz
 ```
 
-Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [JOBS=N] [VALIDATE=1]`, `make campaign-status MATRIX=...` e `make campaign-estimate MATRIX=... MEASURED="<pastas>" [JOBS=N] [CSV=<arquivo>]`. O `make campaign` roda a campanha inteira dentro de **um** container.
+Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [JOBS=N] [VALIDATE=1]`, `make campaign-status MATRIX=...`, `make campaign-estimate MATRIX=... MEASURED="<pastas>" [JOBS=N] [CSV=<arquivo>]`, `make campaign-audit DIR=...` e `make campaign-package DIRS="<pastas>" OUT=<arquivo>`. O `make campaign` roda a campanha inteira dentro de **um** container e passa a identificação da imagem (`RCB_IMAGE`, `RCB_IMAGE_ID`) para o `metadata.json` de cada execução. A auditoria e o pacote estão em [data.md](data.md).
 
 | Opção | Comandos | Efeito |
 | --- | --- | --- |
@@ -180,12 +183,14 @@ O resultado fica em `campaign.json`, com o hash do gem5, o commit do projeto e s
 | Teste | Confere | Comando |
 | --- | --- | --- |
 | `tests/test_campaign.py` | Matriz de exemplo, mensagens de erro da matriz com linha, campos irrelevantes e repetidas, inválidas, nomes que colidem, pasta da campanha e `--update`, estados (concluída, falhou, interrompida, incompleta, desatualizada, pendente, outra configuração com o mesmo nome), retomada, paralelismo, validação reaproveitada, histórico, CLI. A execução é trocada por um executor falso | `make test` |
+| `tests/test_package.py` | `campaign audit` e `campaign package` sobre campanhas com o executor falso ([data.md](data.md#testes)) | `make test` |
 | `tests/test_campaign_e2e.py` | Matriz pequena executada de verdade (fc S, ref e custom, atomic e timing) com um grupo que falha de propósito: estado e diagnóstico, nome e configuração de cada execução, retomada sem repetir as concluídas, histórico e pares do `compare` sobre a pasta | `make e2e-test` |
 
 ## Limitações
 
 - **A retomada confere o executável do gem5, não o código do projeto.** Se um benchmark ou a configuração gem5 mudarem entre duas sessões, as combinações já concluídas não são refeitas. Cada `metadata.json` registra o commit do projeto e o hash do binário, e cada sessão registra o commit no `campaign.json`. Para refazer tudo depois de mudar o código, use outra pasta (`--output`) ou outro `name`.
-- **Não há estimativa de tempo** por combinação nem ordenação pelas mais longas: isso fica para a RCB-22, com as velocidades medidas no piloto (RCB-23).
+- **Sem ordenação pelas mais longas.** O `run` segue a ordem do plano; a estimativa por combinação existe (`campaign estimate`, RCB-22), mas não muda a ordem.
+- **Não edite a árvore durante uma campanha.** Cada execução grava `git status --porcelain` no início; uma edição no meio deixa as seguintes com `project.dirty: true`, e a `campaign audit` as aponta como problema (foi o que aconteceu no piloto, [pilot.md](pilot.md#problemas-encontrados)).
 - **Uma máquina só.** O paralelismo é em threads dentro de um processo; não há execução distribuída.
 - **Memória.** Cada simulação é um processo do gem5; com muitas tarefas em paralelo nas CPUs detalhadas, confira a memória livre.
 - **Campos com `scenario`.** Um experimento base com `cache` ou `memory` não combina com `scenario` no `set` ou no `vary`; essas combinações saem como inválidas.

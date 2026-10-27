@@ -5,7 +5,7 @@
 | Parte | Situação |
 | --- | --- |
 | `src/riscvcnnbench/plot.py`, `riscvcnnbench plot`, `make plot` | Existente |
-| Figuras com os dados da campanha final | Planejado (RCB-24); hoje só há dados de teste e de conferência |
+| Figuras com os dados da campanha final | Existente (RCB-24): 51 figuras em `results/campaigns/final/figures/`, publicadas no pacote de dados ([data.md](data.md)) |
 
 ## Gerar
 

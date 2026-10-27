@@ -84,7 +84,7 @@ Detalhes de alguns campos:
 - **`branch` / `remote_url`** dizem de onde veio o código: a branch do checkout e a URL do remoto `origin`, sem usuário nem token. No gem5, identificam o fork e a branch com as instruções personalizadas. `branch` fica `null` com HEAD destacado, que é o estado comum de um submódulo depois de `git submodule update`; o `commit` continua identificando o código.
 - **`project.dirty` / `gem5_repository.dirty`** indicam alterações não commitadas no momento da execução. Nesse caso `diffs` aponta para os arquivos `inputs/*.diff`. Arquivos não rastreados não entram no diff; aparecem apenas em `status`.
 - **`gem5_build`** é o registro gravado por `make gem5-build` ao lado do executável (`gem5.opt.build-info.json`): commit, branch e URL do gem5 no momento do build e hash do executável. `matches_executable: true` confirma que o executável usado é o mesmo daquele build. `false` ou `gem5_build: null` significa que o gem5 foi compilado fora de `make gem5-build`, e então o commit do checkout não garante de qual código o executável veio.
-- **`environment`**: `container_image` e `container_image_id` são preenchidos pelos alvos do Makefile (`make run`, `make hello-run-gem5`) e ficam `null` quando se chama a CLI direto no `make shell`. `binary_compiler` é o compilador gravado dentro do próprio binário, que vale mesmo se a toolchain mudar depois.
+- **`environment`**: `container_image` e `container_image_id` são preenchidos pelos alvos do Makefile (`make run`, `make hello-run-gem5` e, desde a RCB-24, `make campaign`) e ficam `null` quando se chama a CLI direto no `make shell`. `binary_compiler` é o compilador gravado dentro do próprio binário, que vale mesmo se a toolchain mudar depois.
 
 ### `stdout.log`
 

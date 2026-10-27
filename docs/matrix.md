@@ -8,11 +8,11 @@
 | `riscvcnnbench campaign estimate` e a tabela `docs/matrix_estimate.csv` | Existente |
 | Validação do `-O3` em `make validate` (`tests/test_compiler_validation.py`) | Existente |
 | Piloto e estimativa refeita com ele | Existente (RCB-23, [pilot.md](pilot.md)) |
-| Execução da campanha final | Planejado (RCB-24) |
+| Execução da campanha final | Existente (RCB-24, 27/10/2026, [data.md](data.md)) |
 
 ```bash
 uv run riscvcnnbench campaign plan campaigns/final.yaml       # as 620 combinações
-make campaign MATRIX=campaigns/final.yaml JOBS=4             # valida e executa (RCB-24)
+make campaign MATRIX=campaigns/final.yaml JOBS=4             # valida e executa (rodou na RCB-24)
 ```
 
 ## Grupos
@@ -145,6 +145,30 @@ O S está todo medido. Para o L, a reta de cada CPU e cenário passa pelas duas 
 
 Por isso, a incerteza do L é bem maior que a do S. O piloto (RCB-23) mediu duas das cinco operações interpoladas, depthwise e pointwise, na minor e na o3-edge. A medição ficou entre 0,83 e 1,14 vez a previsão, e a soma, em 0,99 vez ([pilot.md](pilot.md#tempo-previsto--medido)). Isso dá alguma confiança na interpolação, mas não cobre a im2col, a requantização e o maxpool em L, nem a timing.
 
+### Campanha final: previsto × medido
+
+A campanha final rodou em 27/10/2026 ([data.md](data.md)). Comparando a duração de cada execução (`duration_s` do `runs.csv`) com a desta tabela:
+
+| Origem da estimativa | Combinações | Previsto em série | Medido em série | Medido/previsto |
+| --- | --- | --- | --- | --- |
+| Medida | 364 | 3,67 h | 3,52 h | 0,96 |
+| Modelo | 256 | 7,67 h | 7,91 h | 1,03 |
+| **Total** | **620** | **11,34 h** | **11,43 h** | **1,01** |
+
+Com 4 tarefas, a campanha levou 2 h 52 min, contra cerca de 2 h 50 min previstas, mais 9 min 37 s de validação. Nas combinações estimadas pelo modelo, a razão medido/previsto por operação foi:
+
+| Operação L | Combinações | Medido/previsto | Mediana |
+| --- | --- | --- | --- |
+| conv3x3_direct | 32 | 0,91–1,38 | 1,07 |
+| conv3x3_im2col | 44 | 0,81–1,20 | 0,95 |
+| depthwise3x3 | 28 | 0,66–0,98 | 0,87 |
+| pointwise1x1 | 28 | 0,85–1,08 | 0,96 |
+| maxpool2x2 | 44 | 0,77–1,55 | 1,25 |
+| requant_relu | 44 | 0,66–1,11 | 0,83 |
+| fc | 32 | 1,42–3,48 | 2,10 |
+
+As 4 do grupo compilador, em S, ficaram entre 1,00 e 1,27. O erro grande é o da FC L na custom e na RVV, as 32 da tabela; a ref da FC L estava medida. Essas variantes simulam cerca de 55% das instruções da ref (W de 4,1 e 3,9 M contra 7,4 M), mas levaram quase o mesmo tempo que ela. Na minor e na o3-edge com cache, foram 40 a 58 s contra 51 a 59 s. Nessa operação, então, o tempo do host não acompanha as instruções simuladas. Uma explicação provável, não verificada, é que as três variantes leem os mesmos pesos, e o custo da simulação segue o tráfego de memória. O erro foi compensado por outras operações estimadas para mais, e o total acertou. Para uma estimativa por combinação, o modelo a + b · W não basta em operações limitadas pela memória.
+
 ## Conferência do `-O3`
 
 A issue pede conferir, antes, que as variantes passam com `-O3` e registrar a contagem de instruções. Em 27/10/2026:
@@ -179,7 +203,7 @@ Na ref, o `-O3` muda as instruções em menos de 1% em todas as operações. Na 
 
 ## Limitações
 
-- A estimativa de L interpola entre duas operações amostradas (veja Incerteza); a do S é a duração de uma execução só, que varia com a carga do host.
+- A estimativa de L interpola entre duas operações amostradas (veja Incerteza); a do S é a duração de uma execução só, que varia com a carga do host. Na campanha final, o total acertou, mas a FC L na custom e na RVV levou de 1,4 a 3,5 vezes o previsto ([acima](#campanha-final-previsto--medido)).
 - O tempo com 4 tarefas supõe que as simulações em paralelo não se atrasam umas às outras. As medições já rodaram com 4 tarefas no mesmo host, então isso já está incluído, mas outra carga no host muda o resultado.
 - O modelo não sabe de mudanças no código que mudem W; com outro código, é preciso medir de novo.
 - A matriz não tem caches frias (`cold`), VLEN diferente de 256, a O3 padrão do gem5 nem a CPU atomic: são opções do framework fora da campanha.
