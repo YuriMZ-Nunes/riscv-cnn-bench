@@ -1,4 +1,5 @@
 import json
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -22,6 +23,7 @@ from riscvcnnbench.campaign import (
     record_session,
     run_plan,
     states,
+    tree_warnings,
     validate_campaign,
 )
 from riscvcnnbench.cli import app
@@ -483,3 +485,119 @@ def test_cli_campaign_errors(tmp_path: Path) -> None:
     assert missing.exit_code == 1 and "arquivo não encontrado" in missing.stderr
     assert not_campaign.exit_code == 1
     assert "não é a pasta de uma campanha (falta campaign.yaml)" in not_campaign.stderr
+
+
+def git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.name=teste", "-c", "user.email=teste@exemplo", *args],
+        check=True,
+        capture_output=True,
+    )
+
+
+def repository(path: Path, files: dict[str, str]) -> Path:
+    """Repositório Git temporário com `files` já commitados."""
+    path.mkdir(parents=True)
+    git(path, "init", "-q")
+    for name, text in files.items():
+        write(path / name, text)
+    git(path, "add", "-A")
+    git(path, "commit", "-q", "-m", "inicial")
+    return path
+
+
+def test_tree_warnings_with_a_temporary_repository(tmp_path: Path) -> None:
+    root = repository(tmp_path / "projeto", {"a.txt": "a", ".gitignore": "third_party/\n"})
+    gem5 = repository(root / "third_party" / "gem5", {"SConstruct": "x"})
+
+    assert tree_warnings(root) == []
+    assert tree_warnings(tmp_path / "sem-git") == []
+
+    write(root / "a.txt", "b")
+    write(root / "novo.txt", "c")
+    [warning] = tree_warnings(root)
+    assert warning == (
+        "Aviso: o projeto tem 2 mudança(s) não commitada(s) (M a.txt, ?? novo.txt). As execuções "
+        "vão sair com project.dirty: true e não valem como resultado (campaign audit). Faça o "
+        "commit antes e não altere a árvore durante a campanha; rascunhos ficam em build/."
+    )
+    for name in ("b.txt", "c.txt"):
+        write(root / name, name)
+    assert "(M a.txt, ?? b.txt, ?? c.txt e mais 1)" in tree_warnings(root)[0]
+
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "limpa")
+    write(gem5 / "SConstruct", "y")
+    [warning] = tree_warnings(root)
+    assert warning.startswith(
+        "Aviso: o submódulo do gem5 (third_party/gem5) tem 1 mudança(s) não commitada(s) "
+        "(M SConstruct). As execuções vão sair com gem5_repository.dirty: true"
+    )
+
+
+def provenance_executor(dirty: set[str], other_gem5: set[str]):  # noqa: ANN201
+    """O executor falso com a proveniência que o wrapper grava."""
+    base = fake_executor()
+
+    def run(path: Path, gem5: Path) -> Path:
+        run_dir = base(path, gem5)
+        metadata = json.loads((run_dir / "metadata.json").read_text(encoding="utf-8"))
+        name = metadata["experiment"]["resolved"]["name"]
+        metadata["project"] = {"commit": "abc", "dirty": name in dirty}
+        metadata["gem5_repository"] = {"commit": "def", "dirty": False}
+        metadata["gem5_build"] = {"matches_executable": name not in other_gem5}
+        (run_dir / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+        return run_dir
+
+    return run
+
+
+def test_cli_warns_about_a_dirty_tree_and_dirty_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = matrix(tmp_path, SMALL)
+    gem5 = fake_gem5(tmp_path)
+    root = repository(tmp_path / "projeto", {"a.txt": "a"})
+    dirty, other = FC.format("ref", "timing"), FC.format("custom", "minor")
+    monkeypatch.setattr(campaign_module, "check_environment", lambda _gem5: None)
+    monkeypatch.setattr(campaign_module, "tree_warnings", lambda: tree_warnings(root))
+    monkeypatch.setattr(campaign_module, "execute_planned", provenance_executor({dirty}, {other}))
+    runner = CliRunner()
+
+    # Árvore limpa: sem aviso no início.
+    clean = runner.invoke(app, ["campaign", "run", str(path), "-j", "1", "--gem5", str(gem5)])
+    assert clean.exit_code == 0, clean.output
+    assert "o projeto tem" not in clean.output
+    # Mas as execuções sujas aparecem na linha de cada uma e no fim da sessão.
+    assert f"{dirty}: concluída — 115270 instruções, 66214 ciclos, IPC" in clean.stdout
+    assert any(
+        line.startswith("[") and dirty in line and line.endswith("(project.dirty: true)")
+        for line in clean.stdout.splitlines()
+    )
+    assert any(
+        other in line and line.endswith("(gem5_build.matches_executable: false)")
+        for line in clean.stdout.splitlines()
+    )
+    assert (
+        "Aviso: 2 concluída(s) nesta sessão com a árvore suja ou outro executável do gem5; elas "
+        "não valem como resultado." in clean.stderr
+    )
+
+    status = runner.invoke(app, ["campaign", "status", str(path), "--gem5", str(gem5)])
+    assert status.exit_code == 0, status.output
+    lines = status.stdout.splitlines()
+    start = lines.index("Concluídas que não valem como resultado: 2")
+    assert lines[start + 1].startswith(f"  {dirty}: project.dirty: true (")
+    assert lines[start + 2].startswith(f"  {other}: gem5_build.matches_executable: false (")
+    assert lines[start + 3].startswith("Para refazer com a árvore limpa: riscvcnnbench run ")
+    document = runner.invoke(app, ["campaign", "status", str(path), "--gem5", str(gem5), "--json"])
+    rows = {row["name"]: row for row in json.loads(document.stdout)}
+    assert rows[dirty]["provenance"] == ["project.dirty: true"]
+    assert rows[other]["provenance"] == ["gem5_build.matches_executable: false"]
+    assert rows[FC.format("ref", "minor")]["provenance"] == []
+
+    # Árvore suja: o aviso aparece antes de executar (aqui, nada a executar).
+    write(root / "a.txt", "b")
+    again = runner.invoke(app, ["campaign", "run", str(path), "--gem5", str(gem5)])
+    assert again.exit_code == 0, again.output
+    assert "Aviso: o projeto tem 1 mudança(s) não commitada(s) (M a.txt)." in again.stdout
