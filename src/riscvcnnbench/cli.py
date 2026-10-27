@@ -14,7 +14,8 @@ app = typer.Typer(
         "`validate` e execute com `run`. Cada execução cria uma pasta própria "
         "(veja docs/results.md); `runs` lista as existentes, `stats` mostra as "
         "métricas da região de interesse de uma delas, `compare` compara as variantes, "
-        "`report` exporta tudo em CSV e `plot` gera os gráficos a partir dos CSVs. "
+        "`report` exporta tudo em CSV, `plot` gera os gráficos e `analyze` as tabelas da "
+        "análise a partir dos CSVs. "
         "`campaign` executa uma matriz de experimentos em lote (veja docs/campaigns.md)."
     ),
     epilog=(
@@ -466,6 +467,47 @@ def plot(
     if written.repeated:
         typer.echo(f"  {written.repeated} ponto(s) repetido(s): vale o mais recente")
     typer.echo("  figures.json: contexto, execuções e legenda sugerida de cada figura")
+
+
+@app.command()
+def analyze(
+    root: Annotated[
+        Path,
+        typer.Argument(help="Pasta com o report, como uma campanha."),
+    ] = Path("results"),
+    source: Annotated[
+        Path | None,
+        typer.Option("--input", help="Pasta com runs.csv e pairs.csv. Padrão: <pasta>/report/."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Pasta das tabelas. Padrão: <pasta>/analysis/."),
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Regrava as tabelas se já existirem.")
+    ] = False,
+) -> None:
+    """Gera as tabelas da análise a partir dos CSVs do `report`.
+
+    Instruções e R_I; speedup em ciclos e eficiência S_C/R_I por CPU e cenário;
+    IPC, ciclos relativos ao l1-l2 e faltas de cache; sensibilidade à latência das
+    instruções personalizadas; -O2 × -O3. Entram só execuções e pares válidos, com
+    ciclos, como no `plot`. Grava um CSV por tabela, tables.md e analysis.json.
+    Veja docs/analysis.md.
+    """
+    from riscvcnnbench.analysis import AnalysisError, write_analysis
+    from riscvcnnbench.plot import PlotError
+    from riscvcnnbench.runs import display
+
+    target = output or root / "analysis"
+    try:
+        tables = write_analysis(source or root / "report", target, force)
+    except (AnalysisError, PlotError) as error:
+        _fail(str(error))
+    typer.echo(f"Gravado em {display(target)}:")
+    for table in tables:
+        typer.echo(f"  {table.name}.csv: {len(table.rows)} linha(s)")
+    typer.echo("  tables.md: as tabelas em Markdown; analysis.json: hash das entradas")
 
 
 MatrixArg = Annotated[Path, typer.Argument(help="Matriz da campanha (campaigns/<nome>.yaml).")]

@@ -6,8 +6,8 @@ pois precisa da toolchain RISC-V e do gem5 do fork compilado.
 Roda pela CLI uma matriz pequena (fc S, ref e custom, atomic e timing) com um
 grupo que falha de propósito (argumento inválido), confere o estado de cada
 combinação, a retomada sem repetir as concluídas, os pares do compare, os CSVs
-do report (RCB-20), as figuras do plot (RCB-21) e a estimativa de tempo
-(RCB-22) sobre a pasta da campanha.
+do report (RCB-20), as figuras do plot (RCB-21), as tabelas do analyze (RCB-25)
+e a estimativa de tempo (RCB-22) sobre a pasta da campanha.
 """
 
 import csv
@@ -130,6 +130,20 @@ groups:
     assert [path.suffix for path in files] == [".pdf", ".png"] * 3
     assert all(path.stat().st_size > 0 for path in files)
     assert (figures / "runs.csv").read_bytes() == (root / "report" / "runs.csv").read_bytes()
+
+    # Tabelas da análise (RCB-25) sobre o report real: o par ref→custom da timing.
+    analyze = cli("analyze", str(root))
+    assert analyze.returncode == 0, analyze.stderr
+    with (root / "analysis" / "speedup.csv").open(encoding="utf-8") as handle:
+        speedups = list(csv.DictReader(handle))
+    assert [(row["pair"], row["cpu"], row["scenario"]) for row in speedups] == [
+        ("ref→custom", "timing", "l1-l2")
+    ]
+    assert float(speedups[0]["s_c"]) > 1
+    with (root / "analysis" / "instructions.csv").open(encoding="utf-8") as handle:
+        [instructions] = list(csv.DictReader(handle))
+    assert (instructions["bench"], instructions["invariant"]) == ("fc", "true")
+    assert float(instructions["r_i_custom"]) == pytest.approx(float(pairs[0]["r_i"]))
 
     # A própria campanha como medição (RCB-22): as concluídas valem pela duração
     # medida; a que nunca terminou não tem instruções medidas.
