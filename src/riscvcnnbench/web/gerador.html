@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de experimentos</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #deded8;
+    --accent: #2f5d8a; --accent-soft: #e6eef6; --bad: #a33a2a; --bad-soft: #fbeae6;
+    --l1: #dcefdc; --l2: #f3ecd2; --dram: #f6dcd5; --code: #f1f1ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161716; --panel: #1f201f; --text: #e8e8e4; --muted: #a2a29b; --line: #34352f;
+      --accent: #8db6dd; --accent-soft: #23303c; --bad: #f0a291; --bad-soft: #3a2420;
+      --l1: #233a26; --l2: #3a3420; --dram: #42261f; --code: #262725;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 24px 8px; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 16px 24px 32px; }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); padding: 12px 16px 24px; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  section h2 { margin: 0 0 8px; font-size: 15px; }
+  section h2 small { color: var(--muted); font-weight: normal; margin-left: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+  .choice { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+  .choice:hover { background: var(--accent-soft); }
+  .choice input { margin-top: 3px; accent-color: var(--accent); }
+  .choice small { display: block; color: var(--muted); font-size: 12.5px; }
+  .field { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+  .field span { font-size: 13px; color: var(--muted); }
+  input[type=text], input[type=number] { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row .field { flex: 1 1 160px; }
+  .sticky { position: sticky; top: 12px; }
+  .summary { font-size: 18px; font-weight: 600; }
+  .muted { color: var(--muted); font-size: 13.5px; }
+  #problems { margin: 8px 0 0; padding: 10px 14px 10px 28px; background: var(--bad-soft); color: var(--bad); border-radius: 8px; }
+  pre { background: var(--code); border-radius: 8px; padding: 10px 12px; overflow: auto; font: 13px/1.5 ui-monospace, "SFMono-Regular", Menlo, monospace; margin: 8px 0; }
+  .buttons { display: flex; gap: 8px; }
+  button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--panel); cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  td.L1d { background: var(--l1); } td.L2 { background: var(--l2); } td.DRAM, td.memória { background: var(--dram); }
+  .table-wrap { overflow-x: auto; }
+  select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .custom { border-left: 3px solid var(--accent-soft); padding-left: 12px; margin: 6px 0 12px; }
+  .levels { display: grid; grid-template-columns: 70px minmax(0, 2fr) minmax(0, 1fr); gap: 4px 10px; align-items: end; }
+  .level { display: flex; gap: 6px; align-items: center; padding-bottom: 8px; font-weight: 600; }
+  input:disabled { opacity: .45; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Gerador de experimentos</h1>
+  <p>Escolha o que simular e o gerador escreve o YAML do experimento, ou a matriz da campanha quando há várias combinações. As opções vêm do próprio riscv-cnn-bench, e só as válidas aparecem. Versão <span id="version"></span>.</p>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>1. Operação</h2>
+      <div class="grid" id="ops"></div>
+    </section>
+    <section>
+      <h2>2. Tamanho</h2>
+      <div class="grid" id="sizes"></div>
+    </section>
+    <section>
+      <h2>3. Implementações <small>compare as três</small></h2>
+      <div class="grid" id="variants"></div>
+    </section>
+    <section>
+      <h2>4. Processador</h2>
+      <div class="grid" id="cpus"></div>
+      <div class="row">
+        <label class="field"><span>Clock</span><input type="text" id="clock"></label>
+      </div>
+      <div id="latencyBox">
+        <h2>Latência das instruções personalizadas <small>só na custom, nas CPUs minor, o3 e o3-edge</small></h2>
+        <div class="grid" id="latencies"></div>
+        <label class="field"><span>Outra latência (opcional)</span><input type="number" id="extraLatency" min="1" max="64"></label>
+      </div>
+      <div id="vlenBox">
+        <h2>VLEN <small>só na rvv</small></h2>
+        <div class="grid" id="vlens"></div>
+      </div>
+    </section>
+    <section>
+      <h2>5. Memória</h2>
+      <div class="grid" id="scenarios"></div>
+      <label class="choice"><input type="checkbox" id="useCustom"><span><strong>memória personalizada</strong><small>tamanhos e associatividade de cada cache, tipo e tamanho da memória</small></span></label>
+      <div id="customBox" class="custom">
+        <p class="muted">Vários tamanhos separados por vírgula viram uma varredura (por exemplo, <code>8KiB, 16KiB, 32KiB</code>). Desmarque um nível para tirá-lo; a L2 exige a L1i e a L1d.</p>
+        <div class="levels">
+          <label class="level"><input type="checkbox" id="l1iOn" checked> L1i</label>
+          <label class="field"><span>tamanho(s)</span><input type="text" id="l1iSize"></label>
+          <label class="field"><span>associatividade</span><input type="number" id="l1iAssoc" min="1"></label>
+          <label class="level"><input type="checkbox" id="l1dOn" checked> L1d</label>
+          <label class="field"><span>tamanho(s)</span><input type="text" id="l1dSize"></label>
+          <label class="field"><span>associatividade</span><input type="number" id="l1dAssoc" min="1"></label>
+          <label class="level"><input type="checkbox" id="l2On" checked> L2</label>
+          <label class="field"><span>tamanho(s)</span><input type="text" id="l2Size"></label>
+          <label class="field"><span>associatividade</span><input type="number" id="l2Assoc" min="1"></label>
+        </div>
+        <div class="row">
+          <label class="field"><span>Memória principal</span><select id="memoryType"></select></label>
+          <label class="field"><span>Tamanho da memória</span><input type="text" id="memorySize"></label>
+        </div>
+        <p class="muted">simple: latência fixa; ddr4: DDR4-2400 com controlador (a dos cenários). O tamanho da memória não muda os resultados: os programas usam menos de 1 MiB.</p>
+      </div>
+      <h2>Estado das caches no início da medição</h2>
+      <div class="grid" id="cacheStates"></div>
+    </section>
+    <section>
+      <h2>6. Compilação e dados</h2>
+      <div class="grid" id="flags"></div>
+      <h2>Conjunto de dados</h2>
+      <div class="grid" id="datasets"></div>
+    </section>
+    <section>
+      <h2>7. Nome</h2>
+      <div class="row">
+        <label class="field"><span>Nome (letras, números, _ e -)</span><input type="text" id="name" value="meu_teste"></label>
+        <label class="field"><span>Descrição (opcional)</span><input type="text" id="description"></label>
+      </div>
+    </section>
+  </div>
+  <div>
+    <div class="sticky">
+      <section>
+        <div class="summary" id="count"></div>
+        <div class="muted" id="estimate"></div>
+        <div class="row">
+          <label class="field"><span>Tarefas em paralelo (estimativa)</span><input type="number" id="jobs" value="4" min="1"></label>
+        </div>
+        <ul id="problems" hidden></ul>
+      </section>
+      <section>
+        <h2>YAML</h2>
+        <pre id="yaml"></pre>
+        <div class="buttons">
+          <button id="download">Baixar YAML</button>
+          <button id="copy" class="secondary">Copiar</button>
+        </div>
+      </section>
+      <section>
+        <h2>Como rodar</h2>
+        <pre id="commands"></pre>
+        <p class="muted">Guarde o arquivo em <code>build/meus/</code>: a pasta fica fora do Git, e as execuções não saem marcadas como árvore suja. O <code>make campaign-plan</code> mostra as combinações antes de rodar.</p>
+      </section>
+      <section>
+        <h2>Onde ficam os dados <small>pela capacidade das caches</small></h2>
+        <div class="table-wrap"><table id="residence"></table></div>
+        <p class="muted">L1d e L2: os dados cabem naquele nível. DRAM: não cabem nas caches, e a memória tende a limitar o ganho (docs/scenarios.md e docs/analysis.md).</p>
+      </section>
+    </div>
+  </div>
+</main>
+<script id="rcb-data" type="application/json">__RCB_DATA__</script>
+<script>
+__RCB_SCRIPT__
+</script>
+</body>
+</html>

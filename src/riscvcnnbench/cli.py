@@ -510,6 +510,49 @@ def analyze(
     typer.echo("  tables.md: as tabelas em Markdown; analysis.json: hash das entradas")
 
 
+@app.command()
+def gerador(
+    output: Annotated[Path, typer.Option("--output", "-o", help="Arquivo HTML a gravar.")] = Path(
+        "build/gerador.html"
+    ),
+    measured: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--measured",
+            "-m",
+            help="Pasta com execuções medidas, para estimar o tempo (repita para várias).",
+        ),
+    ] = None,
+    force: Annotated[bool, typer.Option("--force", help="Regrava a página se já existir.")] = False,
+) -> None:
+    """Grava uma página HTML para montar experimentos e campanhas sem escrever YAML.
+
+    Abra o arquivo no navegador (não precisa de servidor nem de internet): escolha
+    operação, tamanho, variantes, CPUs, memória e flags, e a página mostra o YAML,
+    o número de simulações, onde ficam os dados e o comando para rodar. As opções
+    vêm do código do projeto. Com --measured, estima o tempo pelo modelo do
+    `campaign estimate`. Veja docs/generator.md.
+    """
+    from riscvcnnbench.generator import GeneratorError, write_page
+    from riscvcnnbench.runs import display
+
+    try:
+        data = write_page(output, measured, force)
+    except GeneratorError as error:
+        _fail(str(error))
+    typer.echo(f"Página gravada em {display(output)}")
+    typer.echo(f"  {len(data['ops'])} operação(ões), {len(data['scenarios']) - 1} cenário(s)")
+    estimate = data["estimate"]
+    if estimate:
+        typer.echo(
+            f"  estimativa de tempo a partir de {estimate['samples']} execução(ões) medida(s), "
+            f"{len(estimate['fits'])} reta(s) por CPU e cenário"
+        )
+    elif measured:
+        typer.echo("  sem estimativa: nenhuma execução medida nas pastas dadas")
+    typer.echo("Abra no navegador (fora do container), por exemplo: xdg-open " + str(output))
+
+
 MatrixArg = Annotated[Path, typer.Argument(help="Matriz da campanha (campaigns/<nome>.yaml).")]
 OutputOption = Annotated[
     Path | None,

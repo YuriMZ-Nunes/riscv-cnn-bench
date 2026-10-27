@@ -2,6 +2,8 @@
 
 Um experimento é um arquivo YAML em `experiments/` que escolhe **o que** rodar (benchmark, variante do kernel e flags), **em qual máquina** (CPU, caches, memória) e **onde** salvar. Caches e memória podem vir de um cenário nomeado (`scenario`), descrito em [scenarios.md](scenarios.md).
 
+Para não escrever o YAML à mão, use o gerador: `make gerador` grava uma página que monta o experimento, ou a matriz de uma campanha, a partir de escolhas num formulário ([generator.md](generator.md)).
+
 Só `name` e `benchmark.name` são obrigatórios. Todo campo omitido usa um padrão que reproduz a configuração baseline de `configs/gem5/se_riscv.py`.
 
 ```bash
