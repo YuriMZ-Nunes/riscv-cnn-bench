@@ -9,7 +9,7 @@ Resultado da execução da matriz final ([matrix.md](matrix.md)) e o pacote em q
 | Pacote de dados: `riscvcnnbench campaign package` | Existente |
 | Release no GitHub com o pacote | Existente: [`dados-v1`](https://github.com/YuriMZ-Nunes/riscv-cnn-bench/releases/tag/dados-v1), 27/10/2026 |
 | Depósito no Zenodo e DOI | Existente: [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495) (v1); todas as versões: [10.5281/zenodo.23698494](https://doi.org/10.5281/zenodo.23698494) |
-| Análise dos resultados | Planejado (RCB-25) |
+| Análise dos resultados | Existente (RCB-25, [analysis.md](analysis.md)) |
 
 ## O que rodou
 

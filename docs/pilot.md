@@ -48,7 +48,7 @@ Isso é plausível para um núcleo de borda fora de ordem de 2 vias: fica abaixo
 | custom (latências 3 e 6) | 1,376–1,558 | 0,659–1,180 |
 | rvv | 0,889–1,252 | 0,502–0,609 |
 
-O IPC menor da RVV é esperado: cada instrução vetorial conta como uma, mas ocupa a unidade por vários ciclos e vira vários micro-ops. A latência 6 baixa o IPC da custom na minor, mas quase não muda o da o3-edge, que esconde parte da latência. É a hipótese H3, a ser analisada com a campanha (RCB-25).
+O IPC menor da RVV é esperado: cada instrução vetorial conta como uma, mas ocupa a unidade por vários ciclos e vira vários micro-ops. A latência 6 baixa o IPC da custom na minor, mas quase não muda o da o3-edge, que esconde parte da latência. É a hipótese H3, analisada com a campanha em [analysis.md](analysis.md#hipóteses).
 
 ## Determinismo
 

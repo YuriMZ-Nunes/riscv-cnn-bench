@@ -22,7 +22,7 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
 	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare \
 	campaign-plan campaign campaign-status campaign-estimate campaign-audit campaign-package \
-	report plot
+	report plot analyze
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -165,3 +165,6 @@ report: ## Exporta as execuções em CSV (runs.csv e pairs.csv): make report [DI
 
 plot: ## Gráficos em PDF e PNG a partir dos CSVs do report: make plot [DIR=results/campaigns/<nome>] [FORCE=1]
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench plot "$(or $(DIR),results)" $(if $(FORCE),--force)'
+
+analyze: ## Tabelas da análise a partir dos CSVs do report: make analyze [DIR=results/campaigns/<nome>] [FORCE=1]
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench analyze "$(or $(DIR),results)" $(if $(FORCE),--force)'
