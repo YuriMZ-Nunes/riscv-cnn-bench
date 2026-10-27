@@ -19,6 +19,7 @@ from pydantic import (
     ValidationError,
     ValidationInfo,
     field_validator,
+    model_serializer,
     model_validator,
 )
 
@@ -119,12 +120,70 @@ class CpuConfig(StrictModel):
         return self
 
 
+# Padrões de configs/gem5/se_riscv_configurable.py para os ajustes das caches
+# (RCB-32). Um ajuste igual ao padrão sai da configuração resolvida, como se fosse
+# omitido: assim a chave das execuções anteriores não muda.
+CACHE_LATENCY = {"l1i": 2, "l1d": 2, "l2": 10}
+CACHE_MSHRS = 16
+CACHE_TARGETS = 20
+CACHE_LINE = 64
+NO_PREFETCHER = "none"
+UNITS = {"KiB": 1024, "MiB": 1024**2, "GiB": 1024**3}
+
+
+def size_bytes(text: str) -> int:
+    """32KiB → 32768 (o formato de SIZE_PATTERN)."""
+    for unit, factor in UNITS.items():
+        if text.endswith(unit):
+            return int(text.removesuffix(unit)) * factor
+    raise ValueError(f"tamanho sem unidade: {text!r}")
+
+
 class CacheLevelConfig(StrictModel):
     size: str = Field(pattern=SIZE_PATTERN)
     assoc: int = Field(default=4, ge=1)
+    latency: int | None = Field(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Ciclos de tag, dados e resposta. Padrão: 2 na L1i e na L1d, 10 na L2.",
+    )
+    mshrs: int | None = Field(
+        default=None, ge=1, le=1024, description="Faltas pendentes ao mesmo tempo. Padrão: 16."
+    )
+    targets: int | None = Field(
+        default=None, ge=1, le=1024, description="Acessos à espera por MSHR. Padrão: 20."
+    )
+    prefetcher: Literal["none", "stride", "tagged"] = Field(
+        default=NO_PREFETCHER,
+        description="none | stride (passo constante) | tagged (próxima linha).",
+    )
+
+    @field_validator("mshrs")
+    @classmethod
+    def default_mshrs(cls, value: int | None) -> int | None:
+        return None if value == CACHE_MSHRS else value
+
+    @field_validator("targets")
+    @classmethod
+    def default_targets(cls, value: int | None) -> int | None:
+        return None if value == CACHE_TARGETS else value
+
+    @model_serializer(mode="wrap")
+    def without_defaults(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        for key in ("latency", "mshrs", "targets"):
+            if data.get(key) is None:
+                data.pop(key, None)
+        if data.get("prefetcher") == NO_PREFETCHER:
+            data.pop("prefetcher", None)
+        return data
 
 
 class CacheConfig(StrictModel):
+    line: Literal[32, 64, 128] | None = Field(
+        default=None, description="Linha de todas as caches, em bytes. Padrão: 64."
+    )
     l1i: CacheLevelConfig | None = None
     l1d: CacheLevelConfig | None = None
     l2: CacheLevelConfig | None = None
@@ -134,6 +193,36 @@ class CacheConfig(StrictModel):
         if self.l2 and not (self.l1i and self.l1d):
             raise ValueError("cache.l2 requer cache.l1i e cache.l1d")
         return self
+
+    @model_validator(mode="after")
+    def gem5_geometry(self) -> "CacheConfig":
+        """Ajustes iguais ao padrão viram omitidos; conjuntos em potência de 2."""
+        if self.line == CACHE_LINE:
+            self.line = None
+        line = self.line or CACHE_LINE
+        for level, default in CACHE_LATENCY.items():
+            cache = getattr(self, level)
+            if cache is None:
+                continue
+            if cache.latency == default:
+                cache.latency = None
+            block = line * cache.assoc
+            total = size_bytes(cache.size)
+            sets = total // block
+            if total % block or sets & (sets - 1) or sets < 1:
+                raise ValueError(
+                    f"cache.{level}: {cache.size} com associatividade {cache.assoc} e linha de "
+                    f"{line} bytes não dá um número de conjuntos potência de 2, como o gem5 "
+                    "exige (tamanho ÷ (linha × associatividade))"
+                )
+        return self
+
+    @model_serializer(mode="wrap")
+    def without_default_line(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if data.get("line") is None:
+            data.pop("line", None)
+        return data
 
 
 class MemoryConfig(StrictModel):
@@ -216,10 +305,18 @@ class Experiment(StrictModel):
         args = [f"--arg={arg}" for arg in self.benchmark.args]
         args += [f"--cpu={self.cpu.model}", f"--clock={self.cpu.clock}", f"--vlen={self.cpu.vlen}"]
         args += [f"--custom-latency={self.cpu.custom_latency}"]
+        if self.cache.line:
+            args += [f"--cache-line={self.cache.line}"]
         for level in ("l1i", "l1d", "l2"):
             cache = getattr(self.cache, level)
             if cache:
                 args += [f"--{level}-size={cache.size}", f"--{level}-assoc={cache.assoc}"]
+                for name in ("latency", "mshrs", "targets"):
+                    value = getattr(cache, name)
+                    if value is not None:
+                        args.append(f"--{level}-{name}={value}")
+                if cache.prefetcher != NO_PREFETCHER:
+                    args.append(f"--{level}-prefetcher={cache.prefetcher}")
         args += [f"--mem-type={self.memory.type}", f"--mem-size={self.memory.size}"]
         args += [f"--roi-caches={self.benchmark.cache_state}"]
         return args

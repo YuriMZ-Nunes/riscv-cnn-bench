@@ -76,6 +76,70 @@ def test_minimal_uses_defaults(tmp_path: Path) -> None:
     ]
 
 
+def test_cache_tuning(tmp_path: Path) -> None:
+    """Ajustes das caches (RCB-32): só os diferentes do padrão chegam ao gem5 e à
+    configuração resolvida, para a chave das execuções anteriores não mudar."""
+    text = (
+        VALID_START
+        + "cpu:\n  model: minor\ncache:\n  line: 128\n"
+        + "  l1i:\n    size: 32KiB\n    latency: 2\n    mshrs: 16\n    targets: 20\n"
+        + "  l1d:\n    size: 32KiB\n    latency: 3\n    mshrs: 4\n    targets: 8\n"
+        + "    prefetcher: stride\n"
+        + "  l2:\n    size: 256KiB\n    assoc: 8\n    latency: 10\n    prefetcher: none\n"
+    )
+    config = load_experiment(write(tmp_path, text))
+
+    assert config.model_dump(mode="json")["cache"] == {
+        "line": 128,
+        "l1i": {"size": "32KiB", "assoc": 4},
+        "l1d": {
+            "size": "32KiB",
+            "assoc": 4,
+            "latency": 3,
+            "mshrs": 4,
+            "targets": 8,
+            "prefetcher": "stride",
+        },
+        "l2": {"size": "256KiB", "assoc": 8},
+    }
+    assert config.gem5_args()[4:13] == [
+        "--cache-line=128",
+        "--l1i-size=32KiB",
+        "--l1i-assoc=4",
+        "--l1d-size=32KiB",
+        "--l1d-assoc=4",
+        "--l1d-latency=3",
+        "--l1d-mshrs=4",
+        "--l1d-targets=8",
+        "--l1d-prefetcher=stride",
+    ]
+    # Valores padrão escritos ou omitidos dão a mesma configuração resolvida.
+    plain = load_experiment(
+        write(
+            tmp_path,
+            VALID_START + "cache:\n  line: 64\n  l1d:\n    size: 32KiB\n    latency: 2\n",
+        )
+    )
+    omitted = load_experiment(write(tmp_path, VALID_START + "cache:\n  l1d:\n    size: 32KiB\n"))
+    assert plain.model_dump(mode="json") == omitted.model_dump(mode="json")
+    assert omitted.model_dump(mode="json")["cache"] == {
+        "l1i": None,
+        "l1d": {"size": "32KiB", "assoc": 4},
+        "l2": None,
+    }
+    tuning = ("--cache-line", "--l1d-latency", "--l1d-mshrs", "--l1d-targets", "--l1d-prefetcher")
+    assert not any(arg.startswith(tuning) for arg in omitted.gem5_args())
+
+
+def test_scenarios_have_no_tuning() -> None:
+    """Os cenários dos resultados publicados continuam com a mesma configuração."""
+    for scenario in load_scenarios().values():
+        cache = scenario.cache.model_dump(mode="json")
+        assert "line" not in cache
+        for level in ("l1i", "l1d", "l2"):
+            assert set(cache[level] or {}) <= {"size", "assoc"}
+
+
 def test_cache_example_gem5_args() -> None:
     config = load_experiment(PROJECT_ROOT / "experiments/hello_param_cache.yaml")
 
@@ -211,6 +275,39 @@ VALID_START = "name: x\nbenchmark:\n  name: hello_riscv\n"
         (
             VALID_START + "cache:\n  l2:\n    size: 1MiB\n",
             "linha 4: cache: cache.l2 requer cache.l1i e cache.l1d",
+        ),
+        (
+            VALID_START + "cache:\n  l1d:\n    size: 48KiB\n",
+            "linha 4: cache: cache.l1d: 48KiB com associatividade 4 e linha de 64 bytes não dá um "
+            "número de conjuntos potência de 2, como o gem5 exige (tamanho ÷ (linha × "
+            "associatividade))",
+        ),
+        (
+            VALID_START + "cache:\n  line: 128\n  l1d:\n    size: 1KiB\n    assoc: 16\n",
+            "linha 4: cache: cache.l1d: 1KiB com associatividade 16 e linha de 128 bytes não dá "
+            "um número de conjuntos potência de 2, como o gem5 exige (tamanho ÷ (linha × "
+            "associatividade))",
+        ),
+        (
+            VALID_START + "cache:\n  line: 96\n",
+            "linha 5: cache.line: valor 96 inválido; use 32, 64 ou 128",
+        ),
+        (
+            VALID_START + "cache:\n  l1d:\n    size: 32KiB\n    latency: 0\n",
+            "linha 7: cache.l1d.latency: deve ser no mínimo 1, mas recebeu 0",
+        ),
+        (
+            VALID_START + "cache:\n  l1d:\n    size: 32KiB\n    mshrs: 2000\n",
+            "linha 7: cache.l1d.mshrs: deve ser no máximo 1024, mas recebeu 2000",
+        ),
+        (
+            VALID_START + "cache:\n  l1d:\n    size: 32KiB\n    prefetcher: next\n",
+            "linha 7: cache.l1d.prefetcher: valor 'next' inválido; use 'none', 'stride' ou "
+            "'tagged'",
+        ),
+        (
+            VALID_START + "cache:\n  l1d:\n    size: 32KiB\n    prefetch: stride\n",
+            "linha 7: cache.l1d.prefetch: campo desconhecido; você quis dizer 'prefetcher'?",
         ),
         (
             VALID_START + "cpu:\n  custom_latency: 6\n",

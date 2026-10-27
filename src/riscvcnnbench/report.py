@@ -25,6 +25,7 @@ from riscvcnnbench.metric import (
     Pair,
     Result,
     RunMetrics,
+    cache_tuning,
     collect,
     compare,
     load_metrics,
@@ -77,6 +78,7 @@ RUN_COLUMNS = [
     "memory",
     "memory_size",
     "cache_state",
+    "cache_tuning",
     # Linha RESULT
     "checksum",
     "mismatches",
@@ -295,6 +297,7 @@ def run_row(
         "memory": memory.get("type"),
         "memory_size": memory.get("size"),
         "cache_state": benchmark.get("cache_state"),
+        "cache_tuning": cache_tuning(resolved) or None,
         "checksum": result.checksum if result else None,
         "mismatches": result.mismatches if result else None,
         "program_exit_code": metadata.get("program_exit_code"),

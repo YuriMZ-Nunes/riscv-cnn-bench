@@ -10,6 +10,13 @@ const RCB = (() => {
   const PLAIN = /^[A-Za-z_][A-Za-z0-9_.@-]*$/;
   const LEVELS = ["l1i", "l1d", "l2"];
   const LEVEL_NAMES = { l1i: "L1i", l1d: "L1d", l2: "L2" };
+  // Ajustes das caches e o nome curto no rótulo do cenário (metric.CACHE_TUNING).
+  const TUNING = [
+    ["latency", "lat"],
+    ["mshrs", "mshrs"],
+    ["targets", "tgts"],
+    ["prefetcher", "pf"],
+  ];
   const UNITS = { KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3 };
 
   // YAML ------------------------------------------------------------------------
@@ -69,24 +76,44 @@ const RCB = (() => {
     return lists.reduce((acc, list) => acc.flatMap((prefix) => list.map((v) => [...prefix, v])), [[]]);
   }
 
+  // Um nível da memória personalizada como fica na configuração resolvida: os
+  // ajustes iguais ao padrão saem (config.CacheLevelConfig).
+  function levelConfig(level, size, prefetcher, config, data) {
+    const defaults = data.memory.custom[level];
+    const found = { size, assoc: config.assoc };
+    for (const key of ["latency", "mshrs", "targets"]) {
+      if (config[key] !== undefined && config[key] !== null && config[key] !== defaults[key]) {
+        found[key] = config[key];
+      }
+    }
+    if (prefetcher !== data.memory.noPrefetcher) found.prefetcher = prefetcher;
+    return found;
+  }
+
+  const prefetchersOf = (config, data) => config.prefetchers || [data.memory.noPrefetcher];
+
   // As configurações de memória escolhidas: os cenários nomeados, "sem cenário" e
-  // cada combinação de tamanhos da memória personalizada (`cache` e `memory`).
+  // cada combinação de tamanhos e prefetchers da memória personalizada.
   function memories(state, data) {
     const found = state.scenarios.map((id) => ({
       scenario: id,
       cache: null,
+      line: null,
       memoryType: scenarioInfo(data, id).memory,
       memorySize: data.memory.default.size,
     }));
     const custom = state.custom;
     if (custom) {
       const levels = LEVELS.filter((level) => custom[level]);
-      for (const sizes of product(levels.map((level) => custom[level].sizes))) {
+      const options = levels.map((level) => product([custom[level].sizes, prefetchersOf(custom[level], data)]));
+      const line = custom.line && custom.line !== data.memory.line ? custom.line : null;
+      for (const picks of product(options)) {
         const cache = {};
         levels.forEach((level, index) => {
-          cache[level] = { size: sizes[index], assoc: custom[level].assoc };
+          const [size, prefetcher] = picks[index];
+          cache[level] = levelConfig(level, size, prefetcher, custom[level], data);
         });
-        found.push({ scenario: "", cache, memoryType: custom.memoryType, memorySize: custom.memorySize });
+        found.push({ scenario: "", cache, line, memoryType: custom.memoryType, memorySize: custom.memorySize });
       }
     }
     return found;
@@ -141,6 +168,7 @@ const RCB = (() => {
         cpu,
         scenario: memory.scenario,
         cache: memory.cache,
+        line: memory.line,
         memoryType: memory.memoryType,
         memorySize: memory.memorySize,
         cacheState,
@@ -156,11 +184,22 @@ const RCB = (() => {
 
   function customProblems(custom, data) {
     const found = [];
+    const line = custom.line || data.memory.line;
+    if (!data.memory.lines.includes(line)) found.push(`Linha: use ${data.memory.lines.join(", ")} bytes.`);
     for (const level of LEVELS) {
       const config = custom[level];
       if (!config) continue;
       const name = LEVEL_NAMES[level];
       if (!config.sizes.length) found.push(`${name}: informe pelo menos um tamanho.`);
+      if (!prefetchersOf(config, data).length) found.push(`${name}: escolha pelo menos um prefetcher (ou nenhum).`);
+      const labels = { latency: "latência", mshrs: "MSHRs", targets: "alvos por MSHR" };
+      for (const [key, label] of Object.entries(labels)) {
+        const value = config[key];
+        const [low, high] = data.memory.bounds[key];
+        if (value !== undefined && value !== null && !(Number.isInteger(value) && value >= low && value <= high)) {
+          found.push(`${name}: ${label} deve ser um inteiro de ${low} a ${high}.`);
+        }
+      }
       if (!Number.isInteger(config.assoc) || config.assoc < 1) {
         found.push(`${name}: a associatividade deve ser um inteiro a partir de 1.`);
       }
@@ -170,11 +209,11 @@ const RCB = (() => {
           found.push(`${name}: "${size}": ${data.hints.size}.`);
           continue;
         }
-        const sets = total / (data.memory.line * config.assoc);
+        const sets = total / (line * config.assoc);
         if (Number.isInteger(config.assoc) && config.assoc >= 1 && !(Number.isInteger(sets) && sets >= 1 && (sets & (sets - 1)) === 0)) {
           found.push(
-            `${name}: ${size} com associatividade ${config.assoc} não dá um número de conjuntos ` +
-              `potência de 2 (tamanho ÷ (${data.memory.line} × associatividade)).`
+            `${name}: ${size} com associatividade ${config.assoc} e linha de ${line} bytes não dá um ` +
+              "número de conjuntos potência de 2 (tamanho ÷ (linha × associatividade))."
           );
         }
       }
@@ -245,7 +284,7 @@ const RCB = (() => {
       type: memory.memoryType !== data.memory.default.type ? memory.memoryType : undefined,
       size: memory.memorySize !== data.memory.default.size ? memory.memorySize : undefined,
     };
-    return { cache: memory.cache, memory: memoryFields };
+    return { cache: { line: memory.line || undefined, ...memory.cache }, memory: memoryFields };
   }
 
   function experimentDocument(state, data, combo) {
@@ -303,11 +342,18 @@ const RCB = (() => {
     }
     const custom = state.custom;
     if (custom) {
-      const memory = [];
+      const memory = [["cache.line", [custom.line || data.memory.line], data.memory.line]];
       for (const level of LEVELS) {
-        if (!custom[level]) continue;
-        memory.push([`cache.${level}.size`, custom[level].sizes, null]);
-        memory.push([`cache.${level}.assoc`, [custom[level].assoc], null]);
+        const config = custom[level];
+        if (!config) continue;
+        const defaults = data.memory.custom[level];
+        memory.push([`cache.${level}.size`, config.sizes, null]);
+        memory.push([`cache.${level}.assoc`, [config.assoc], null]);
+        for (const key of ["latency", "mshrs", "targets"]) {
+          const value = config[key] === undefined || config[key] === null ? defaults[key] : config[key];
+          memory.push([`cache.${level}.${key}`, [value], defaults[key]]);
+        }
+        memory.push([`cache.${level}.prefetcher`, prefetchersOf(config, data), data.memory.noPrefetcher]);
       }
       memory.push(["memory.type", [custom.memoryType], data.memory.default.type]);
       memory.push(["memory.size", [custom.memorySize], data.memory.default.size]);
@@ -352,7 +398,16 @@ const RCB = (() => {
     if (!label && !combo.cache) label = data.noScenarioLabel;
     if (!label) {
       const levels = LEVELS.filter((level) => combo.cache[level]).map((l) => `${l}=${combo.cache[l].size}`);
-      label = [...(levels.length ? levels : ["sem-cache"]), combo.memoryType].join(",");
+      const tuning = combo.line ? [`line=${combo.line}`] : [];
+      for (const level of LEVELS) {
+        for (const [key, short] of TUNING) {
+          const value = combo.cache[level] && combo.cache[level][key];
+          if (value !== undefined && value !== null && value !== data.memory.noPrefetcher) {
+            tuning.push(`${level}.${short}=${value}`);
+          }
+        }
+      }
+      label = [...(levels.length ? levels : ["sem-cache"]), combo.memoryType, ...tuning].join(",");
     }
     return label + (combo.cacheState === "cold" ? ",cold" : "");
   }
@@ -528,9 +583,24 @@ if (typeof document !== "undefined") {
     );
     const defaults = DATA.memory.custom;
     for (const level of ["l1i", "l1d", "l2"]) {
-      $(`${level}Size`).value = defaults[level].size;
-      $(`${level}Assoc`).value = defaults[level].assoc;
+      for (const key of ["size", "assoc", "latency", "mshrs", "targets"]) {
+        $(`${level}${key[0].toUpperCase()}${key.slice(1)}`).value = defaults[level][key];
+      }
+      choice(
+        $(`${level}Prefetchers`),
+        "checkbox",
+        `${level}Prefetcher`,
+        DATA.memory.prefetchers.map((p) => ({ value: p, title: p === DATA.memory.noPrefetcher ? "sem prefetcher" : p })),
+        [DATA.memory.noPrefetcher]
+      );
     }
+    for (const line of DATA.memory.lines) {
+      const option = document.createElement("option");
+      option.value = line;
+      option.textContent = `${line} bytes${line === DATA.memory.line ? " (padrão)" : ""}`;
+      $("cacheLine").append(option);
+    }
+    $("cacheLine").value = DATA.memory.line;
     for (const type of DATA.memory.types) {
       const option = document.createElement("option");
       option.value = option.textContent = type;
@@ -539,8 +609,10 @@ if (typeof document !== "undefined") {
     $("memoryType").value = defaults.type;
     $("memorySize").value = DATA.memory.default.size;
     $("clock").value = DATA.clock.default;
-    const inputs = ["name", "description", "clock", "extraLatency", "jobs", "useCustom", "memoryType", "memorySize"];
-    for (const level of ["l1i", "l1d", "l2"]) inputs.push(`${level}On`, `${level}Size`, `${level}Assoc`);
+    const inputs = ["name", "description", "clock", "extraLatency", "jobs", "useCustom", "memoryType", "memorySize", "cacheLine"];
+    for (const level of ["l1i", "l1d", "l2"]) {
+      inputs.push(`${level}On`, `${level}Size`, `${level}Assoc`, `${level}Latency`, `${level}Mshrs`, `${level}Targets`);
+    }
     for (const id of inputs) {
       $(id).addEventListener("input", update);
       $(id).addEventListener("change", update);
@@ -553,10 +625,21 @@ if (typeof document !== "undefined") {
 
   function customState() {
     if (!$("useCustom").checked) return null;
-    const custom = { memoryType: $("memoryType").value, memorySize: $("memorySize").value.trim() };
+    const custom = {
+      memoryType: $("memoryType").value,
+      memorySize: $("memorySize").value.trim(),
+      line: Number($("cacheLine").value),
+    };
     for (const level of ["l1i", "l1d", "l2"]) {
       custom[level] = $(`${level}On`).checked
-        ? { sizes: list($(`${level}Size`).value), assoc: Number($(`${level}Assoc`).value) }
+        ? {
+            sizes: list($(`${level}Size`).value),
+            assoc: Number($(`${level}Assoc`).value),
+            latency: Number($(`${level}Latency`).value),
+            mshrs: Number($(`${level}Mshrs`).value),
+            targets: Number($(`${level}Targets`).value),
+            prefetchers: picked(`${level}Prefetcher`),
+          }
         : null;
     }
     return custom;
@@ -592,7 +675,9 @@ if (typeof document !== "undefined") {
     $("vlenBox").hidden = !current.variants.includes("rvv");
     $("customBox").hidden = !$("useCustom").checked;
     for (const level of ["l1i", "l1d", "l2"]) {
-      $(`${level}Size`).disabled = $(`${level}Assoc`).disabled = !$(`${level}On`).checked;
+      const off = !$(`${level}On`).checked;
+      for (const key of ["Size", "Assoc", "Latency", "Mshrs", "Targets"]) $(`${level}${key}`).disabled = off;
+      for (const input of document.querySelectorAll(`input[name="${level}Prefetcher"]`)) input.disabled = off;
     }
     const result = RCB.build(current, DATA);
     const file = `build/meus/${current.name || "nome"}.yaml`;
@@ -644,8 +729,13 @@ if (typeof document !== "undefined") {
   // Rótulo curto da coluna: o cenário, ou só a L1d e a L2 da memória personalizada.
   function shortLabel(memory) {
     if (!memory.cache) return memory.scenario || "sem cenário";
-    const level = (name) => (memory.cache[name] ? memory.cache[name].size : "—");
-    return `L1d ${level("l1d")}<br>L2 ${level("l2")}`;
+    const level = (name) => {
+      const config = memory.cache[name];
+      if (!config) return "—";
+      return config.prefetcher ? `${config.size} (${config.prefetcher})` : config.size;
+    };
+    const line = memory.line ? `<br>linha ${memory.line}` : "";
+    return `L1d ${level("l1d")}<br>L2 ${level("l2")}${line}`;
   }
 
   function download() {

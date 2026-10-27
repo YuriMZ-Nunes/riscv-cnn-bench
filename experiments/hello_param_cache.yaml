@@ -52,16 +52,28 @@ cpu:
 # Cada nível é opcional; omitido = sem aquele cache. Padrão: sem caches.
 # size em KiB/MiB/GiB; assoc = associatividade (vias). Padrão de assoc: 4.
 # A L2 exige l1i e l1d.
+# Ajustes (RCB-32), todos opcionais; um valor igual ao padrão é o mesmo que
+# omitir. line: linha de todas as caches, 32 | 64 | 128 bytes. Padrão: 64.
+# Por nível: latency (ciclos de tag, dados e resposta; padrão 2 na L1 e 10 na
+# L2), mshrs (faltas pendentes; padrão 16), targets (acessos por MSHR; padrão
+# 20) e prefetcher (none | stride | tagged; padrão none). O número de conjuntos,
+# size ÷ (linha × assoc), tem de ser potência de 2.
 cache:
+  line: 64
   l1i:
     size: 32KiB
     assoc: 4
   l1d:
     size: 32KiB
     assoc: 4
+    latency: 2
+    mshrs: 16
+    targets: 20
+    prefetcher: none
   l2:
     size: 256KiB
     assoc: 8
+    latency: 10
 
 memory:
   # simple (latência fixa) | ddr4 (DDR4-2400 com controlador). Padrão: simple.

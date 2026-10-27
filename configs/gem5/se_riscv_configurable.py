@@ -46,9 +46,11 @@ from m5.objects import (
     SIMD_Unit,
     SimpleMemory,
     SrcClockDomain,
+    StridePrefetcher,
     System,
     System_Unit,
     SystemXBar,
+    TaggedPrefetcher,
     TimingSimpleCPU,
     VoltageDomain,
 )
@@ -162,16 +164,45 @@ def configure_minor(cpu, latency):
     cpu.executeFuncUnits = MinorFUPool(funcUnits=units)
 
 
-def make_cache(size, assoc, latency):
-    return Cache(
-        size=size,
-        assoc=assoc,
-        tag_latency=latency,
-        data_latency=latency,
-        response_latency=latency,
-        mshrs=16,
-        tgts_per_mshr=20,
+# Ajustes das caches (RCB-32); os padrões são os de antes, e o YAML só os passa
+# quando mudam (cache.<nível>.latency, mshrs, targets, prefetcher e cache.line).
+CACHE_LATENCY = {"l1i": 2, "l1d": 2, "l2": 10}
+CACHE_MSHRS = 16
+CACHE_TARGETS = 20
+CACHE_LINE = 64
+PREFETCHERS = {"none": None, "stride": StridePrefetcher, "tagged": TaggedPrefetcher}
+
+
+def make_cache(args, level):
+    cache = Cache(
+        size=getattr(args, f"{level}_size"),
+        assoc=getattr(args, f"{level}_assoc"),
+        tag_latency=getattr(args, f"{level}_latency"),
+        data_latency=getattr(args, f"{level}_latency"),
+        response_latency=getattr(args, f"{level}_latency"),
+        mshrs=getattr(args, f"{level}_mshrs"),
+        tgts_per_mshr=getattr(args, f"{level}_targets"),
     )
+    prefetcher = PREFETCHERS[getattr(args, f"{level}_prefetcher")]
+    if prefetcher is not None:
+        cache.prefetcher = prefetcher()
+    return cache
+
+
+def tuning(args):
+    """Os ajustes das caches que não são o padrão, para a linha "Sistema:"."""
+    parts = [f"linha={args.cache_line}"] if args.cache_line != CACHE_LINE else []
+    for level in ["l1i", "l1d", "l2"]:
+        if not getattr(args, f"{level}_size"):
+            continue
+        values = {
+            "latência": (getattr(args, f"{level}_latency"), CACHE_LATENCY[level]),
+            "mshrs": (getattr(args, f"{level}_mshrs"), CACHE_MSHRS),
+            "alvos": (getattr(args, f"{level}_targets"), CACHE_TARGETS),
+            "prefetcher": (getattr(args, f"{level}_prefetcher"), "none"),
+        }
+        parts += [f"{level}.{name}={value}" for name, (value, default) in values.items() if value != default]
+    return parts
 
 
 def main():
@@ -203,9 +234,16 @@ def main():
     )
     parser.add_argument("--mem-type", choices=["simple", "ddr4"], default="simple")
     parser.add_argument("--mem-size", default="512MiB")
+    parser.add_argument(
+        "--cache-line", type=int, choices=[32, 64, 128], default=CACHE_LINE, help="Linha das caches."
+    )
     for level in ["l1i", "l1d", "l2"]:
         parser.add_argument(f"--{level}-size", help=f"Tamanho da {level}; omita para não criar.")
         parser.add_argument(f"--{level}-assoc", type=int, default=8 if level == "l2" else 4)
+        parser.add_argument(f"--{level}-latency", type=int, default=CACHE_LATENCY[level])
+        parser.add_argument(f"--{level}-mshrs", type=int, default=CACHE_MSHRS)
+        parser.add_argument(f"--{level}-targets", type=int, default=CACHE_TARGETS)
+        parser.add_argument(f"--{level}-prefetcher", choices=sorted(PREFETCHERS), default="none")
     parser.add_argument(
         "--roi-caches",
         choices=["warm", "cold"],
@@ -232,6 +270,7 @@ def main():
         voltage_domain=VoltageDomain(),
     )
 
+    system.cache_line_size = args.cache_line
     system.mem_mode = "atomic" if args.cpu == "atomic" else "timing"
     system.mem_ranges = [AddrRange(args.mem_size)]
 
@@ -246,7 +285,7 @@ def main():
     # Caches L1 ligam a CPU à L2 (se existir) ou diretamente ao barramento.
     if args.l2_size:
         system.l2bus = L2XBar()
-        system.l2cache = make_cache(args.l2_size, args.l2_assoc, latency=10)
+        system.l2cache = make_cache(args, "l2")
         system.l2cache.cpu_side = system.l2bus.mem_side_ports
         system.l2cache.mem_side = system.membus.cpu_side_ports
         below_l1 = system.l2bus.cpu_side_ports
@@ -254,14 +293,14 @@ def main():
         below_l1 = system.membus.cpu_side_ports
 
     if args.l1i_size:
-        system.cpu.icache = make_cache(args.l1i_size, args.l1i_assoc, latency=2)
+        system.cpu.icache = make_cache(args, "l1i")
         system.cpu.icache.cpu_side = system.cpu.icache_port
         system.cpu.icache.mem_side = below_l1
     else:
         system.cpu.icache_port = system.membus.cpu_side_ports
 
     if args.l1d_size:
-        system.cpu.dcache = make_cache(args.l1d_size, args.l1d_assoc, latency=2)
+        system.cpu.dcache = make_cache(args, "l1d")
         system.cpu.dcache.cpu_side = system.cpu.dcache_port
         system.cpu.dcache.mem_side = below_l1
     else:
@@ -294,7 +333,8 @@ def main():
         f"Sistema: cpu={args.cpu} clock={args.clock} vlen={args.vlen} "
         f"custom_latency={args.custom_latency} "
         f"l1i={args.l1i_size} l1d={args.l1d_size} l2={args.l2_size} "
-        f"memória={args.mem_type}/{args.mem_size} caches_roi={args.roi_caches}",
+        f"memória={args.mem_type}/{args.mem_size} caches_roi={args.roi_caches}"
+        + "".join(f" {part}" for part in tuning(args)),
         flush=True,
     )
     exit_event = m5.simulate()

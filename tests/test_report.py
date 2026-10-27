@@ -201,6 +201,7 @@ def test_runs_table(results: Path) -> None:
         "true",
     )
     assert (ref["project_dirty"], ref["duration_s"]) == ("false", "12.5")
+    assert ref["cache_tuning"] == ""
 
     # Repetida: só a mais recente vale.
     assert (rows["02"]["current"], rows["03"]["current"]) == ("false", "true")
@@ -226,6 +227,28 @@ def test_runs_table(results: Path) -> None:
         "",
     )
     assert all(build[metric.key] == "" for metric in METRICS)
+
+
+def test_cache_tuning_column(tmp_path: Path) -> None:
+    tuned = resolved("custom")
+    tuned["scenario"] = None
+    tuned["cache"]["line"] = 128
+    tuned["cache"]["l1d"] = {"size": "32KiB", "assoc": 4, "prefetcher": "stride"}
+    make_run(
+        tmp_path,
+        run_id="20261027T000001.000000Z-t",
+        stdout="RESULT bench=fc variant=custom data=random In=512 Out=32 R=1 "
+        "checksum=0x00ff mismatches=0\n",
+        stats=ROI_STATS,
+        experiment={"resolved": tuned},
+        **PROVENANCE,
+    )
+
+    write_report(tmp_path)
+
+    [row] = read(tmp_path / "report/runs.csv")
+    assert row["cache_tuning"] == "line=128,l1d.pf=stride"
+    assert row["scenario"] == ""
 
 
 def test_pairs_table(results: Path) -> None:
