@@ -13,8 +13,8 @@ app = typer.Typer(
         "Fluxo: escreva um experimento YAML (veja docs/experiments.md), confira com "
         "`validate` e execute com `run`. Cada execução cria uma pasta própria "
         "(veja docs/results.md); `runs` lista as existentes, `stats` mostra as "
-        "métricas da região de interesse de uma delas, `compare` compara as variantes e "
-        "`report` exporta tudo em CSV. "
+        "métricas da região de interesse de uma delas, `compare` compara as variantes, "
+        "`report` exporta tudo em CSV e `plot` gera os gráficos a partir dos CSVs. "
         "`campaign` executa uma matriz de experimentos em lote (veja docs/campaigns.md)."
     ),
     epilog=(
@@ -413,6 +413,57 @@ def report(
         f"{written.current} valendo (current), {written.inconsistent} com checksum divergente"
     )
     typer.echo(f"  pairs.csv: {written.pairs} par(es), {written.rejected} rejeitado(s)")
+
+
+@app.command()
+def plot(
+    root: Annotated[
+        Path,
+        typer.Argument(help="Pasta com o report, como results/ ou uma campanha."),
+    ] = Path("results"),
+    source: Annotated[
+        Path | None,
+        typer.Option("--input", help="Pasta com runs.csv e pairs.csv. Padrão: <pasta>/report/."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Pasta das figuras. Padrão: <pasta>/figures/."),
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Regrava as figuras se já existirem.")
+    ] = False,
+) -> None:
+    """Gera os gráficos de comparação (PDF e PNG) a partir dos CSVs do `report`.
+
+    Três tipos: instruções e ciclos por MAC e IPC por operação e variante; speedup
+    em ciclos por cenário de memória e CPU; R_I contra S_C com a diagonal. Entram
+    só execuções e pares válidos, com ciclos. Os CSVs usados são copiados para a
+    pasta das figuras, com figures.json (contexto, execuções e legenda sugerida de
+    cada figura). Veja docs/plots.md.
+    """
+    from riscvcnnbench.plot import PlotError, write_plots
+    from riscvcnnbench.runs import display
+
+    source = source or root / "report"
+    try:
+        written = write_plots(source, output or root / "figures", force)
+    except PlotError as error:
+        _fail(str(error))
+    kinds = written.kinds
+    typer.echo(f"Gravado em {display(written.output)} (PDF e PNG):")
+    typer.echo(
+        f"  {kinds['variantes']} de variantes, {kinds['speedup']} de speedup, "
+        f"{kinds['ri_sc']} de R_I × S_C"
+    )
+    for name, used, skipped in (
+        ("runs.csv", f"{written.used_runs} execução(ões) usada(s)", written.skipped_runs),
+        ("pairs.csv", f"{written.used_pairs} par(es) usado(s)", written.skipped_pairs),
+    ):
+        reasons = ", ".join(f"{count} {reason}" for reason, count in skipped.most_common())
+        typer.echo(f"  {name}: {used}" + (f"; fora: {reasons}" if reasons else ""))
+    if written.repeated:
+        typer.echo(f"  {written.repeated} ponto(s) repetido(s): vale o mais recente")
+    typer.echo("  figures.json: contexto, execuções e legenda sugerida de cada figura")
 
 
 MatrixArg = Annotated[Path, typer.Argument(help="Matriz da campanha (campaigns/<nome>.yaml).")]
