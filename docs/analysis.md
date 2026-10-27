@@ -248,6 +248,8 @@ As hipóteses da RCB-10, como foram formuladas na issue RCB-25:
 - **Sem validação em RTL**, nem estimativa de área ou energia: o custo de hardware das instruções e da unidade vetorial não entra na comparação.
 - **Causas não investigadas**: o IPC da custom da FC, e os valores extremos da minor sem cache, ficam como observação.
 
+O que estender a partir destas limitações, e o que cada extensão exigiria, está em [future.md](future.md).
+
 ## Reproduzir
 
 ```bash

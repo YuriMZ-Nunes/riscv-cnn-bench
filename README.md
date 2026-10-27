@@ -35,6 +35,7 @@ Disponíveis:
 Planejados (ainda não implementados):
 
 - Material para o texto do TCC, revisão do container e da documentação de reprodução, e a demonstração final (RCB-26 a RCB-29).
+- Extensões fora do escopo do TCC, com o que cada uma exigiria: ver [docs/future.md](docs/future.md).
 
 ---
 
@@ -295,5 +296,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Dados da campanha final e publicação](docs/data.md)
 - [Análise dos resultados](docs/analysis.md)
 - [Gerador de experimentos](docs/generator.md)
+- [Trabalhos futuros](docs/future.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

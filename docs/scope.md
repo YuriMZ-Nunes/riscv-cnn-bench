@@ -202,6 +202,8 @@ O gem5 é determinístico: no piloto (RCB-23), 12 combinações repetidas com as
 
 ## Fora do escopo
 
+O que exigiria cada item, e outras extensões, estão em [future.md](future.md).
+
 | Item | Motivo |
 | --- | --- |
 | Rede completa (mini-CNN) | A avaliação é por operação; fica como trabalho futuro (decisão de 17/10/2026). |
@@ -210,4 +212,4 @@ O gem5 é determinístico: no piloto (RCB-23), 12 combinações repetidas com as
 | RTL, hardware real, área e energia | O gem5 dá desempenho arquitetural; validação física está fora do alcance (proposta, seção 3). |
 | Modo full-system, sistema operacional, multinúcleo | Modo SE com um núcleo isola o efeito de instruções e memória. |
 | Autovetorização do compilador | A variante RVV usa intrínsecos, para o código vetorial ser controlado e comparável. |
-| Variação de VLEN, latências internas de cache e CPU | Fixos nos padrões; podem virar parâmetros depois. |
+| Variação de VLEN e das latências na campanha | A VLEN (`cpu.vlen`), as latências, MSHRs, prefetcher e linha das caches (RCB-32) e as unidades das instruções personalizadas (RCB-33) são campos do YAML, mas a campanha final usou os padrões. Parâmetros internos da CPU continuam fixos. |
