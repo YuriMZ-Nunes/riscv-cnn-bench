@@ -1,14 +1,14 @@
 # Dados da campanha final
 
-Resultado da execução da matriz final ([matrix.md](matrix.md)) e o pacote em que os dados são publicados (RCB-24). Os resultados ficam em `results/campaigns/final/`, que o Git ignora. Saem do repositório num pacote `.tar.gz`, anexado a uma release do GitHub e depositado no Zenodo, sob a licença CC BY 4.0.
+Resultado da execução da matriz final ([matrix.md](matrix.md)) e o pacote em que os dados são publicados (RCB-24). Os resultados ficam em `results/campaigns/final/`, que o Git ignora. Saem do repositório num pacote `.tar.gz`, anexado à release [`dados-v1`](https://github.com/YuriMZ-Nunes/riscv-cnn-bench/releases/tag/dados-v1) do GitHub e depositado no Zenodo com o DOI [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495), sob a licença CC BY 4.0.
 
 | Parte | Situação |
 | --- | --- |
 | Campanha final executada (620 combinações), com CSV e gráficos | Existente, 27/10/2026 |
 | Auditoria de uma campanha: `riscvcnnbench campaign audit` | Existente (`src/riscvcnnbench/package.py`) |
 | Pacote de dados: `riscvcnnbench campaign package` | Existente |
-| Release no GitHub com o pacote | Planejado: depende do merge desta entrega |
-| Depósito no Zenodo e DOI | Planejado: feito pelo autor, com a conta dele |
+| Release no GitHub com o pacote | Existente: [`dados-v1`](https://github.com/YuriMZ-Nunes/riscv-cnn-bench/releases/tag/dados-v1), 27/10/2026 |
+| Depósito no Zenodo e DOI | Existente: [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495) (v1); todas as versões: [10.5281/zenodo.23698494](https://doi.org/10.5281/zenodo.23698494) |
 | Análise dos resultados | Planejado (RCB-25) |
 
 ## O que rodou
@@ -90,7 +90,16 @@ tar -xzf riscv-cnn-bench-dados-v1.tar.gz
 cd riscv-cnn-bench-dados-v1 && sha256sum -c SHA256SUMS
 ```
 
-Um pacote de teste, gerado em 27/10/2026 antes do commit, tinha 260,9 MB compactado e 797 MB extraído, com 12.006 arquivos. O `sha256sum -c` passou em todos. O pacote publicado deve ser gerado de novo depois do merge, para que o `MANIFEST.json` registre um commit do código com a árvore limpa.
+O pacote publicado foi gerado em 27/10/2026 pelo commit `cf3f8fe`, com a árvore limpa. O `MANIFEST.json` registra esse commit, com `dirty: false`.
+
+| | |
+| --- | --- |
+| Arquivo | `riscv-cnn-bench-dados-v1.tar.gz` |
+| Tamanho | 260.854.670 bytes (797 MB extraído, 12.006 arquivos) |
+| SHA-256 | `f3b1486e1913c2f8c4bd1ab220aea0564ee79acadfea2152076e143c89dab0f0` |
+| MD5 (o que o Zenodo mostra) | `2c15e2ebca039bf2041d4e42dab1a0b3` |
+
+Conferência feita: o `sha256sum -c` passou nos 12.006 arquivos de uma cópia extraída. O anexo da release, baixado de volta, é idêntico ao arquivo gerado. O arquivo no Zenodo tem o mesmo tamanho e o mesmo MD5.
 
 ## Publicação
 
@@ -98,37 +107,39 @@ O pacote é publicado em dois lugares: numa **release do GitHub**, junto do cód
 
 ### Release no GitHub
 
-Depois do merge, a partir da `main`:
+Criada em 27/10/2026, depois do merge da RCB-24:
 
 ```bash
-gh release create dados-v1 results/pacotes/riscv-cnn-bench-dados-v1.tar.gz \
+gh release create dados-v1 results/pacotes/riscv-cnn-bench-dados-v1.tar.gz --target main \
     --title "Dados da campanha final (v1)" --notes-file <notas>
 ```
 
-A tag `dados-v1` marca o commit do código que gerou o pacote. As notas repetem o README do pacote e o hash SHA-256 do `.tar.gz`. O limite do GitHub é de 2 GiB por arquivo anexado.
+A tag `dados-v1` aponta para o merge `ca963f5` na `main`, que contém o commit `cf3f8fe` que gerou o pacote. As notas repetem o README do pacote e o hash SHA-256 do `.tar.gz`. O limite do GitHub é de 2 GiB por arquivo anexado.
 
 ### Zenodo
 
-O depósito é feito pelo autor, em <https://zenodo.org/uploads/new>, enviando o mesmo `.tar.gz`. A integração automática do Zenodo com o GitHub arquiva o código-fonte da release, não os arquivos anexados, então os dados vão como um depósito próprio.
+O depósito foi feito pelo autor, em <https://zenodo.org/uploads/new>, com o mesmo `.tar.gz`, e publicado em 27/10/2026: <https://doi.org/10.5281/zenodo.23698495>. A integração automática do Zenodo com o GitHub arquiva o código-fonte da release, não os arquivos anexados, então os dados vão como um depósito próprio.
 
 | Campo | Valor |
 | --- | --- |
 | Tipo | Dataset |
 | Título | riscv-cnn-bench: dados de simulação de operações de CNN int8 em RISC-V no gem5 (v1) |
-| Autores | O autor do TCC, com ORCID se houver |
-| Descrição | O primeiro parágrafo e a lista de campanhas do README do pacote |
+| Autor | Nunes, Yuri de Melo Zorzoli (Universidade Federal de Pelotas) |
+| Data de publicação | 2026-10-27 |
+| Descrição | O que o pacote contém (as campanhas, a pasta de cada execução, como conferir) e os links do código e do fork |
 | Versão | v1 |
+| Idioma | Português |
 | Licença | Creative Commons Attribution 4.0 International (CC BY 4.0) |
-| Palavras-chave | RISC-V, gem5, CNN, quantização int8, RVV, instruções personalizadas, simulação |
-| Identificadores relacionados | *is supplement to* o repositório <https://github.com/YuriMZ-Nunes/riscv-cnn-bench> (ou a release `dados-v1`); *is derived from* o fork <https://github.com/YuriMZ-Nunes/gem5> |
+| Identificadores relacionados | *is supplement to* a release [`dados-v1`](https://github.com/YuriMZ-Nunes/riscv-cnn-bench/releases/tag/dados-v1); *references* o fork <https://github.com/YuriMZ-Nunes/gem5> |
+| DOI | `10.5281/zenodo.23698495` (esta versão); `10.5281/zenodo.23698494` (todas as versões) |
 
-O Zenodo reserva o DOI antes da publicação ("Reserve DOI"). Assim dá para pôr o DOI nas notas da release e neste documento antes de publicar. Uma versão nova dos dados (v2) entra como nova versão do mesmo registro. O DOI do conceito continua apontando para a mais recente.
+Os metadados do Zenodo podem ser editados depois; os arquivos, não. Dados novos (v2) entram como *New version* do mesmo registro, com DOI próprio. O DOI de todas as versões (`…23698494`) continua apontando para a mais recente. Para citar exatamente os dados analisados, use o DOI da versão.
 
 ### Como citar
 
-Até o depósito, a referência é provisória:
+> NUNES, Yuri de Melo Zorzoli. *riscv-cnn-bench: dados de simulação de operações de CNN int8 em RISC-V no gem5 (v1)*. Versão v1. Zenodo, 2026. Conjunto de dados. DOI: [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495).
 
-> Autor. *riscv-cnn-bench: dados de simulação de operações de CNN int8 em RISC-V no gem5*, versão 1. Zenodo, 2026. DOI: a definir.
+O Zenodo também exporta a referência em BibTeX e outros formatos, no quadro "Citation" da página do registro.
 
 ## Testes
 
