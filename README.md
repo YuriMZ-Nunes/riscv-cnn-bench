@@ -18,6 +18,7 @@ Disponíveis:
 - **Gráficos de comparação:** `riscvcnnbench plot <pasta>` gera, a partir desses CSVs, figuras em PDF e PNG prontas para a monografia: instruções e ciclos por MAC e IPC por operação e variante, speedup em ciclos por cenário de memória e CPU, e redução de instruções contra speedup com a diagonal. Sem título, legíveis em preto e branco, com os CSVs usados copiados junto e um `figures.json` com o contexto e uma legenda sugerida de cada figura (ver [docs/plots.md](docs/plots.md)).
 - **Campanhas (execução em lote):** uma matriz em `campaigns/*.yaml`, com grupos de produtos cartesianos sobre os experimentos de `experiments/`, vira execuções normais agrupadas numa pasta; `riscvcnnbench campaign plan|run|status` mostra o plano, executa em paralelo num só container, retoma sem repetir o que terminou e mostra o estado com o diagnóstico de cada falha, com validação de equivalência opcional antes (ver [docs/campaigns.md](docs/campaigns.md)).
 - **Matriz da campanha final e estimativa de tempo:** `campaigns/final.yaml` tem 620 execuções: o fatorial variante × CPU × cenário de memória nas sete operações em S e L, a latência 6 das instruções personalizadas e um contraste `-O2` × `-O3`, cada grupo ligado a um objetivo da proposta. `riscvcnnbench campaign estimate` estima o tempo de cada combinação a partir de execuções medidas: cerca de 2,8 h com 4 tarefas (ver [docs/matrix.md](docs/matrix.md)).
+- **Experimento piloto:** `campaigns/piloto.yaml` (depthwise e pointwise em S e L, nas três variantes, minor e o3-edge, cenários em que os dados cabem e em que não cabem) rodou em 27/10/2026 antes da campanha: 64 combinações válidas em 17 min, tempo L dentro de 0,83–1,14 vez o previsto, IPC da o3-edge entre 0,89 e 1,66, e o determinismo do gem5 confirmado em 12 repetições (ver [docs/pilot.md](docs/pilot.md)).
 - **Cenários de CPU e memória:** quatro cenários de memória nomeados (`sem-cache`, `l1`, `l1-l2`, `reduzido`, em `configs/scenarios.yaml`, escolhidos por `scenario` no YAML), uma O3 estreita de borda (`o3-edge`), latência configurável das instruções personalizadas (`cpu.custom_latency`, classe `CnnMult` no fork do gem5) e caches aquecidas ou esvaziadas no início da região de interesse (`benchmark.cache_state`), com a tabela do que cabe em cada nível (ver [docs/scenarios.md](docs/scenarios.md)).
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5.
@@ -30,7 +31,6 @@ Disponíveis:
 
 Planejados (ainda não implementados):
 
-- Experimento piloto e estimativa refeita com ele (RCB-23).
 - Execução da campanha final (RCB-24) e análise dos resultados (RCB-25).
 
 ---
@@ -280,5 +280,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Tabelas de resultados em CSV](docs/report.md)
 - [Gráficos de comparação](docs/plots.md)
 - [Matriz da campanha final e estimativa de tempo](docs/matrix.md)
+- [Experimento piloto](docs/pilot.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

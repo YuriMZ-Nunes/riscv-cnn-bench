@@ -7,7 +7,7 @@
 | Matriz `campaigns/final.yaml` (620 execuções) e medições `campaigns/medicao.yaml` | Existente |
 | `riscvcnnbench campaign estimate` e a tabela `docs/matrix_estimate.csv` | Existente |
 | Validação do `-O3` em `make validate` (`tests/test_compiler_validation.py`) | Existente |
-| Piloto e estimativa refeita com ele | Planejado (RCB-23) |
+| Piloto e estimativa refeita com ele | Existente (RCB-23, [pilot.md](pilot.md)) |
 | Execução da campanha final | Planejado (RCB-24) |
 
 ```bash
@@ -66,9 +66,9 @@ Um contraste mínimo, para mostrar se a otimização do compilador muda a reduç
 
 | | Execuções | Tempo em série | Fonte |
 | --- | --- | --- | --- |
-| S | 312 | 1,48 h | 308 medidas (todas as combinações S com `-O2`); as 4 com `-O3` vêm do modelo |
-| L | 308 | 9,88 h | 24 medidas (a amostra); 284 do modelo |
-| **Total** | **620** | **11,4 h** | **≈ 2,8 h com 4 tarefas**, na ordem do plano |
+| S | 312 | 1,45 h | 308 medidas (todas as combinações S com `-O2`); as 4 com `-O3` vêm do modelo |
+| L | 308 | 9,89 h | 56 medidas (a amostra da RCB-22 e o piloto); 252 do modelo |
+| **Total** | **620** | **11,3 h** | **≈ 2,8 h com 4 tarefas**, na ordem do plano |
 
 A maior execução é a conv direta L ref na o3-edge sem cache: 16,1 min, medida. Somando a validação, a campanha cabe numa noite. O `make validate` (e2e mais validação) levou 14 min 32 s em 26/10/2026. Mesmo que o L leve 50% a mais que o estimado, a campanha passa pouco das 4 h.
 
@@ -77,18 +77,19 @@ Por CPU e cenário, em minutos em série (S medido | L estimado):
 | CPU | `sem-cache` | `l1` | `l1-l2` | `reduzido` |
 | --- | --- | --- | --- | --- |
 | timing | 6,1 \| 45,5 | 2,9 \| 12,3 | 2,9 \| 12,2 | 2,9 \| 12,3 |
-| minor | 10,5 \| 85,2 | 6,7 \| 41,8 | 8,2 \| 41,9 | 6,8 \| 42,3 |
-| o3-edge | 19,0 \| 154,7 | 7,4 \| 47,4 | 7,4 \| 48,3 | 7,6 \| 49,1 |
+| minor | 10,5 \| 85,2 | 6,7 \| 41,8 | 7,8 \| 42,0 | 6,4 \| 43,8 |
+| o3-edge | 19,0 \| 154,7 | 7,4 \| 47,4 | 7,1 \| 47,4 | 7,2 \| 48,6 |
 
 O `l1-l2` da minor inclui as quatro execuções do grupo compilador. A tabela com cada uma das 620 combinações e o tempo dela está em [matrix_estimate.csv](matrix_estimate.csv).
 
 ```bash
 uv run riscvcnnbench campaign estimate campaigns/final.yaml \
     -m build/rcb21-probe/conferencia -m build/rcb22-probe/medicao -m build/rcb22-probe/semcache-l \
+    -m results/campaigns/piloto \
     --csv docs/matrix_estimate.csv
 ```
 
-As pastas acima são as medições de 26 e 27/10/2026, em `build/` (ignorado pelo Git). Elas foram rodadas com código ainda não commitado da RCB-21, o que não muda o tempo. Para refazê-las, `campaigns/medicao.yaml` roda as mesmas 381 execuções.
+As três primeiras pastas são as medições de 26 e 27/10/2026, em `build/` (ignorado pelo Git). Elas foram rodadas com código ainda não commitado da RCB-21, o que não muda o tempo. Para refazê-las, `campaigns/medicao.yaml` roda as mesmas 381 execuções. A quarta é o piloto da RCB-23 ([pilot.md](pilot.md)), com 76 execuções.
 
 ### Como a estimativa é feita
 
@@ -126,7 +127,7 @@ Instruções simuladas em L, em milhões, na ROI e na verificação. A ref soma 
 | requant_relu | 1,2 | 1,0 | 0,8 |
 | fc | 7,4 | 4,1 | 3,9 |
 
-Velocidade das retas ajustadas (1/b), em milhões de instruções simuladas por segundo. Com cache, ela fica perto da que foi medida com um laço simples em 20/10/2026 ([scope.md](scope.md#estimativa-de-tempo-de-simulação)): 0,94 na timing, 0,31 na minor e 0,27 na o3 padrão. Sem cache, cai de 2 a 4 vezes:
+Velocidade das retas ajustadas (1/b) com as medições da RCB-22, antes do piloto, em milhões de instruções simuladas por segundo. Com cache, ela fica perto da que foi medida com um laço simples em 20/10/2026 ([scope.md](scope.md#estimativa-de-tempo-de-simulação)): 0,94 na timing, 0,31 na minor e 0,27 na o3 padrão. Sem cache, cai de 2 a 4 vezes:
 
 | CPU | `sem-cache` | `l1` | `l1-l2` | `reduzido` |
 | --- | --- | --- | --- | --- |
@@ -142,7 +143,7 @@ O S está todo medido. Para o L, a reta de cada CPU e cenário passa pelas duas 
 - Com as amostras no ajuste, o erro nesses pontos some, mas isso não diz quanto ele é nas operações que não foram amostradas.
 - Deixando a conv L fora do ajuste, a reta erra a conv L em 40 a 67% para mais.
 
-Por isso, a incerteza do L é bem maior que a do S. A RCB-23 (piloto) mede outras operações L e refaz a estimativa com o mesmo comando.
+Por isso, a incerteza do L é bem maior que a do S. O piloto (RCB-23) mediu duas das cinco operações interpoladas, depthwise e pointwise, na minor e na o3-edge. A medição ficou entre 0,83 e 1,14 vez a previsão, e a soma, em 0,99 vez ([pilot.md](pilot.md#tempo-previsto--medido)). Isso dá alguma confiança na interpolação, mas não cobre a im2col, a requantização e o maxpool em L, nem a timing.
 
 ## Conferência do `-O3`
 

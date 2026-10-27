@@ -2,7 +2,7 @@
 
 Este documento fecha **o que** será medido no TCC: operações de CNN, quantização, dimensões, variantes de implementação, modelos de CPU e métricas. Ele é a referência para as issues de kernels (RCB-11, RCB-12, RCB-14), instruções personalizadas (RCB-10, RCB-13) e métricas (RCB-16, RCB-17).
 
-> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); os cenários de CPU e memória, a latência configurável das instruções personalizadas e as caches frias opcionais existem (RCB-18, [scenarios.md](scenarios.md)); a execução em lote (RCB-19, [campaigns.md](campaigns.md)), as tabelas em CSV (RCB-20, [report.md](report.md)), os gráficos (RCB-21, [plots.md](plots.md)) e a matriz final com a estimativa de tempo (RCB-22, [matrix.md](matrix.md)) existem; o piloto e a campanha (RCB-23+) são **planejados**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
+> Estado: as sete operações existem nas três variantes, referência (RCB-12), personalizada e RVV (RCB-14), ver [kernels.md](kernels.md); a equivalência é validada por `make validate` (RCB-15); a leitura das métricas da região de interesse (RCB-16) e as métricas derivadas com a comparação entre variantes (RCB-17) existem ([results.md](results.md#métricas)); os cenários de CPU e memória, a latência configurável das instruções personalizadas e as caches frias opcionais existem (RCB-18, [scenarios.md](scenarios.md)); a execução em lote (RCB-19, [campaigns.md](campaigns.md)), as tabelas em CSV (RCB-20, [report.md](report.md)), os gráficos (RCB-21, [plots.md](plots.md)) e a matriz final com a estimativa de tempo (RCB-22, [matrix.md](matrix.md)) e o piloto (RCB-23, [pilot.md](pilot.md)) existem; a campanha final e a análise (RCB-24+) são **planejadas**. A velocidade de simulação, os nomes de estatísticas e as instruções da referência abaixo foram medidos no gem5 do projeto.
 
 ## Pergunta e objetivos
 
@@ -189,16 +189,16 @@ As velocidades de simulação da primeira tabela foram medidas com código escal
 | Binários | 7 operações × 2 tamanhos × 3 variantes = 42, mais 4 com `-O3` |
 | Execuções | 620: fatorial variante × CPU (timing, minor, o3-edge) × 4 cenários nos dois tamanhos (504), latência 6 na custom (112), `-O2` × `-O3` (4) |
 | Velocidade medida | Com cache: timing ≈ 0,9 M, minor ≈ 0,31 M, o3-edge ≈ 0,27 M instruções/s; sem cache, de 2 a 4 vezes menor |
-| Tempo | S medido: 1,5 h em série; L estimado: 9,9 h em série; total 11,4 h em série, **≈ 2,8 h com 4 tarefas** |
+| Tempo | S medido: 1,5 h em série; L: 9,9 h em série (56 medidas, 252 estimadas); total 11,3 h em série, **≈ 2,8 h com 4 tarefas** |
 | Maior execução | Conv direta L, referência, o3-edge sem cache: 16,1 min (medida) |
 
 **Decisão (21/10/2026):** o oráculo e a comparação são simulados em todas as CPUs, inclusive nas detalhadas. Cada execução da campanha verifica a própria saída (`mismatches=0` e código de saída 0), e uma execução que calculou errado aparece como falha no `metadata.json`. Isso protege as medições contra defeitos do simulador que só aparecem nas CPUs detalhadas, como o da redução RVV na O3CPU ([kernels.md](kernels.md#limitação-do-gem5-reduções-rvv-na-o3cpu)), e por isso a estimativa acima já inclui a verificação.
 
 **Decisão (27/10/2026, RCB-22):** não reduzir o tempo simulando fora da ROI com a CPU atomic. Com a verificação simulada em todas as CPUs, a matriz completa leva cerca de 2,8 h com 4 tarefas, uma noite. A troca de CPU mudaria também o estado das caches no início da ROI, sem necessidade.
 
-A incerteza fica no L: a estimativa interpola entre as duas operações amostradas, a conv direta e a FC (veja [matrix.md](matrix.md#incerteza)). O piloto (RCB-23) mede outras e refaz a estimativa com `riscvcnnbench campaign estimate`.
+A incerteza fica no L: a estimativa interpola entre as operações amostradas (veja [matrix.md](matrix.md#incerteza)). O piloto (RCB-23) mediu a depthwise e a pointwise em L, com medição entre 0,83 e 1,14 vez a previsão e soma em 0,99 vez, e a estimativa foi refeita com ele por `riscvcnnbench campaign estimate`.
 
-Como o gem5 é determinístico, repetir uma execução com as mesmas entradas deve reproduzir as mesmas estatísticas (a confirmar); repetições servem só para medir o tempo do host.
+O gem5 é determinístico: no piloto (RCB-23), 12 combinações repetidas com as mesmas entradas reproduziram o `stats.txt` inteiro, menos as estatísticas do tempo do host, e a mesma saída do programa ([pilot.md](pilot.md#determinismo)). Repetições servem só para medir o tempo do host, e por isso `R = 1`.
 
 ## Fora do escopo
 
