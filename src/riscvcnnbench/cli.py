@@ -600,6 +600,14 @@ def campaign_run(
         f"\nSessão: {outcome.skipped} já concluída(s), {len(outcome.executed)} executada(s), "
         f"{done} concluída(s), {len(outcome.failed)} com problema."
     )
+    flagged = [state for state in outcome.executed if state.provenance()]
+    if flagged:
+        typer.echo(
+            f"Aviso: {len(flagged)} concluída(s) nesta sessão com a árvore suja ou outro "
+            f"executável do gem5; elas não valem como resultado. Veja `riscvcnnbench campaign "
+            f"status {target}`.",
+            err=True,
+        )
     if outcome.failed:
         typer.echo(
             f"Veja as causas em `riscvcnnbench campaign status {target}`; rodar de novo refaz "
@@ -627,7 +635,9 @@ def campaign_status(
 
     O estado vem das pastas das execuções: concluída (com este gem5), falhou,
     interrompida, incompleta, desatualizada (concluída com outro gem5) ou pendente.
-    Para as concluídas, instruções, ciclos e IPC da região de interesse.
+    Para as concluídas, instruções, ciclos e IPC da região de interesse, e quais
+    não valem como resultado: árvore suja (project.dirty ou gem5_repository.dirty)
+    ou executável do gem5 diferente do build registrado (matches_executable false).
     """
     import json
 
@@ -655,6 +665,7 @@ def campaign_status(
                     "insts": insts,
                     "cycles": cycles,
                     "ipc": ipc,
+                    "provenance": state.provenance(),
                 }
             )
         typer.echo(json.dumps(document, indent=2, ensure_ascii=False))
@@ -678,6 +689,19 @@ def campaign_status(
             problem = diagnose(state.run) if state.run else None
             reason = problem.message if problem else "concluída com outro executável do gem5"
             typer.echo(f"  {state.planned.name}: {reason} ({display(state.run.path)})")
+    flagged = [
+        (state.planned.name, state.provenance(), state.run.path)
+        for state in found
+        if state.run and state.provenance()
+    ]
+    if flagged:
+        typer.echo(f"\nConcluídas que não valem como resultado: {len(flagged)}")
+        for name, problems, path in flagged:
+            typer.echo(f"  {name}: {', '.join(problems)} ({display(path)})")
+        typer.echo(
+            "Para refazer com a árvore limpa: riscvcnnbench run "
+            f"{display(plan.root)}/experiments/<nome>.yaml (a mais recente passa a valer)."
+        )
 
 
 def _hours(seconds: float) -> str:

@@ -349,6 +349,23 @@ class RunState:
             return f"{self.status} ({problem.kind})"
         return self.status
 
+    def provenance(self) -> list[str]:
+        """Por que uma concluída não vale como resultado; vazio se vale (ou não concluiu)."""
+        return provenance_problems(self.run) if self.done and self.run else []
+
+
+def provenance_problems(run: Run) -> list[str]:
+    """Árvore suja ou executável do gem5 diferente do build registrado, pelo metadata.json."""
+    metadata = run.metadata
+    problems = []
+    if (metadata.get("project") or {}).get("dirty") is True:
+        problems.append("project.dirty: true")
+    if (metadata.get("gem5_repository") or {}).get("dirty") is True:
+        problems.append("gem5_repository.dirty: true")
+    if (metadata.get("gem5_build") or {}).get("matches_executable") is False:
+        problems.append("gem5_build.matches_executable: false")
+    return problems
+
 
 def run_key(run: Run) -> str | None:
     resolved = run.resolved
@@ -414,17 +431,55 @@ def now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
+def _git(directory: Path, *args: str) -> str | None:
+    result = subprocess.run(
+        ["git", "-C", str(directory), *args], capture_output=True, text=True, check=False
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
 def project_state() -> dict[str, Any]:
     """Commit do projeto e se há mudanças não commitadas (None fora de um repositório)."""
+    commit = _git(PROJECT_ROOT, "rev-parse", "HEAD")
+    status = _git(PROJECT_ROOT, "status", "--porcelain")
+    return {
+        "commit": commit.strip() if commit is not None else None,
+        "dirty": None if status is None else bool(status.strip()),
+    }
 
-    def git(*args: str) -> str | None:
-        result = subprocess.run(
-            ["git", "-C", str(PROJECT_ROOT), *args], capture_output=True, text=True, check=False
+
+GEM5_SUBMODULE = Path("third_party/gem5")
+SHOWN_CHANGES = 3
+
+
+def tree_warnings(root: Path = PROJECT_ROOT) -> list[str]:
+    """Avisos de mudanças não commitadas no projeto e no submódulo do gem5.
+
+    Cada execução grava `git status --porcelain` no início (scripts/provenance.py),
+    incluindo arquivos não rastreados; com mudanças, ela sai com `dirty: true`.
+    """
+    warnings = []
+    trees = [
+        (root, "o projeto", "project.dirty"),
+        (root / GEM5_SUBMODULE, f"o submódulo do gem5 ({GEM5_SUBMODULE})", "gem5_repository.dirty"),
+    ]
+    for directory, label, field_name in trees:
+        if not (directory / ".git").exists():
+            continue
+        status = _git(directory, "status", "--porcelain")
+        changes = [line.strip() for line in (status or "").splitlines() if line.strip()]
+        if not changes:
+            continue
+        shown = ", ".join(changes[:SHOWN_CHANGES])
+        if len(changes) > SHOWN_CHANGES:
+            shown += f" e mais {len(changes) - SHOWN_CHANGES}"
+        warnings.append(
+            f"Aviso: {label} tem {len(changes)} mudança(s) não commitada(s) ({shown}). As "
+            f"execuções vão sair com {field_name}: true e não valem como resultado "
+            "(campaign audit). Faça o commit antes e não altere a árvore durante a campanha; "
+            "rascunhos ficam em build/."
         )
-        return result.stdout.strip() if result.returncode == 0 else None
-
-    status = git("status", "--porcelain")
-    return {"commit": git("rev-parse", "HEAD"), "dirty": None if status is None else bool(status)}
+    return warnings
 
 
 def read_log(root: Path) -> dict[str, Any]:
@@ -582,6 +637,9 @@ def run_plan(
         if result.done:
             insts, cycles, ipc = result.cells()
             line += f" — {insts} instruções, {cycles} ciclos, IPC {ipc}"
+            problems = result.provenance()
+            if problems:
+                line += f" ({', '.join(problems)})"
         with lock:
             echo(line)
 
@@ -656,6 +714,8 @@ def run_campaign(
     started = now()
     prepare_folder(plan, matrix, update)
     echo(f"Campanha {campaign.name} em {display(plan.root)}")
+    for warning in tree_warnings():
+        echo(warning)
     validation = None
     if validate or campaign.validate_first:
         validation = validate_campaign(plan.root, file_sha256(gem5), jobs, echo)

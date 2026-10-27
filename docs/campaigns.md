@@ -163,6 +163,40 @@ fc_s__custom__minor__l1-l2__O3    concluída  12645   13451   0.940  1
 
 Saída real de 26/10/2026, rodada com `--output` numa pasta de `build/` (aqui com o caminho padrão e linhas omitidas). INSTS, CICLOS e IPC são da região de interesse, como no `riscvcnnbench runs`. As combinações sem conclusão aparecem depois da tabela, com a mensagem do diagnóstico e a pasta.
 
+### Árvore suja
+
+Uma combinação `concluída` pode não valer como resultado. Cada execução grava, no início, o estado do Git do projeto e do submódulo do gem5 (`git status --porcelain`, que inclui arquivos não rastreados), e também se o executável do gem5 é o do build registrado. Com mudanças não commitadas, ela sai com `dirty: true`, e a [`campaign audit`](data.md#auditoria) a recusa. Foi o que aconteceu com 8 execuções do piloto, editadas no meio da campanha ([pilot.md](pilot.md#problemas-encontrados)). Desde a RCB-30, a campanha avisa em três momentos:
+
+| Quando | O que aparece |
+| --- | --- |
+| Início do `campaign run`, antes da validação | `Aviso: o projeto tem N mudança(s) não commitada(s) (M src/x.py, ?? novo.txt...)`, e o mesmo para o submódulo do gem5 (`third_party/gem5`), com o campo que vai sair `true`. Com a árvore limpa, nada aparece. A campanha roda mesmo assim |
+| Linha de progresso de cada combinação | A linha termina com `(project.dirty: true)`, `(gem5_repository.dirty: true)` ou `(gem5_build.matches_executable: false)` quando a execução sai assim. Isso pega uma edição feita no meio da campanha |
+| Fim da sessão (stderr) | `Aviso: N concluída(s) nesta sessão com a árvore suja ou outro executável do gem5` |
+
+O `campaign status` lista essas concluídas depois da tabela. No `--json`, o campo `provenance` de cada combinação traz a lista, vazia quando ela vale. Saída real de 27/10/2026, da campanha de exemplo rodada numa pasta de `build/` com as mudanças desta issue ainda não commitadas (linhas omitidas):
+
+```text
+$ uv run riscvcnnbench campaign run campaigns/exemplo.yaml --output build/rcb30/exemplo -j 4
+Campanha exemplo em build/rcb30/exemplo
+Aviso: o projeto tem 4 mudança(s) não commitada(s) (M docs/campaigns.md, M src/riscvcnnbench/campaign.py, M src/riscvcnnbench/cli.py e mais 1). As execuções vão sair com project.dirty: true e não valem como resultado (campaign audit). Faça o commit antes e não altere a árvore durante a campanha; rascunhos ficam em build/.
+9 combinação(ões): 0 já concluída(s), 9 a executar com 4 tarefa(s) em paralelo.
+[1/9] fc_s__ref__timing__l1-l2: concluída — 115270 instruções, 329558 ciclos, IPC 0.350 (project.dirty: true)
+...
+Sessão: 0 já concluída(s), 9 executada(s), 9 concluída(s), 0 com problema.
+Aviso: 9 concluída(s) nesta sessão com a árvore suja ou outro executável do gem5; elas não valem como resultado. Veja `riscvcnnbench campaign status build/rcb30/exemplo`.
+
+$ uv run riscvcnnbench campaign status build/rcb30/exemplo
+...
+Concluídas que não valem como resultado: 9
+  fc_s__ref__timing__l1-l2: project.dirty: true (build/rcb30/exemplo/runs/fc_s__ref__timing__l1-l2/20261027T185641.365784Z-f7736f8f)
+  ...
+Para refazer com a árvore limpa: riscvcnnbench run build/rcb30/exemplo/experiments/<nome>.yaml (a mais recente passa a valer).
+```
+
+No piloto e na campanha final, o `status` não lista nenhuma: as execuções que valem estão limpas (as 8 sujas do piloto foram substituídas).
+
+O `campaign run` não as refaz sozinho, porque elas estão concluídas. Para refazer, rode o experimento gerado da combinação com a árvore limpa: a execução nova fica na mesma pasta e passa a ser a que vale no `status`, no `report` e na `audit`.
+
 ### Execução, falhas e interrupção
 
 - **Paralelismo.** `--jobs N` roda até N simulações ao mesmo tempo, em threads dentro do mesmo processo e, portanto, do mesmo container. Não rode vários `podman run` ao mesmo tempo sobre a pasta do projeto: o volume `:Z` é reetiquetado pelo SELinux e os containers anteriores perdem acesso. Cada combinação compila o benchmark na própria pasta, então compilações simultâneas da mesma operação não se atrapalham.
@@ -182,7 +216,7 @@ O resultado fica em `campaign.json`, com o hash do gem5, o commit do projeto e s
 
 | Teste | Confere | Comando |
 | --- | --- | --- |
-| `tests/test_campaign.py` | Matriz de exemplo, mensagens de erro da matriz com linha, campos irrelevantes e repetidas, inválidas, nomes que colidem, pasta da campanha e `--update`, estados (concluída, falhou, interrompida, incompleta, desatualizada, pendente, outra configuração com o mesmo nome), retomada, paralelismo, validação reaproveitada, histórico, CLI. A execução é trocada por um executor falso | `make test` |
+| `tests/test_campaign.py` | Aviso de árvore suja num repositório Git temporário (limpo, arquivo modificado e não rastreado, mais de três mudanças, só o submódulo do gem5, pasta fora do Git), execuções sujas na linha de progresso, no fim da sessão, no `status` e no `--json`. Matriz de exemplo, mensagens de erro da matriz com linha, campos irrelevantes e repetidas, inválidas, nomes que colidem, pasta da campanha e `--update`, estados (concluída, falhou, interrompida, incompleta, desatualizada, pendente, outra configuração com o mesmo nome), retomada, paralelismo, validação reaproveitada, histórico, CLI. A execução é trocada por um executor falso | `make test` |
 | `tests/test_package.py` | `campaign audit` e `campaign package` sobre campanhas com o executor falso ([data.md](data.md#testes)) | `make test` |
 | `tests/test_campaign_e2e.py` | Matriz pequena executada de verdade (fc S, ref e custom, atomic e timing) com um grupo que falha de propósito: estado e diagnóstico, nome e configuração de cada execução, retomada sem repetir as concluídas, histórico e pares do `compare` sobre a pasta | `make e2e-test` |
 
@@ -190,7 +224,7 @@ O resultado fica em `campaign.json`, com o hash do gem5, o commit do projeto e s
 
 - **A retomada confere o executável do gem5, não o código do projeto.** Se um benchmark ou a configuração gem5 mudarem entre duas sessões, as combinações já concluídas não são refeitas. Cada `metadata.json` registra o commit do projeto e o hash do binário, e cada sessão registra o commit no `campaign.json`. Para refazer tudo depois de mudar o código, use outra pasta (`--output`) ou outro `name`.
 - **Sem ordenação pelas mais longas.** O `run` segue a ordem do plano; a estimativa por combinação existe (`campaign estimate`, RCB-22), mas não muda a ordem.
-- **Não edite a árvore durante uma campanha.** Cada execução grava `git status --porcelain` no início; uma edição no meio deixa as seguintes com `project.dirty: true`, e a `campaign audit` as aponta como problema (foi o que aconteceu no piloto, [pilot.md](pilot.md#problemas-encontrados)).
+- **Não edite a árvore durante uma campanha.** Cada execução grava `git status --porcelain` no início; uma edição no meio deixa as seguintes com `project.dirty: true`, e a `campaign audit` as aponta como problema (foi o que aconteceu no piloto, [pilot.md](pilot.md#problemas-encontrados)). A campanha avisa, mas não impede ([Árvore suja](#árvore-suja)).
 - **Uma máquina só.** O paralelismo é em threads dentro de um processo; não há execução distribuída.
 - **Memória.** Cada simulação é um processo do gem5; com muitas tarefas em paralelo nas CPUs detalhadas, confira a memória livre.
 - **Campos com `scenario`.** Um experimento base com `cache` ou `memory` não combina com `scenario` no `set` ou no `vary`; essas combinações saem como inválidas.
