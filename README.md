@@ -22,6 +22,7 @@ Disponíveis:
 - **Relatório de resultados em HTML:** `riscvcnnbench relatorio <pasta>` (ou `make relatorio DIR=<pasta>`) grava uma página que abre no navegador. Ela traz a visão geral, resultados com filtros, o gráfico de speedup por CPU e cenário, a comparação entre configurações escolhidas (métricas lado a lado e a razão sobre uma base, inclusive entre YAMLs separados gravados na mesma pasta) e as tabelas do `analyze` (ver [docs/html_report.md](docs/html_report.md)).
 - **Gerador de experimentos:** `riscvcnnbench gerador` (ou `make gerador`) grava uma página HTML que abre no navegador, sem servidor. Nela você escolhe operação, tamanho, implementações, CPU, memória e flags, e ela escreve o YAML do experimento ou da campanha, com o número de simulações, onde ficam os dados, o tempo estimado e o comando para rodar. As opções vêm do código, e só as válidas aparecem (ver [docs/generator.md](docs/generator.md)).
 - **Análise dos resultados:** `riscvcnnbench analyze <pasta>` gera, a partir dos CSVs do report, as tabelas da análise: instruções e redução de instruções, speedup em ciclos e eficiência por CPU e cenário, IPC, ciclos e faltas por cenário de memória, sensibilidade à latência e o contraste `-O2` × `-O3`. A análise da campanha final responde à pergunta da proposta e às hipóteses: a redução de instruções vira redução de ciclos quando os dados estão nas caches, e a memória limita o ganho quando não estão (ver [docs/analysis.md](docs/analysis.md)).
+- **Container e ambiente conferido:** o `Containerfile` fixa a imagem base e as versões da cadeia RISC-V (GCC 13.3.0, binutils 2.42, glibc 2.39), do QEMU 8.2.2 e do uv. `riscvcnnbench ambiente` (ou `make ambiente`) confere o ambiente: compila `rv64gc` e `rv64gcv` com intrínsecos RVV e roda os dois no QEMU, e registra as versões das ferramentas, do gem5 do fork (conferido com o build-info) e das bibliotecas Python em `build/ambiente.json`. Uma imagem reconstruída do zero em 27/10/2026 gerou o mesmo binário e o mesmo `stats.txt` que a imagem da campanha num experimento de referência e passou no `make validate` (ver [docs/container.md](docs/container.md)).
 - **Campanha final e pacote de dados:** a matriz final rodou em 27/10/2026, com a validação de equivalência antes e 620 simulações válidas em 2 h 52 min com 4 tarefas. `riscvcnnbench campaign audit` confere se uma campanha vale como resultado (concluídas, válidas, árvore limpa, um só commit, executável do gem5 registrado), e `riscvcnnbench campaign package` junta as campanhas num `.tar.gz` com README, licença CC BY 4.0, MANIFEST e SHA256SUMS. Os dados estão publicados na release [`dados-v1`](https://github.com/YuriMZ-Nunes/riscv-cnn-bench/releases/tag/dados-v1) e no Zenodo, com o DOI [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495) (ver [docs/data.md](docs/data.md)).
 - **Cenários de CPU e memória:** quatro cenários de memória nomeados (`sem-cache`, `l1`, `l1-l2`, `reduzido`, em `configs/scenarios.yaml`, escolhidos por `scenario` no YAML), uma O3 estreita de borda (`o3-edge`), latência configurável das instruções personalizadas (`cpu.custom_latency`, classe `CnnMult` no fork do gem5), com a quantidade de unidades e o pipeline delas (`cpu.custom_units`, `cpu.custom_pipelined`) e caches aquecidas ou esvaziadas no início da região de interesse (`benchmark.cache_state`), com a tabela do que cabe em cada nível. Latência, MSHRs, alvos, prefetcher e linha das caches também são campos opcionais do YAML, com os padrões de antes (ver [docs/scenarios.md](docs/scenarios.md)).
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
@@ -78,6 +79,7 @@ riscv-cnn-bench/
 │   ├── campaign.py           # Campanhas: matriz, plano, execução em lote e estado
 │   ├── estimate.py           # Estimativa de tempo de uma campanha a partir de execuções medidas
 │   ├── package.py            # Auditoria de uma campanha e pacote de dados para publicação
+│   ├── environment.py        # Conferência do ambiente (toolchain, QEMU, gem5, bibliotecas)
 │   ├── report.py             # Tabelas em CSV (runs.csv e pairs.csv)
 │   ├── plot.py               # Gráficos de comparação (PDF e PNG) a partir dos CSVs
 │   ├── analysis.py           # Tabelas da análise (R_I, S_C, eficiência, memória, latência, -O3)
@@ -141,14 +143,21 @@ make gem5-build JOBS=8
 
 Ao final, `make gem5-build` grava `gem5.opt.build-info.json` ao lado do executável, com o commit, a branch e a URL do fork do gem5 e o hash do binário. Compile sempre por esse alvo para que as execuções possam conferir de qual revisão o gem5 veio.
 
-### 5. Executar a Verificação Geral (Smoke Test)
+### 5. Conferir o Ambiente
+
+```bash
+make ambiente
+```
+Compila um programa `rv64gc` e outro `rv64gcv` (com intrínsecos RVV), roda os dois no QEMU e confere a versão de cada ferramenta, o gem5 compilado e as bibliotecas Python. A saída é 1 quando falta algo obrigatório, e o registro fica em `build/ambiente.json` (ver [docs/container.md](docs/container.md)).
+
+### 6. Executar a Verificação Geral (Smoke Test)
 
 ```bash
 make smoke-test
 ```
 Este comando executa a sincronização do ambiente, a CLI, testes com Pytest, checagem do linter e formatação estática. Ele não compila o gem5 nem executa benchmarks.
 
-### 6. Executar o hello_riscv
+### 7. Executar o hello_riscv
 
 ```bash
 make hello-build      # Compila o benchmark
@@ -162,7 +171,7 @@ O `make e2e-test` requer o gem5 compilado (`make gem5-build`). Ele usa pastas te
 
 Detalhes em [docs/hello_riscv.md](docs/hello_riscv.md).
 
-### 7. Validar e executar um experimento
+### 8. Validar e executar um experimento
 
 ```bash
 make shell
@@ -189,6 +198,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make image-clean` | Remove a imagem local do projeto. |
 | `make shell` | Abre Bash no container, na raiz do repositório. |
 | `make check` | Exibe versões de ferramentas instaladas no container. |
+| `make ambiente` | Confere o ambiente (rv64gc e rv64gcv no QEMU, versões, gem5 e bibliotecas) e grava `build/ambiente.json`; saída 1 se falta algo obrigatório. |
 | `make lock` | Resolve dependências e atualiza `uv.lock`. |
 | `make sync` | Cria ou sincroniza `.venv` com dependências de desenvolvimento. |
 | `make test` | Executa os testes Python rápidos (exclui o teste de ponta a ponta). |
@@ -301,5 +311,6 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Gerador de experimentos](docs/generator.md)
 - [Relatório de resultados em HTML](docs/html_report.md)
 - [Trabalhos futuros](docs/future.md)
+- [Container e dependências](docs/container.md)
 - [Toolchain RISC-V](docs/toolchain.md)
 - [Ambiente gem5](docs/environment.md)

@@ -18,7 +18,7 @@ PODMAN_RUN = podman run --rm -it --userns=keep-id \
 # Identifica a imagem usada nos metadados de cada execução.
 IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 
-.PHONY: help image image-clean shell check sync lock test lint format format-check \
+.PHONY: help image image-clean shell check ambiente sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
 	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare \
 	campaign-plan campaign campaign-status campaign-estimate campaign-audit campaign-package \
@@ -38,6 +38,10 @@ shell: ## Abre um shell Bash dentro do container, na raiz do projeto.
 
 check: ## Exibe versões de ferramentas disponíveis no container.
 	$(PODMAN_RUN) bash -lc 'uname -m; python3 --version; uv --version; scons --version; git --version'
+
+ambiente: PODMAN_ARGS += -e RCB_IMAGE="$(IMAGE)" -e RCB_IMAGE_ID="$(IMAGE_ID)"
+ambiente: ## Confere e registra o ambiente (rv64gc e rv64gcv no QEMU, versões, gem5) em build/ambiente.json.
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench ambiente --output build/ambiente.json'
 
 lock: ## Resolve dependências e atualiza o uv.lock.
 	$(PODMAN_RUN) bash -lc 'uv lock'
