@@ -257,7 +257,7 @@ uv run riscvcnnbench report results/campaigns/final    # runs.csv e pairs.csv
 uv run riscvcnnbench analyze results/campaigns/final   # tabelas em results/campaigns/final/analysis/
 ```
 
-Fora do container, `make analyze DIR=results/campaigns/final [FORCE=1]`. O `analyze` lê `<pasta>/report/` (ou `--input`) e grava em `<pasta>/analysis/` (ou `--output`); recusa sobrescrever sem `--force`. A seleção das execuções e dos pares é a do `plot`: válidas, valendo (`current`), com checksum consistente e com ciclos. Ficam no contexto comum: clock de 1 GHz e dados `random`.
+Fora do container, `make analyze DIR=results/campaigns/final [FORCE=1]`. Para ver as mesmas tabelas com os resultados filtráveis e a comparação de configurações numa página, `make relatorio DIR=results/campaigns/final` ([html_report.md](html_report.md)). O `analyze` lê `<pasta>/report/` (ou `--input`) e grava em `<pasta>/analysis/` (ou `--output`); recusa sobrescrever sem `--force`. A seleção das execuções e dos pares é a do `plot`: válidas, valendo (`current`), com checksum consistente e com ciclos. Ficam no contexto comum: clock de 1 GHz e dados `random`.
 
 | Arquivo | Conteúdo |
 | --- | --- |

@@ -511,6 +511,48 @@ def analyze(
 
 
 @app.command()
+def relatorio(
+    root: Annotated[
+        Path,
+        typer.Argument(help="Pasta com o report, como uma campanha ou results/."),
+    ] = Path("results"),
+    source: Annotated[
+        Path | None,
+        typer.Option("--input", help="Pasta com runs.csv e pairs.csv. Padrão: <pasta>/report/."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Arquivo HTML. Padrão: <pasta>/relatorio.html."),
+    ] = None,
+    force: Annotated[bool, typer.Option("--force", help="Regrava a página se já existir.")] = False,
+) -> None:
+    """Grava um relatório HTML dos resultados, para abrir no navegador.
+
+    Visão geral, resultados com filtros e o gráfico de speedup, comparação entre
+    configurações escolhidas (CPU, cenário, flags, dados) com a razão sobre uma
+    base, e as tabelas do `analyze` (se a pasta tiver analysis/). Lê os CSVs do
+    `report`, com a seleção do `plot`; não precisa de servidor nem de internet.
+    Veja docs/html_report.md.
+    """
+    from riscvcnnbench.plot import PlotError
+    from riscvcnnbench.report_page import DEFAULT_NAME, ReportPageError, write_page
+    from riscvcnnbench.runs import display
+
+    target = output or root / DEFAULT_NAME
+    try:
+        data = write_page(source or root / "report", target, root / "analysis", force)
+    except (ReportPageError, PlotError) as error:
+        _fail(str(error))
+    used = sum(1 for run in data["runs"] if not run["skip"])
+    typer.echo(f"Relatório gravado em {display(target)}")
+    typer.echo(
+        f"  {len(data['runs'])} execução(ões), {used} na análise; {len(data['pairs'])} par(es)"
+    )
+    typer.echo(f"  tabelas do analyze: {'incluídas' if data['analysis'] else 'ausentes'}")
+    typer.echo("Abra no navegador (fora do container), por exemplo: xdg-open " + str(target))
+
+
+@app.command()
 def gerador(
     output: Annotated[Path, typer.Option("--output", "-o", help="Arquivo HTML a gravar.")] = Path(
         "build/gerador.html"
