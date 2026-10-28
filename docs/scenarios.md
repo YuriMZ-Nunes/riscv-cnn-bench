@@ -15,7 +15,7 @@ Os cenários arquiteturais das comparações (RCB-18). O objetivo específico 4 
 | Classe `CnnMult` no fork do gem5 e campo `cpu.custom_latency` | Existente ([custom_instructions.md](custom_instructions.md#latência-configurável)) |
 | Caches frias no início da ROI (`benchmark.cache_state: cold`) | Existente |
 | Benchmark [`insn_latency`](../benchmarks/insn_latency/main.c), testes e2e e validação nas CPUs com tempo | Existente |
-| Execução em lote da matriz (operações × variantes × CPUs × cenários) | Planejado (RCB-19) |
+| Execução em lote da matriz (operações × variantes × CPUs × cenários) | Existente (RCB-19, [campaigns.md](campaigns.md)) |
 | Escolha final da matriz (quais latências, se haverá caches frias) | Existente (RCB-22, [matrix.md](matrix.md)) |
 | Ajustes das caches no YAML: latência, MSHRs, alvos, prefetcher e linha | Existente (RCB-32) |
 

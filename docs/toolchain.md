@@ -1,6 +1,8 @@
 # Toolchain RISC-V
 
-## Alvo inicial
+Compilador usado pelos benchmarks. As versões fixadas e a conferência do ambiente estão em [container.md](container.md).
+
+## Alvo
 
 - Host: Linux x86-64
 - Container: Ubuntu 24.04
@@ -9,8 +11,8 @@
 - Compilador C: `riscv64-linux-gnu-gcc`
 - Compilador C++: `riscv64-linux-gnu-g++`
 - Modo gem5: Syscall Emulation (SE)
-- ISA inicial: `rv64gc`
-- ABI inicial: `lp64d`
+- ISA: `rv64gc`; a variante RVV dos kernels usa `rv64gcv` ([kernels.md](kernels.md))
+- ABI: `lp64d`
 - Ligação: estática
 
 ## Verificação de versão
@@ -21,11 +23,13 @@ riscv64-linux-gnu-g++ --version
 riscv64-linux-gnu-ld --version
 ```
 
-## Flags iniciais
+## Flags
 
 ```text
 -O2 -static -march=rv64gc -mabi=lp64d -Wall -Wextra -Werror
 ```
+
+`-O2` é o padrão de `compiler.flags` no YAML. Nas sete operações, `benchmarks/common/kernel.mk` põe o `-march` da variante depois das flags do experimento: `rv64gc` na referência e na personalizada (que usa `.insn` com `-DCNN_INSN_HW`), `rv64gcv` na RVV.
 
 ## Critério de validação
 

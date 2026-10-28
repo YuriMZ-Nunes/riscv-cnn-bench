@@ -1,0 +1,14 @@
+# Contexto de build da imagem (make image). O Containerfile não copia nada do
+# projeto: o código, o .venv e o gem5 compilado ficam na pasta do projeto,
+# montada em /workspace. Estas pastas ficam fora do contexto; se um COPY for
+# acrescentado ao Containerfile, confira esta lista.
+.git
+third_party
+build
+results
+m5out
+.venv
+.pytest_cache
+.ruff_cache
+.mypy_cache
+**/__pycache__

@@ -81,7 +81,7 @@ riscv-cnn-bench-dados-v1/
 
 A pasta de cada execução está descrita em [results.md](results.md), as tabelas em [report.md](report.md) e as figuras em [plots.md](plots.md). O pacote leva tudo o que a campanha tem, inclusive as execuções substituídas do piloto, para que o histórico possa ser conferido. As tabelas marcam com `current` a execução que vale.
 
-O executável do gem5 não vai no pacote. Ele é identificado pelo hash (`gem5_sha256`), pelo build-info e pelo commit do fork, e pode ser compilado de novo a partir deles ([hello_riscv.md](hello_riscv.md)). Os binários RISC-V de cada execução vão em `inputs/`.
+O executável do gem5 não vai no pacote. Ele é identificado pelo hash (`gem5_sha256`), pelo build-info e pelo commit do fork, e pode ser compilado de novo a partir deles ([environment.md](environment.md)). Como reproduzir as simulações e compará-las com o pacote está em [reproducibility.md](reproducibility.md). Os binários RISC-V de cada execução vão em `inputs/`.
 
 Para conferir depois de baixar:
 
@@ -139,7 +139,7 @@ Os metadados do Zenodo podem ser editados depois; os arquivos, não. Dados novos
 
 > NUNES, Yuri de Melo Zorzoli. *riscv-cnn-bench: dados de simulação de operações de CNN int8 em RISC-V no gem5 (v1)*. Versão v1. Zenodo, 2026. Conjunto de dados. DOI: [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495).
 
-O Zenodo também exporta a referência em BibTeX e outros formatos, no quadro "Citation" da página do registro.
+O Zenodo também exporta a referência em BibTeX e outros formatos, no quadro "Citation" da página do registro. O framework, que tem licença MIT, se cita pelo [`CITATION.cff`](../CITATION.cff) da raiz do repositório, que também aponta para este DOI.
 
 ## Testes
 

@@ -112,7 +112,7 @@ O clock fica em 1GHz, o padrão. Com o clock fixo, ciclos e tempo simulado são 
 
 ## Compilação
 
-Todas as variantes são compiladas com GCC 13.3 e `-O2`, o padrão de `compiler.flags`, para que as diferenças medidas venham das instruções e da memória, e não do compilador. O sumário executivo da proposta cita também "otimizações de compilador". Por isso, a matriz terá um **contraste mínimo `-O2` × `-O3`** com uma ou duas operações, ref e custom, em um cenário e uma CPU (decisão de 22/10/2026, **planejado** na RCB-22). O contraste mostra se a otimização do compilador muda a redução de instruções e o speedup. Na variante RVV, `-fno-tree-vectorize` vem depois das flags do experimento, então `-O3` não autovetoriza o código.
+Todas as variantes são compiladas com GCC 13.3 e `-O2`, o padrão de `compiler.flags`, para que as diferenças medidas venham das instruções e da memória, e não do compilador. O sumário executivo da proposta cita também "otimizações de compilador". Por isso, a matriz tem um **contraste mínimo `-O2` × `-O3`**: a convolução direta e a im2col em S, ref e custom, na minor com o cenário `l1-l2` (decisão de 22/10/2026, grupo `compilador` da matriz final, RCB-22). O contraste mostra se a otimização do compilador muda a redução de instruções e o speedup; o resultado está em [analysis.md](analysis.md#compilador). Na variante RVV, `-fno-tree-vectorize` vem depois das flags do experimento, então `-O3` não autovetoriza o código.
 
 ## Métricas
 

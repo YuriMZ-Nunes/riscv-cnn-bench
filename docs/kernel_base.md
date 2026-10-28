@@ -193,7 +193,7 @@ Assim, o mesmo binário roda no QEMU e no gem5, com os mesmos dados e o mesmo ch
 ### Cuidados
 
 - **Caches aquecidas, por padrão.** A ROI começa com as caches no estado deixado pela inicialização, que acabou de escrever os tensores. Nos tamanhos S, com L1 de 32KiB, os dados já estão na L1. O código do kernel, que só roda na ROI, não está. A alternativa é `benchmark.cache_state: cold`, e a escolha está justificada em [scenarios.md](scenarios.md#estado-das-caches-no-início-da-roi) (RCB-18).
-- **Repetições.** Com `R > 1`, as repetições depois da primeira encontram as caches aquecidas pela anterior. Métricas por execução do kernel exigem dividir o bloco por `R`, o que fica para a RCB-17.
+- **Repetições.** Com `R > 1`, as repetições depois da primeira encontram as caches aquecidas pela anterior. Métricas por execução do kernel exigem dividir o bloco por `R`, o que as métricas por repetição de `metric.py` fazem (RCB-17, [results.md](results.md#por-execução)).
 - **Um bloco de ROI por execução.** Mais regiões por programa exigiriam outro par `rcb_roi_begin`/`rcb_roi_end`, e o parser teria que saber quantas são. Hoje ele espera 2 blocos em todo benchmark cujo fonte chama `rcb_roi_begin`.
 
 ## Benchmark de exemplo
