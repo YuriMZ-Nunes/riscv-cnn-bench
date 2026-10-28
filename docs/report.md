@@ -13,6 +13,7 @@ Os CSVs são gerados só a partir das pastas de execução, sem edição manual,
 | --- | --- |
 | `src/riscvcnnbench/report.py`, `riscvcnnbench report`, `make report` | Existente |
 | Gráficos a partir destes CSVs: `riscvcnnbench plot` | Existente (RCB-21, [plots.md](plots.md)) |
+| Relatório HTML a partir destes CSVs: `riscvcnnbench relatorio` | Existente (RCB-35, [html_report.md](html_report.md)) |
 
 ## Gerar
 

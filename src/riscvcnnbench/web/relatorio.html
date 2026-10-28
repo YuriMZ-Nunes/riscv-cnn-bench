@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório de resultados</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f7f7f5; --panel: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --line: #deded8;
+    --grid: #ecebe6; --accent: #2a78d6; --accent-soft: #e6eef6; --code: #f1f1ee;
+    --better: #0f6b2f; --better-soft: #e3f2e7; --worse: #a33a2a; --worse-soft: #fbeae6;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+    --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+    --series-other: #8d8c86;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --bg: #141413; --panel: #1a1a19; --text: #f0efec; --muted: #c3c2b7; --line: #34352f;
+      --grid: #2a2a27; --accent: #3987e5; --accent-soft: #23303c; --code: #262725;
+      --better: #7fd39a; --better-soft: #1f3326; --worse: #f0a291; --worse-soft: #3a2420;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+      --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+      --series-other: #77766f;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #141413; --panel: #1a1a19; --text: #f0efec; --muted: #c3c2b7; --line: #34352f;
+    --grid: #2a2a27; --accent: #3987e5; --accent-soft: #23303c; --code: #262725;
+    --better: #7fd39a; --better-soft: #1f3326; --worse: #f0a291; --worse-soft: #3a2420;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+    --series-other: #77766f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 24px 4px; }
+  header h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  nav { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line);
+        padding: 8px 24px; display: flex; gap: 16px; flex-wrap: wrap; }
+  nav a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  main { padding: 16px 24px 40px; max-width: 1200px; }
+  @media (max-width: 700px) { main, header, nav { padding-left: 16px; padding-right: 16px; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  section h2 { margin: 0 0 10px; font-size: 18px; }
+  h3 { font-size: 15px; margin: 14px 0 8px; }
+  .muted { color: var(--muted); font-size: 13.5px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .card-value { font-size: 22px; font-weight: 650; }
+  .card-label { color: var(--muted); font-size: 13px; }
+  .lists div { margin: 3px 0; }
+  .filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 16px; }
+  .filters fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin: 0; }
+  .filters legend { font-weight: 600; font-size: 13.5px; }
+  .choice { display: flex; gap: 6px; align-items: baseline; font-size: 13.5px; padding: 2px 0; }
+  .choice input { accent-color: var(--accent); }
+  .choice small { color: var(--muted); }
+  .config input[type=radio] { margin-left: -2px; }
+  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 4px 0 8px; }
+  .key { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .ri-swatch { width: 16px; height: 0; border-top: 2px dashed var(--text); display: inline-block; }
+  svg.panel { width: 100%; height: auto; display: block; margin-bottom: 4px; }
+  svg .grid { stroke: var(--grid); stroke-width: 1; }
+  svg .baseline { stroke: var(--muted); stroke-width: 1.2; }
+  svg .tick { fill: var(--muted); font-size: 11px; }
+  svg .axis-label { fill: var(--muted); font-size: 11.5px; }
+  svg .panel-title { fill: var(--text); font-size: 13px; font-weight: 600; }
+  svg .bar { stroke: var(--panel); stroke-width: 1; }
+  svg .bar:hover { opacity: .8; }
+  svg .ri { stroke: var(--text); stroke-width: 2; stroke-dasharray: 4 3; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th[data-key] { cursor: pointer; text-decoration: underline dotted; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.better { color: var(--better); background: var(--better-soft); }
+  td.worse { color: var(--worse); background: var(--worse-soft); }
+  tfoot td { font-weight: 600; }
+  code { background: var(--code); border-radius: 4px; padding: 0 4px; font-size: 12.5px; }
+  #tooltip { position: fixed; z-index: 5; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+             border-radius: 6px; padding: 6px 8px; font-size: 12.5px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  #analysis h3 { margin-top: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Relatório de resultados</h1>
+  <p>Dados de <span id="source"></span>. Gerado por riscvcnnbench relatorio <span id="version"></span>; a seleção das execuções é a do <code>plot</code> e do <code>analyze</code> (válidas, valendo e com checksum consistente).</p>
+</header>
+<nav>
+  <a href="#visao">Visão geral</a><a href="#filtros">Filtros</a><a href="#resultados">Resultados</a><a href="#comparar">Comparar configurações</a><a href="#analise">Análise</a>
+</nav>
+<main>
+  <section id="visao">
+    <h2>Visão geral</h2>
+    <div class="cards" id="cards"></div>
+    <div class="lists" id="lists"></div>
+    <div id="skipped"></div>
+    <div id="problems"></div>
+  </section>
+  <section id="filtros">
+    <h2>Filtros</h2>
+    <p class="muted">Valem para os resultados e para a comparação (nela, só operação, tamanho e série: as configurações escolhidas já fixam CPU e cenário).</p>
+    <div class="filters">
+      <fieldset><legend>Operação</legend><div id="f-ops"></div></fieldset>
+      <fieldset><legend>Tamanho</legend><div id="f-sizes"></div></fieldset>
+      <fieldset><legend>CPU</legend><div id="f-cpus"></div></fieldset>
+      <fieldset><legend>Cenário</legend><div id="f-scenarios"></div></fieldset>
+      <fieldset><legend>Série</legend><div id="f-series"></div></fieldset>
+    </div>
+  </section>
+  <section id="resultados">
+    <h2>Resultados</h2>
+    <div class="controls">
+      <label>Par <select id="pair"></select></label>
+      <span class="muted">Speedup em ciclos (S_C) por operação, uma barra por cenário, a partir de 1× (sem ganho). O traço é a redução de instruções (R_I): a barra acima dele quer dizer que o par ganhou mais em ciclos que em instruções.</span>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div id="chart"></div>
+    <h3>Execuções <span class="muted" id="runs-count"></span></h3>
+    <p class="muted">Clique no título de uma coluna numérica para ordenar.</p>
+    <div class="table-wrap">
+      <table id="runs">
+        <thead><tr>
+          <th>Operação</th><th>Tam.</th><th>CPU</th><th>Cenário</th><th>Série</th><th>Flags, dados</th>
+          <th class="num" data-key="insts">Instruções</th><th class="num" data-key="cycles">Ciclos</th>
+          <th class="num" data-key="ipc">IPC</th><th class="num" data-key="inst_work">Inst./MAC</th>
+          <th class="num" data-key="cyc_work">Ciclos/MAC</th><th class="num" data-key="l1d_mpki">L1d MPKI</th>
+          <th class="num" data-key="l2_mpki">L2 MPKI</th>
+        </tr></thead>
+        <tbody id="runs-body"></tbody>
+      </table>
+    </div>
+  </section>
+  <section id="comparar">
+    <h2>Comparar configurações</h2>
+    <p class="muted">Uma configuração é a CPU, o cenário de memória (com os ajustes das caches), as flags, os dados e o clock. Marque duas ou mais e escolha a base pelo círculo. Vale para uma campanha ou para YAMLs separados com o mesmo <code>output.dir</code>.</p>
+    <div id="configs"></div>
+    <div class="controls"><label>Métrica <select id="metric"></select></label></div>
+    <div id="compare"></div>
+  </section>
+  <section id="analise">
+    <h2>Análise</h2>
+    <div id="analysis"></div>
+  </section>
+</main>
+<div id="tooltip" hidden></div>
+<script id="rcb-data" type="application/json">__RCB_DATA__</script>
+<script>
+__RCB_SCRIPT__
+</script>
+</body>
+</html>
