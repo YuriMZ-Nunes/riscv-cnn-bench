@@ -1,3 +1,6 @@
+# Imagem de desenvolvimento do riscv-cnn-bench. Versões e verificação em
+# docs/container.md; confira uma imagem nova com make ambiente e make validate.
+#
 # Digest fixado para que reconstruções usem a mesma imagem base.
 # Para atualizar: podman pull ubuntu:24.04 && podman image inspect --format '{{.Digest}}' ubuntu:24.04
 FROM docker.io/library/ubuntu:24.04@sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316
@@ -36,6 +39,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pytest \
     gcc-riscv64-linux-gnu=4:13.2.0-7ubuntu1 \
     g++-riscv64-linux-gnu=4:13.2.0-7ubuntu1 \
+    gcc-13-riscv64-linux-gnu=13.3.0-6ubuntu2~24.04.1cross1 \
+    g++-13-riscv64-linux-gnu=13.3.0-6ubuntu2~24.04.1cross1 \
+    cpp-13-riscv64-linux-gnu=13.3.0-6ubuntu2~24.04.1cross1 \
     binutils-riscv64-linux-gnu=2.42-4ubuntu2.10 \
     libc6-dev-riscv64-cross=2.39-0ubuntu8cross1 \
     qemu-user=1:8.2.2+ds-0ubuntu1.18 \

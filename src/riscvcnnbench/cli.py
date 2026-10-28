@@ -511,6 +511,55 @@ def analyze(
 
 
 @app.command()
+def ambiente(
+    gem5: Annotated[
+        Path | None,
+        typer.Option(help="Executável do gem5. Padrão: $GEM5_BIN ou o build do submódulo."),
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Imprime em JSON.")] = False,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Grava o resultado em JSON neste arquivo.")
+    ] = None,
+) -> None:
+    """Confere e registra as ferramentas do ambiente, dentro do container.
+
+    Compila e roda no QEMU um programa rv64gc e um rv64gcv (intrínsecos RVV, com
+    v=true), e mostra as versões da toolchain, do QEMU, do Python, do uv, do
+    SCons, do Git, do gem5 do fork (com o build-info) e das bibliotecas Python.
+    Saída 1 se faltar algo obrigatório. Veja docs/container.md.
+    """
+    import json
+
+    from riscvcnnbench.environment import as_document, check_environment
+    from riscvcnnbench.runner import default_gem5
+    from riscvcnnbench.runs import display
+
+    checks = check_environment((gem5 or default_gem5()).resolve())
+    document = as_document(checks)
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+    if as_json:
+        typer.echo(json.dumps(document, indent=2, ensure_ascii=False))
+    else:
+        rows = [["ITEM", "SITUAÇÃO", "VERSÃO", "DETALHE"]]
+        for item in checks:
+            state = "ok" if item.ok else ("FALTA" if item.required else "aviso")
+            rows.append([item.name, state, item.version or "-", item.detail])
+        widths = [max(len(row[i]) for row in rows) for i in range(3)]
+        for row in rows:
+            cells = [cell.ljust(width) for cell, width in zip(row[:3], widths, strict=True)]
+            typer.echo("  ".join([*cells, row[3]]).rstrip())
+        typer.echo(f"\nPlataforma: {document['platform']}")
+        if output:
+            typer.echo(f"Gravado em {display(output)}")
+    if not document["ok"]:
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def relatorio(
     root: Annotated[
         Path,
