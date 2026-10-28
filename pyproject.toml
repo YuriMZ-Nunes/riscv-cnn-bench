@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-  { name = "Yuri Nunes" }
+  { name = "Yuri de Melo Zorzoli Nunes" }
 ]
 keywords = [
   "risc-v",
@@ -61,8 +61,10 @@ docs = [
 riscvcnnbench = "riscvcnnbench.cli:app"
 
 [project.urls]
-Repository = "https://github.com/SEU-USUARIO/riscv-cnn-bench"
-Issues = "https://github.com/SEU-USUARIO/riscv-cnn-bench/issues"
+Repository = "https://github.com/YuriMZ-Nunes/riscv-cnn-bench"
+Issues = "https://github.com/YuriMZ-Nunes/riscv-cnn-bench/issues"
+Documentation = "https://github.com/YuriMZ-Nunes/riscv-cnn-bench/tree/main/docs"
+Dados = "https://doi.org/10.5281/zenodo.23698495"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

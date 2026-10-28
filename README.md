@@ -36,7 +36,7 @@ Disponíveis:
 
 Planejados (ainda não implementados):
 
-- Material para o texto do TCC, revisão do container e da documentação de reprodução, e a demonstração final (RCB-26 a RCB-29).
+- Material para o texto do TCC e a demonstração final (RCB-28 e RCB-29).
 - Extensões fora do escopo do TCC, com o que cada uma exigiria: ver [docs/future.md](docs/future.md).
 
 ---
@@ -49,8 +49,9 @@ riscv-cnn-bench/
 ├── Makefile                  # Orquestração de comandos e automação de tarefas
 ├── pyproject.toml            # Configuração do pacote Python e linters (Ruff/Mypy)
 ├── uv.lock                   # Trava de versões de dependências Python
+├── LICENSE                   # Licença MIT do código (os dados publicados são CC BY 4.0)
+├── CITATION.cff              # Como citar o framework e os dados
 ├── configs/                  # Arquivos de configuração do simulador e experimentos
-│   ├── defaults.yaml         # Placeholder (vazio)
 │   ├── scenarios.yaml        # Cenários de memória nomeados (campo scenario do YAML)
 │   └── gem5/
 │       ├── se_riscv.py              # Configuração baseline do gem5 (SysCall Emulation)
@@ -96,9 +97,12 @@ riscv-cnn-bench/
 
 ## Requisitos do Sistema
 
+- **Linux x86-64** (testado num Fedora 44) com cerca de 9 GB livres: imagem, gem5 compilado e `.venv`.
 - **Podman** (o Makefile usa execução rootless com `--userns=keep-id`).
 - **GNU Make** (utilizado para automação de tarefas).
 - **Git** (necessário para o gerenciamento de submódulos).
+
+O guia detalhado, com o que conferir em cada passo e os problemas comuns, está em [docs/installation.md](docs/installation.md). Para rodar de novo os experimentos do TCC e comparar com os dados publicados, veja [docs/reproducibility.md](docs/reproducibility.md).
 
 ---
 
@@ -280,7 +284,7 @@ O `metadata.json` registra:
 - versão do gem5 e o registro de build, indicando se o executável ainda é o mesmo compilado por `make gem5-build`;
 - imagem do container, Python e versões do compilador RISC-V.
 
-Limitações: o executável do gem5 não é copiado (apenas identificado por hash); os caminhos são absolutos e documentam a execução original, não permitem replay automático; arquivos não rastreados não entram nos diffs; pacotes apt fixados podem deixar de existir no repositório do Ubuntu, exigindo atualização do Containerfile. O objetivo é rastreabilidade, não reprodução bit a bit.
+Limitações: o executável do gem5 não é copiado (apenas identificado por hash); os caminhos são absolutos e documentam a execução original, não permitem replay automático; arquivos não rastreados não entram nos diffs; pacotes apt fixados podem deixar de existir no repositório do Ubuntu, exigindo atualização do Containerfile. O objetivo é rastreabilidade, não reprodução bit a bit da pasta inteira. Ainda assim, com as mesmas entradas, o gem5 repete o `stats.txt`: 9 combinações da campanha final, rodadas de novo com o código atual e uma imagem reconstruída, saíram idênticas aos dados publicados (ver [docs/reproducibility.md](docs/reproducibility.md)).
 
 ### Limpeza
 
@@ -293,6 +297,9 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 
 ## Documentação
 
+- [Instalação](docs/installation.md)
+- [Arquitetura](docs/architecture.md)
+- [Reprodução dos experimentos](docs/reproducibility.md)
 - [Formato dos experimentos](docs/experiments.md)
 - [Execução e resultados do hello_riscv](docs/hello_riscv.md)
 - [Resultados de uma execução](docs/results.md)
@@ -313,4 +320,10 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Trabalhos futuros](docs/future.md)
 - [Container e dependências](docs/container.md)
 - [Toolchain RISC-V](docs/toolchain.md)
-- [Ambiente gem5](docs/environment.md)
+- [O gem5 do fork](docs/environment.md)
+
+## Licença e citação
+
+O código está sob a licença MIT ([LICENSE](LICENSE)). Os dados da campanha final, publicados à parte, estão sob a CC BY 4.0 ([docs/data.md](docs/data.md)).
+
+Para citar o framework, use o [CITATION.cff](CITATION.cff); o GitHub o mostra em "Cite this repository". Para citar os dados, use o DOI [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495).

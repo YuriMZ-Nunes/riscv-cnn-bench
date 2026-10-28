@@ -1,0 +1,44 @@
+# Metadados de citação do framework (formato Citation File Format). O GitHub
+# mostra "Cite this repository" a partir deste arquivo. Os dados da campanha
+# final têm DOI próprio, em references (docs/data.md).
+cff-version: 1.2.0
+message: >-
+  Se usar o riscv-cnn-bench, cite-o com estes metadados. Se usar os dados da
+  campanha final, cite também o conjunto de dados pelo DOI.
+title: >-
+  riscv-cnn-bench: framework reprodutível para avaliar operações de CNN int8
+  com instruções RISC-V personalizadas no gem5
+type: software
+authors:
+  - family-names: Nunes
+    given-names: Yuri de Melo Zorzoli
+    affiliation: Universidade Federal de Pelotas
+version: 0.1.0
+license: MIT
+repository-code: https://github.com/YuriMZ-Nunes/riscv-cnn-bench
+keywords:
+  - risc-v
+  - gem5
+  - cnn
+  - int8
+  - quantization
+  - custom instructions
+  - rvv
+  - benchmark
+  - reproducibility
+references:
+  - type: dataset
+    title: >-
+      riscv-cnn-bench: dados de simulação de operações de CNN int8 em RISC-V
+      no gem5 (v1)
+    authors:
+      - family-names: Nunes
+        given-names: Yuri de Melo Zorzoli
+        affiliation: Universidade Federal de Pelotas
+    version: v1
+    year: 2026
+    doi: 10.5281/zenodo.23698495
+    license: CC-BY-4.0
+    publisher:
+      name: Zenodo
+    url: https://doi.org/10.5281/zenodo.23698495

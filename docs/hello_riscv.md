@@ -154,11 +154,12 @@ Versões de pacotes fixadas no `Containerfile`, que também fixa a imagem base `
 | --- | --- |
 | `gcc-riscv64-linux-gnu` | `4:13.2.0-7ubuntu1` |
 | `g++-riscv64-linux-gnu` | `4:13.2.0-7ubuntu1` |
+| `gcc-13-riscv64-linux-gnu`, `g++-13-…`, `cpp-13-…` | `13.3.0-6ubuntu2~24.04.1cross1` |
 | `binutils-riscv64-linux-gnu` | `2.42-4ubuntu2.10` |
 | `libc6-dev-riscv64-cross` | `2.39-0ubuntu8cross1` |
 | `qemu-user` | `1:8.2.2+ds-0ubuntu1.18` |
 
-`gcc-riscv64-linux-gnu` é um metapacote: o compilador efetivamente instalado é o GCC 13.3.0 (`13.3.0-6ubuntu2~24.04.1`), que não é fixado diretamente. Por isso, cada execução no gem5 registra em `metadata.json` a versão do compilador do ambiente e a gravada no próprio binário. Versões fixadas podem ser removidas dos repositórios do Ubuntu; nesse caso, `make image` falha e o `Containerfile` precisa ser atualizado.
+`gcc-riscv64-linux-gnu` é um metapacote. O compilador efetivamente instalado, o GCC 13.3.0, é fixado pelos pacotes `gcc-13-*` desde a RCB-27 ([container.md](container.md)). Além disso, cada execução no gem5 registra em `metadata.json` a versão do compilador do ambiente e a gravada no próprio binário. Versões fixadas podem ser removidas dos repositórios do Ubuntu; nesse caso, `make image` falha e o `Containerfile` precisa ser atualizado ([container.md](container.md#versões-fixadas-e-o-que-fazer-quando-uma-some)). `make ambiente` confere as versões instaladas.
 
 Confira a versão efetiva do compilador e do emulador com:
 

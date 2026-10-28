@@ -19,7 +19,7 @@ PODMAN_RUN = podman run --rm -it --userns=keep-id \
 IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 
 .PHONY: help image image-clean shell check ambiente sync lock test lint format format-check \
-	gem5-status gem5-build gem5-clean toolchain-check benchmark-build smoke-test \
+	gem5-status gem5-build gem5-clean toolchain-check smoke-test \
 	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare \
 	campaign-plan campaign campaign-status campaign-estimate campaign-audit campaign-package \
 	report plot analyze gerador relatorio
@@ -70,9 +70,6 @@ gem5-build: ## Compila o gem5 otimizado com suporte a RISC-V. Use JOBS=N para aj
 
 gem5-clean: ## Remove os artefatos de build do gem5; não altera o código-fonte.
 	$(PODMAN_RUN) bash -lc 'cd $(GEM5_DIR) && scons -c build/RISCV/gem5.opt && rm -f .sconsign.dblite build/RISCV/gem5.opt.build-info.json build/RISCV/gem5.opt.build.diff'
-
-benchmark-build: ## Placeholder para futura compilação de benchmarks RISC-V.
-	$(PODMAN_RUN) bash -lc 'echo "Ainda não há benchmarks configurados para build."'
 
 smoke-test: ## Executa CLI, testes, lint e verificação de formato.
 	$(PODMAN_RUN) bash -lc 'uv sync --extra $(UV_EXTRA) && uv run riscvcnnbench version && uv run pytest -q && uv run ruff check src tests && uv run ruff format --check src tests'
