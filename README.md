@@ -24,6 +24,7 @@ Disponíveis:
 - **Análise dos resultados:** `riscvcnnbench analyze <pasta>` gera, a partir dos CSVs do report, as tabelas da análise: instruções e redução de instruções, speedup em ciclos e eficiência por CPU e cenário, IPC, ciclos e faltas por cenário de memória, sensibilidade à latência e o contraste `-O2` × `-O3`. A análise da campanha final responde à pergunta da proposta e às hipóteses: a redução de instruções vira redução de ciclos quando os dados estão nas caches, e a memória limita o ganho quando não estão (ver [docs/analysis.md](docs/analysis.md)). O caminho de cada resposta e de cada objetivo da proposta até o CSV, a figura e a campanha de origem está em [docs/evidence.md](docs/evidence.md).
 - **Container e ambiente conferido:** o `Containerfile` fixa a imagem base e as versões da cadeia RISC-V (GCC 13.3.0, binutils 2.42, glibc 2.39), do QEMU 8.2.2 e do uv. `riscvcnnbench ambiente` (ou `make ambiente`) confere o ambiente: compila `rv64gc` e `rv64gcv` com intrínsecos RVV e roda os dois no QEMU, e registra as versões das ferramentas, do gem5 do fork (conferido com o build-info) e das bibliotecas Python em `build/ambiente.json`. Uma imagem reconstruída do zero em 27/10/2026 gerou o mesmo binário e o mesmo `stats.txt` que a imagem da campanha num experimento de referência e passou no `make validate` (ver [docs/container.md](docs/container.md)).
 - **Campanha final e pacote de dados:** a matriz final rodou em 27/10/2026, com a validação de equivalência antes e 620 simulações válidas em 2 h 52 min com 4 tarefas. `riscvcnnbench campaign audit` confere se uma campanha vale como resultado (concluídas, válidas, árvore limpa, um só commit, executável do gem5 registrado), e `riscvcnnbench campaign package` junta as campanhas num `.tar.gz` com README, licença CC BY 4.0, MANIFEST e SHA256SUMS. Os dados estão publicados na release [`dados-v1`](https://github.com/YuriMZ-Nunes/riscv-cnn-bench/releases/tag/dados-v1) e no Zenodo, com o DOI [10.5281/zenodo.23698495](https://doi.org/10.5281/zenodo.23698495) (ver [docs/data.md](docs/data.md)).
+- **Demonstração:** `make demo` roda a convolução 3×3 por im2col no tamanho S nas três variantes, na `o3-edge`, com as caches L1 e L2 e sem caches (6 simulações, cerca de 1 min 30 s), e gera as tabelas, os gráficos e o relatório HTML numa pasta nova de `build/demo/`. Com as caches, a personalizada leva menos ciclos que a RVV; sem caches, a RVV passa à frente. `riscvcnnbench campaign diff` (ou `make campaign-diff DIR=<pasta>`) compara as execuções com as de mesma configuração da campanha final publicada: binário, gem5, `RESULT` e `stats.txt` iguais. O roteiro do vídeo, em cenas, e os resultados pré-gerados (plano B) estão em [docs/demo.md](docs/demo.md).
 - **Cenários de CPU e memória:** quatro cenários de memória nomeados (`sem-cache`, `l1`, `l1-l2`, `reduzido`, em `configs/scenarios.yaml`, escolhidos por `scenario` no YAML), uma O3 estreita de borda (`o3-edge`), latência configurável das instruções personalizadas (`cpu.custom_latency`, classe `CnnMult` no fork do gem5), com a quantidade de unidades e o pipeline delas (`cpu.custom_units`, `cpu.custom_pipelined`) e caches aquecidas ou esvaziadas no início da região de interesse (`benchmark.cache_state`), com a tabela do que cabe em cada nível. Latência, MSHRs, alvos, prefetcher e linha das caches também são campos opcionais do YAML, com os padrões de antes (ver [docs/scenarios.md](docs/scenarios.md)).
 - **Execução de experimentos:** `riscvcnnbench run <yaml>` (ou `make run EXPERIMENT=...`) compila o benchmark com as flags do YAML, executa no gem5 e salva YAML, configuração resolvida e comando de build na pasta da execução. Em caso de falha, a CLI explica a causa (build, benchmark, instrução desconhecida, gem5) e aponta o log; `riscvcnnbench runs` lista as execuções.
 - **Especificação das instruções personalizadas:** cinco instruções em `custom-0`/`custom-1` para operações de CNN int8 (ver [docs/custom_instructions.md](docs/custom_instructions.md)), com header `.insn`, modelo em C e o benchmark `cnn_insn_semantics`, que confere os casos de teste no QEMU e no gem5.
@@ -36,7 +37,6 @@ Disponíveis:
 
 Planejados (ainda não implementados):
 
-- A demonstração final (RCB-29).
 - Extensões fora do escopo do TCC, com o que cada uma exigiria: ver [docs/future.md](docs/future.md).
 
 ---
@@ -226,6 +226,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make campaign-status MATRIX=<yaml>` | Estado de cada combinação, com o diagnóstico das falhas e instruções/ciclos/IPC. |
 | `make campaign-estimate MATRIX=<yaml> MEASURED="<pastas>" [CSV=<arquivo>]` | Tempo estimado de cada combinação e do total, a partir de execuções medidas. |
 | `make campaign-audit DIR=<pasta>` | Confere se uma campanha vale como resultado: concluídas, válidas, árvore limpa, um só commit. |
+| `make campaign-diff DIR=<pasta> [REF=results/campaigns/final]` | Compara cada combinação de uma campanha com a de mesma configuração em outra (binário, gem5, `RESULT` e `stats.txt`); saída 1 se alguma diferir. |
 | `make campaign-package DIRS="<pastas>" OUT=<arquivo>` | Pacote `.tar.gz` das campanhas para publicação, com README, licença, MANIFEST e SHA256SUMS. |
 | `make report [DIR=results/<name>] [FORCE=1]` | Grava `runs.csv` e `pairs.csv` em `<pasta>/report/`. |
 | `make plot [DIR=results/<name>] [FORCE=1]` | Gera os gráficos (PDF e PNG) a partir de `<pasta>/report/` em `<pasta>/figures/`. |
@@ -233,6 +234,7 @@ Fora do container, `make run EXPERIMENT=experiments/hello_param_cache.yaml`, `ma
 | `make gerador [OUT=build/gerador.html] [MEASURED="<pastas>"] [FORCE=1]` | Grava a página do gerador de experimentos; abra-a no navegador para montar o YAML sem escrevê-lo. |
 | `make analyze [DIR=results/<name>] [FORCE=1]` | Gera as tabelas da análise (CSV e Markdown) a partir de `<pasta>/report/` em `<pasta>/analysis/`. |
 | `make compare [DIR=results/<name>]` | Compara as execuções aos pares (variantes e `-O2` × `-O3`): redução de instruções, speedup em ciclos e razão de IPC. |
+| `make demo [DIR=<pasta>] [JOBS=N]` | Demonstração: a im2col S nas três variantes, com e sem caches, mais tabelas, gráficos e `relatorio.html`, numa pasta nova de `build/demo/` ([docs/demo.md](docs/demo.md)). |
 | `make smoke-test` | Sincroniza ambiente, testa CLI, executa Pytest e Ruff. |
 | `make clean-results` | Remove resultados gerados sob `results/`. |
 | `make clean` | Remove `.venv`, caches e artefatos gerados pelo framework. |
@@ -284,7 +286,7 @@ O `metadata.json` registra:
 - versão do gem5 e o registro de build, indicando se o executável ainda é o mesmo compilado por `make gem5-build`;
 - imagem do container, Python e versões do compilador RISC-V.
 
-Limitações: o executável do gem5 não é copiado (apenas identificado por hash); os caminhos são absolutos e documentam a execução original, não permitem replay automático; arquivos não rastreados não entram nos diffs; pacotes apt fixados podem deixar de existir no repositório do Ubuntu, exigindo atualização do Containerfile. O objetivo é rastreabilidade, não reprodução bit a bit da pasta inteira. Ainda assim, com as mesmas entradas, o gem5 repete o `stats.txt`: 9 combinações da campanha final, rodadas de novo com o código atual e uma imagem reconstruída, saíram idênticas aos dados publicados (ver [docs/reproducibility.md](docs/reproducibility.md)).
+Limitações: o executável do gem5 não é copiado (apenas identificado por hash); os caminhos são absolutos e documentam a execução original, não permitem replay automático; arquivos não rastreados não entram nos diffs; pacotes apt fixados podem deixar de existir no repositório do Ubuntu, exigindo atualização do Containerfile. O objetivo é rastreabilidade, não reprodução bit a bit da pasta inteira. Ainda assim, com as mesmas entradas, o gem5 repete o `stats.txt`: 9 combinações da campanha final, rodadas de novo com o código atual e uma imagem reconstruída, saíram idênticas aos dados publicados, e `make campaign-diff` faz essa conferência para uma campanha inteira (ver [docs/reproducibility.md](docs/reproducibility.md)).
 
 ### Limpeza
 
@@ -318,6 +320,7 @@ Faça backup das execuções que deseja manter antes de utilizá-los. A criaçã
 - [Evidências por objetivo: de cada resposta do TCC ao CSV e à figura](docs/evidence.md)
 - [Gerador de experimentos](docs/generator.md)
 - [Relatório de resultados em HTML](docs/html_report.md)
+- [Demonstração: roteiro do vídeo e plano B](docs/demo.md)
 - [Trabalhos futuros](docs/future.md)
 - [Container e dependências](docs/container.md)
 - [Toolchain RISC-V](docs/toolchain.md)

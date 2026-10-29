@@ -1,6 +1,7 @@
 """A matriz final da campanha (campaigns/final.yaml, RCB-22), as medições da
-estimativa (campaigns/medicao.yaml) e o piloto (campaigns/piloto.yaml, RCB-23):
-número de execuções, parâmetros fixados e cobertura."""
+estimativa (campaigns/medicao.yaml), o piloto (campaigns/piloto.yaml, RCB-23) e a
+demonstração (campaigns/demo.yaml, RCB-29): número de execuções, parâmetros
+fixados e cobertura."""
 
 from pathlib import Path
 
@@ -84,3 +85,20 @@ def test_pilot_is_part_of_the_final_matrix(final: tuple[Plan, dict], tmp_path: P
     pilot = plan_of(PROJECT_ROOT / "campaigns/piloto.yaml", tmp_path)
     assert len(pilot.runs) == 64 and not pilot.invalid
     assert {run.key for run in pilot.runs} <= {run.key for run in plan.runs}
+
+
+def test_demo_is_part_of_the_final_matrix(final: tuple[Plan, dict], tmp_path: Path) -> None:
+    # A demonstração (RCB-29) roda 6 combinações da matriz final, e a pasta padrão dela
+    # tem o comprimento da final: o caminho entra na pilha do programa simulado, e
+    # assim os ciclos saem iguais aos publicados.
+    plan, _ = final
+    path = PROJECT_ROOT / "campaigns/demo.yaml"
+    demo = plan_of(path, tmp_path)
+    assert not demo.invalid
+    assert [run.name for run in demo.runs] == [
+        f"conv3x3_im2col_s__{variant}__o3-edge__{scenario}"
+        for variant in ("ref", "custom", "rvv")
+        for scenario in ("l1-l2", "sem-cache")
+    ]
+    assert {run.key for run in demo.runs} <= {run.key for run in plan.runs}
+    assert len(str(load_campaign(path).output.dir)) == len("results/campaigns/final")

@@ -21,8 +21,8 @@ IMAGE_ID = $(shell podman image inspect --format '{{.Id}}' $(IMAGE) 2>/dev/null)
 .PHONY: help image image-clean shell check ambiente sync lock test lint format format-check \
 	gem5-status gem5-build gem5-clean toolchain-check smoke-test \
 	clean clean-results status hello-build hello-run hello-run-gem5 e2e-test validate run runs stats compare \
-	campaign-plan campaign campaign-status campaign-estimate campaign-audit campaign-package \
-	report plot analyze gerador relatorio
+	campaign-plan campaign campaign-status campaign-estimate campaign-audit campaign-diff \
+	campaign-package report plot analyze gerador relatorio demo
 
 help: ## Mostra os comandos disponíveis.
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z0-9_-]+:.*##/ {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -156,6 +156,10 @@ campaign-audit: ## Confere se uma campanha vale como resultado: make campaign-au
 	@test -n "$(DIR)" || { echo "Informe DIR=results/campaigns/<nome>"; exit 2; }
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign audit "$(DIR)"'
 
+campaign-diff: ## Compara uma campanha com outra, combinação a combinação (binário, RESULT, stats.txt): make campaign-diff DIR=<pasta> [REF=results/campaigns/final]
+	@test -n "$(DIR)" || { echo "Informe DIR=<pasta da campanha a conferir>"; exit 2; }
+	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench campaign diff "$(DIR)" "$(or $(REF),results/campaigns/final)"'
+
 campaign-package: ## Pacote de dados para publicação: make campaign-package DIRS="<pastas>" OUT=results/pacotes/<nome>.tar.gz
 	@test -n "$(DIRS)" || { echo "Informe DIRS=\"<pasta> [<pasta>...]\" com as campanhas"; exit 2; }
 	@test -n "$(OUT)" || { echo "Informe OUT=results/pacotes/<nome>.tar.gz"; exit 2; }
@@ -175,3 +179,16 @@ relatorio: ## Relatório HTML dos resultados (filtros, gráficos, comparação d
 
 gerador: ## Página HTML para montar experimentos sem escrever YAML: make gerador [OUT=build/gerador.html] [MEASURED="<pastas>"] [FORCE=1]
 	$(PODMAN_RUN) bash -lc 'uv run riscvcnnbench gerador -o "$(or $(OUT),build/gerador.html)" $(foreach d,$(MEASURED),-m "$(d)") $(if $(FORCE),--force)'
+
+# A pasta padrão é nova a cada minuto e tem o comprimento de results/campaigns/final
+# (build/demo/ e 12 dígitos): o caminho entra na pilha do programa simulado, e assim
+# os ciclos saem iguais aos publicados (docs/demo.md).
+demo: PODMAN_ARGS += -e RCB_IMAGE="$(IMAGE)" -e RCB_IMAGE_ID="$(IMAGE_ID)"
+demo: ## Demonstração (docs/demo.md): conv3x3_im2col S nas três variantes, com e sem caches (6 simulações, ~1,5 min), mais tabelas, gráficos e relatorio.html: make demo [DIR=build/demo/<data>] [JOBS=N]
+	$(PODMAN_RUN) bash -lc 'set -e; d="$(or $(DIR),build/demo/$(shell date +%Y%m%d%H%M))"; \
+		uv run riscvcnnbench campaign run campaigns/demo.yaml --output "$$d" --jobs $(JOBS) && \
+		uv run riscvcnnbench report "$$d" --force && \
+		uv run riscvcnnbench plot "$$d" --force && \
+		uv run riscvcnnbench analyze "$$d" --force && \
+		uv run riscvcnnbench relatorio "$$d" --force && \
+		echo && echo "Pasta da demonstração: $$d"'

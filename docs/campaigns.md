@@ -9,6 +9,8 @@ Uma campanha executa uma matriz de experimentos sem montar cada YAML à mão (RC
 | Matriz final da campanha [`campaigns/final.yaml`](../campaigns/final.yaml) | Existente (RCB-22, [matrix.md](matrix.md)); executada em 27/10/2026 (RCB-24, [data.md](data.md)) |
 | Estimativa de tempo por combinação: `riscvcnnbench campaign estimate` | Existente (RCB-22, [matrix.md](matrix.md#como-a-estimativa-é-feita)); refeita com o piloto (RCB-23) e conferida com a campanha final |
 | Auditoria (`riscvcnnbench campaign audit`) e pacote de dados para publicação (`riscvcnnbench campaign package`) | Existente (RCB-24, [data.md](data.md)) |
+| Comparação com outra campanha, como a publicada (`riscvcnnbench campaign diff`) | Existente (RCB-29, [reproducibility.md](reproducibility.md#conferir-com-os-dados-publicados)) |
+| Matriz da demonstração [`campaigns/demo.yaml`](../campaigns/demo.yaml) e `make demo` | Existente (RCB-29, [demo.md](demo.md)) |
 | Exportação em CSV: `riscvcnnbench report <pasta da campanha>` | Existente (RCB-20, [report.md](report.md)); com colunas `campaign` e `groups` |
 | Gráficos: `riscvcnnbench plot <pasta da campanha>` | Existente (RCB-21, [plots.md](plots.md)); lê o `report/` da campanha e grava em `figures/` |
 
@@ -20,10 +22,11 @@ uv run riscvcnnbench campaign run campaigns/exemplo.yaml --jobs 4     # executa 
 uv run riscvcnnbench campaign status campaigns/exemplo.yaml          # estado de cada combinação
 uv run riscvcnnbench campaign estimate campaigns/final.yaml -m results/campaigns/medicao   # tempo estimado
 uv run riscvcnnbench campaign audit results/campaigns/final          # vale como resultado?
+uv run riscvcnnbench campaign diff results/demo/pre-gerado results/campaigns/final   # iguais às da final?
 uv run riscvcnnbench campaign package results/campaigns/final -o results/pacotes/dados.tar.gz
 ```
 
-Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [JOBS=N] [VALIDATE=1]`, `make campaign-status MATRIX=...`, `make campaign-estimate MATRIX=... MEASURED="<pastas>" [JOBS=N] [CSV=<arquivo>]`, `make campaign-audit DIR=...` e `make campaign-package DIRS="<pastas>" OUT=<arquivo>`. O `make campaign` roda a campanha inteira dentro de **um** container e passa a identificação da imagem (`RCB_IMAGE`, `RCB_IMAGE_ID`) para o `metadata.json` de cada execução. A auditoria e o pacote estão em [data.md](data.md).
+Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [JOBS=N] [VALIDATE=1]`, `make campaign-status MATRIX=...`, `make campaign-estimate MATRIX=... MEASURED="<pastas>" [JOBS=N] [CSV=<arquivo>]`, `make campaign-audit DIR=...`, `make campaign-diff DIR=... [REF=results/campaigns/final]` e `make campaign-package DIRS="<pastas>" OUT=<arquivo>`. O `campaign diff` compara cada combinação da primeira pasta com a de mesma chave na segunda: binário, executável do gem5, linha `RESULT` e `stats.txt` sem as estatísticas do host ([reproducibility.md](reproducibility.md#conferir-com-os-dados-publicados)). O `make campaign` roda a campanha inteira dentro de **um** container e passa a identificação da imagem (`RCB_IMAGE`, `RCB_IMAGE_ID`) para o `metadata.json` de cada execução. A auditoria e o pacote estão em [data.md](data.md).
 
 | Opção | Comandos | Efeito |
 | --- | --- | --- |
@@ -33,7 +36,7 @@ Fora do container, `make campaign-plan MATRIX=...`, `make campaign MATRIX=... [J
 | `--validate` | `run` | Roda `pytest -m validation` antes, como `validate: true` na matriz |
 | `--update` | `run` | Aceita uma matriz diferente da já usada na pasta |
 | `--gem5 <arquivo>` | `run`, `status` | Executável do gem5. Padrão: `$GEM5_BIN` ou o build do submódulo |
-| `--output <pasta>` | todos | Pasta da campanha. Padrão: `output.dir` da matriz ou `results/campaigns/<name>` |
+| `--output <pasta>` | `plan`, `run`, `status`, `estimate` | Pasta da campanha. Padrão: `output.dir` da matriz ou `results/campaigns/<name>` |
 | `--json` | `plan`, `status` | Saída em JSON |
 
 `campaign status` e `campaign estimate` aceitam a matriz ou a pasta da campanha. `riscvcnnbench runs <pasta>`, `stats`, `compare <pasta>`, `report <pasta>` ([report.md](report.md)) e `plot <pasta>` ([plots.md](plots.md)) também funcionam sobre a pasta de uma campanha, porque ela só contém execuções normais.
@@ -217,7 +220,7 @@ O resultado fica em `campaign.json`, com o hash do gem5, o commit do projeto e s
 | Teste | Confere | Comando |
 | --- | --- | --- |
 | `tests/test_campaign.py` | Aviso de árvore suja num repositório Git temporário (limpo, arquivo modificado e não rastreado, mais de três mudanças, só o submódulo do gem5, pasta fora do Git), execuções sujas na linha de progresso, no fim da sessão, no `status` e no `--json`. Matriz de exemplo, mensagens de erro da matriz com linha, campos irrelevantes e repetidas, inválidas, nomes que colidem, pasta da campanha e `--update`, estados (concluída, falhou, interrompida, incompleta, desatualizada, pendente, outra configuração com o mesmo nome), retomada, paralelismo, validação reaproveitada, histórico, CLI. A execução é trocada por um executor falso | `make test` |
-| `tests/test_package.py` | `campaign audit` e `campaign package` sobre campanhas com o executor falso ([data.md](data.md#testes)) | `make test` |
+| `tests/test_package.py` | `campaign audit`, `campaign package` e `campaign diff` sobre campanhas com o executor falso ([data.md](data.md#testes), [demo.md](demo.md#testes)) | `make test` |
 | `tests/test_campaign_e2e.py` | Matriz pequena executada de verdade (fc S, ref e custom, atomic e timing) com um grupo que falha de propósito: estado e diagnóstico, nome e configuração de cada execução, retomada sem repetir as concluídas, histórico e pares do `compare` sobre a pasta | `make e2e-test` |
 
 ## Limitações

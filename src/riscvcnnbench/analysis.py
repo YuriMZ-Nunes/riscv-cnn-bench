@@ -555,7 +555,7 @@ def latency_table(runs: dict[tuple, dict[str, str]], pairs: dict[tuple, dict[str
         "Aumento de ciclos da custom com latência 6 em relação à latência 3 (a do `mul`), e o "
         "S_C ref→custom com cada latência.",
         "",
-        *markdown_table(header, body),
+        *(markdown_table(header, body) if body else ["Sem execuções da custom com latência 6."]),
     ]
     columns = [
         "bench",
