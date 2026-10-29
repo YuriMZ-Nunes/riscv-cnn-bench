@@ -32,8 +32,9 @@ campaign_app = typer.Typer(
     help=(
         "Executa em lote uma matriz de experimentos (campaigns/*.yaml): `plan` mostra as "
         "combinações, `estimate` estima o tempo a partir de execuções medidas, `run` executa "
-        "e retoma, `status` mostra o estado, `audit` confere se vale como resultado e "
-        "`package` empacota para publicação. Veja docs/campaigns.md e docs/data.md."
+        "e retoma, `status` mostra o estado, `audit` confere se vale como resultado, "
+        "`diff` compara com outra campanha, como a publicada, e `package` empacota para "
+        "publicação. Veja docs/campaigns.md e docs/data.md."
     ),
     no_args_is_help=True,
 )
@@ -1015,6 +1016,71 @@ def campaign_audit(
             typer.echo(f"  {problem}")
         raise typer.Exit(code=1)
     typer.echo("\nSem problemas.")
+
+
+DIFFERENCES_SHOWN = 3
+
+
+@campaign_app.command("diff")
+def campaign_diff(
+    target: Annotated[Path, typer.Argument(help="Pasta da campanha a conferir.")],
+    reference: Annotated[
+        Path, typer.Argument(help="Pasta da campanha de referência, como a publicada.")
+    ],
+) -> None:
+    """Compara as execuções de uma campanha com as de mesma configuração em outra.
+
+    Cada combinação concluída é procurada na referência pela chave da configuração
+    (a de plan.json) e comparada com ela: binário (binary_sha256), executável do
+    gem5, linha RESULT e stats.txt inteiro, menos as estatísticas do host. Saída 0
+    se todas forem iguais, 1 se alguma diferir, não tiver correspondente ou não
+    estiver concluída. Veja docs/reproducibility.md.
+    """
+    from riscvcnnbench.campaign import CampaignError, count_by
+    from riscvcnnbench.config import ConfigError
+    from riscvcnnbench.package import diff
+    from riscvcnnbench.runs import display
+
+    for folder in (target, reference):
+        if not folder.is_dir():
+            _fail(f"pasta não encontrada: {folder}")
+    try:
+        found = diff(target, reference)
+    except (ConfigError, CampaignError) as error:
+        _fail(str(error))
+    typer.echo(
+        f"Campanha {found.name} ({display(target)}) × {found.reference} ({display(reference)})"
+    )
+    header = ["NOME", "SITUAÇÃO", "ESTATÍSTICAS", "DIFERENÇAS"]
+    rows = [header] + [
+        [
+            match.name,
+            match.status,
+            str(match.compared) if match.compared else "-",
+            str(len(match.differences)) if match.compared or match.differences else "-",
+        ]
+        for match in found.matches
+    ]
+    widths = [max(len(row[i]) for row in rows) for i in range(len(header))]
+    for row in rows:
+        typer.echo("  ".join(cell.ljust(w) for cell, w in zip(row, widths, strict=True)).rstrip())
+    counts = count_by(match.status for match in found.matches)
+    summary = ", ".join(f"{status}: {count}" for status, count in counts.items())
+    typer.echo(f"\n{len(found.matches)} combinação(ões): {summary}.")
+    different = [match for match in found.matches if match.differences]
+    if different:
+        typer.echo("\nDiferenças:")
+        for match in different:
+            typer.echo(f"  {match.name}:")
+            for difference in match.differences[:DIFFERENCES_SHOWN]:
+                typer.echo(f"    {difference}")
+            hidden = len(match.differences) - DIFFERENCES_SHOWN
+            if hidden > 0:
+                typer.echo(f"    ... e mais {hidden}")
+    for note in found.notes:
+        typer.echo(f"observação: {note}")
+    if not found.ok:
+        raise typer.Exit(code=1)
 
 
 @campaign_app.command("package")

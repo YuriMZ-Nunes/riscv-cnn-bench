@@ -145,7 +145,7 @@ O Zenodo também exporta a referência em BibTeX e outros formatos, no quadro "C
 
 | Teste | Confere | Comando |
 | --- | --- | --- |
-| `tests/test_package.py` | Auditoria de uma campanha falsa limpa (contagens, commits, período, caminho relativo) e com problemas (`dirty`, `mismatches`, falha, dois commits), a refeita limpa valendo e a antiga como observação; conteúdo do pacote (pasta raiz, dono anônimo, README, MANIFEST, licença), cada linha do `SHA256SUMS` contra o arquivo, recusa com problemas, pacote existente e pastas de mesmo nome; a CLI | `make test` |
+| `tests/test_package.py` | Comparação entre campanhas (`campaign diff`, [demo.md](demo.md#testes)); auditoria de uma campanha falsa limpa (contagens, commits, período, caminho relativo) e com problemas (`dirty`, `mismatches`, falha, dois commits), a refeita limpa valendo e a antiga como observação; conteúdo do pacote (pasta raiz, dono anônimo, README, MANIFEST, licença), cada linha do `SHA256SUMS` contra o arquivo, recusa com problemas, pacote existente e pastas de mesmo nome; a CLI | `make test` |
 
 ## Limitações
 

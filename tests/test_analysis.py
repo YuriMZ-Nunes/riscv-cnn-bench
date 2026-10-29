@@ -162,6 +162,19 @@ def test_latency(campaign: Path) -> None:
     assert "| `fc` | S | +25,0% | +10,0% a +25,0% | 4,00 → 3,20 |" in "\n".join(table.markdown)
 
 
+def test_latency_without_runs(tmp_path: Path) -> None:
+    root = tmp_path / "sem-latencia"
+    (root / "report").mkdir(parents=True)
+    runs = [row for row in RUNS if row["custom_latency"] != 6]
+    write_csv(root / "report/runs.csv", RUN_COLUMNS, runs)
+    write_csv(root / "report/pairs.csv", PAIR_COLUMNS, PAIRS[:2])
+
+    table = tables_of(root)["latency"]
+
+    assert table.rows == []
+    assert table.markdown[-1] == "Sem execuções da custom com latência 6."
+
+
 def test_compiler(campaign: Path) -> None:
     table = tables_of(campaign)["compiler"]
 

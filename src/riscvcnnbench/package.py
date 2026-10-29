@@ -6,6 +6,10 @@ falsos, o executável do gem5 igual ao do build-info (`matches_executable`), um 
 commit do projeto e uma validação de equivalência aprovada. `package` junta uma
 ou mais campanhas num .tar.gz com README, licença dos dados (CC BY 4.0),
 MANIFEST.json (commits, contagens, validação) e SHA256SUMS. Doc: docs/data.md.
+
+`diff` (RCB-29) compara uma campanha com outra, como a publicada, combinação a
+combinação pela chave da configuração: binário, gem5, RESULT e stats.txt.
+Doc: docs/reproducibility.md.
 """
 
 import hashlib
@@ -19,10 +23,18 @@ from pathlib import Path
 from typing import Any
 
 from riscvcnnbench import __version__
-from riscvcnnbench.campaign import CampaignError, file_sha256, load_plan_from, read_log, states
-from riscvcnnbench.metric import load_metrics
-from riscvcnnbench.parser import StatsError
-from riscvcnnbench.runs import display, list_runs
+from riscvcnnbench.campaign import (
+    CampaignError,
+    Plan,
+    RunState,
+    file_sha256,
+    load_plan_from,
+    read_log,
+    states,
+)
+from riscvcnnbench.metric import Result, load_metrics, parse_result
+from riscvcnnbench.parser import StatsError, stats_differences
+from riscvcnnbench.runs import Run, display, list_runs, read_text
 
 LICENSE = "CC-BY-4.0"
 LICENSE_TEXT = """\
@@ -65,8 +77,9 @@ def _short(commit: object) -> str:
     return str(commit)[:7]
 
 
-def audit(root: Path) -> Audit:
-    """Confere a campanha em `root` pelas pastas das execuções e pelo campaign.json.
+def current_states(root: Path) -> tuple[Plan, list[RunState], list[Run], str | None]:
+    """Plano da campanha em `root`, a situação de cada combinação, todas as execuções
+    das pastas e o gem5 de referência.
 
     O gem5 de referência é o executável mais frequente entre as execuções
     concluídas; uma combinação vale pela mais recente concluída com ele, como em
@@ -80,7 +93,15 @@ def audit(root: Path) -> Audit:
         if run.metadata.get("status") == "completed"
     )
     reference = hashes.most_common(1)[0][0] if hashes else None
-    found = states(plan, reference)
+    return plan, states(plan, reference), found_runs, reference
+
+
+def audit(root: Path) -> Audit:
+    """Confere a campanha em `root` pelas pastas das execuções e pelo campaign.json.
+
+    Cada combinação vale pela execução de `current_states`.
+    """
+    plan, found, found_runs, reference = current_states(root)
     result = Audit(
         root,
         plan.campaign.name,
@@ -142,6 +163,106 @@ def audit(root: Path) -> Audit:
         result.notes.append("sem figures/ (rode riscvcnnbench plot)")
     result.first_started = min(started) if started else None
     result.last_finished = max(finished) if finished else None
+    return result
+
+
+SAME = "igual"
+DIFFERENT = "diferente"
+UNMATCHED = "sem correspondente"
+
+
+@dataclass
+class Match:
+    """Uma combinação comparada com a de mesma chave na campanha de referência."""
+
+    name: str
+    status: str
+    compared: int = 0
+    differences: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CampaignDiff:
+    """O que `diff` encontrou: uma linha por combinação da campanha conferida."""
+
+    name: str
+    reference: str
+    matches: list[Match] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return all(match.status == SAME for match in self.matches)
+
+
+def _result(run: Run) -> Result | None:
+    return parse_result(read_text(run.path / "stdout.log"))
+
+
+def compare_runs(run: Run, other: Run) -> tuple[int, list[str]]:
+    """Diferenças entre duas execuções da mesma configuração: binário, executável do
+    gem5, campos da linha RESULT e stats.txt sem as estatísticas do host. Devolve
+    quantas estatísticas foram comparadas e as diferenças."""
+    differences = []
+    for key in ("binary_sha256", "gem5_sha256"):
+        first_hash, second_hash = run.metadata.get(key), other.metadata.get(key)
+        if first_hash != second_hash:
+            differences.append(f"{key}: {str(first_hash)[:12]} × {str(second_hash)[:12]}")
+    mine, theirs = (_result(item) for item in (run, other))
+    if mine is None or theirs is None:
+        if mine != theirs:
+            differences.append("RESULT: só uma das execuções imprimiu a linha")
+    else:
+        for key in sorted(mine.fields.keys() | theirs.fields.keys()):
+            first, second = mine.fields.get(key), theirs.fields.get(key)
+            if first != second:
+                differences.append(
+                    f"RESULT {key}: {first or '(ausente)'} × {second or '(ausente)'}"
+                )
+    compared, stats = stats_differences(
+        *(read_text(item.path / "gem5" / "stats.txt") for item in (run, other))
+    )
+    if compared == 0 and not stats:
+        stats = ["stats.txt vazio ou ausente"]
+    return compared, differences + stats
+
+
+def _binary_path_length(run: Run) -> int:
+    return len(run.metadata.get("original_binary") or "")
+
+
+def diff(root: Path, reference: Path) -> CampaignDiff:
+    """Compara cada combinação da campanha em `root` com a de mesma chave (a da
+    configuração, em plan.json) na campanha em `reference`.
+
+    Nas duas vale a execução de `current_states`. Um caminho do binário com outro
+    comprimento vira observação: ele entra na pilha do programa simulado e muda os
+    ciclos (docs/reproducibility.md).
+    """
+    plan, found, _, _ = current_states(root)
+    other_plan, others, _, _ = current_states(reference)
+    by_key = {state.planned.key: state.run for state in others if state.done and state.run}
+    result = CampaignDiff(plan.campaign.name, other_plan.campaign.name)
+    lengths = 0
+    for state in found:
+        name = state.planned.name
+        other = by_key.get(state.planned.key)
+        if not state.done or state.run is None:
+            result.matches.append(Match(name, state.label()))
+        elif other is None:
+            result.matches.append(Match(name, UNMATCHED))
+        else:
+            compared, differences = compare_runs(state.run, other)
+            status = DIFFERENT if differences else SAME
+            result.matches.append(Match(name, status, compared, differences))
+            if _binary_path_length(state.run) != _binary_path_length(other):
+                lengths += 1
+    if lengths:
+        result.notes.append(
+            f"{lengths} combinação(ões) com o caminho do binário de outro comprimento que o "
+            "da referência: ele entra na pilha do programa simulado e muda os ciclos "
+            "(docs/reproducibility.md)"
+        )
     return result
 
 

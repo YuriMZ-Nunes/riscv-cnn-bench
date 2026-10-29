@@ -29,7 +29,7 @@ flowchart LR
     report --> plot["plot.py<br/>figuras"]
     report --> analysis["analysis.py<br/>tabelas"]
     report --> pagina["report_page.py<br/>relatorio.html"]
-    pasta --> package["package.py<br/>auditoria e pacote"]
+    pasta --> package["package.py<br/>auditoria, comparação e pacote"]
 ```
 
 O fluxo tem quatro camadas:
@@ -60,7 +60,7 @@ O programa simulado confere o próprio resultado contra um oráculo e imprime a 
 2. Combinações iguais depois da normalização rodam uma vez só. A identidade é a `config_key`, o hash da configuração resolvida sem nome, descrição e pasta. Campos que não afetam uma combinação saem antes do hash, como a latência das instruções personalizadas na variante de referência.
 3. Com `validate: true`, roda antes a validação de equivalência entre as variantes (`pytest -m validation`).
 4. As combinações rodam em paralelo, cada uma como um `riscvcnnbench run` normal, em `runs/<nome>/<run_id>/`. Uma retomada pula as concluídas com o mesmo gem5 e a mesma chave.
-5. `campaign status` mostra o estado de cada uma; `campaign audit` diz se a campanha vale como resultado; `campaign package` gera o pacote de dados.
+5. `campaign status` mostra o estado de cada uma; `campaign audit` diz se a campanha vale como resultado; `campaign diff` compara com outra campanha, como a publicada; `campaign package` gera o pacote de dados.
 
 `estimate.py` estima o tempo de uma matriz antes de rodá-la, a partir de execuções medidas ([matrix.md](matrix.md)).
 
@@ -74,7 +74,7 @@ O programa simulado confere o próprio resultado contra um oráculo e imprime a 
 | Gráficos | `plot.py` | `report/` | `figures/*.pdf`, `*.png`, `figures.json` |
 | Análise | `analysis.py` | `report/` | `analysis/*.csv`, `tables.md` |
 | Página de resultados | `report_page.py`, `web/relatorio.*` | `report/`, `analysis/` | `relatorio.html` |
-| Auditoria e pacote | `package.py` | Pasta da campanha | Relatório da auditoria; `.tar.gz` com MANIFEST e SHA256SUMS |
+| Auditoria, comparação e pacote | `package.py` | Pasta da campanha (e, no `diff`, a de referência) | Relatório da auditoria; diferenças por combinação; `.tar.gz` com MANIFEST e SHA256SUMS |
 
 Todas leem as pastas de execução ou os CSVs. Nenhuma refaz uma simulação.
 

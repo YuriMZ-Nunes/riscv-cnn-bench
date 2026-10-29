@@ -14,8 +14,10 @@ from riscvcnnbench.campaign import (
     write_json,
 )
 from riscvcnnbench.cli import app
-from riscvcnnbench.package import LICENSE, audit, package
+from riscvcnnbench.package import LICENSE, audit, diff, package
+from riscvcnnbench.parser import stats_differences
 from test_campaign import FC, SMALL, fake_executor, fake_gem5, matrix, plan_of
+from test_runs import ROI_STATS
 
 COMMIT = "abc1234def"
 GEM5_COMMIT = "ce03244"
@@ -232,5 +234,103 @@ def test_cli_audit_and_package(tmp_path: Path) -> None:
     assert result.exit_code == 1
     assert f"1 problema(s):\n  {FC.format('ref', 'timing')}: project.dirty = True" in result.output
     result = runner.invoke(app, ["campaign", "audit", str(tmp_path / "nada")])
+    assert result.exit_code == 1
+    assert "Erro: pasta não encontrada" in result.output
+
+
+REF_TIMING, REF_MINOR, CUSTOM_TIMING, CUSTOM_MINOR = (
+    FC.format(*pair)
+    for pair in [("ref", "timing"), ("ref", "minor"), ("custom", "timing"), ("custom", "minor")]
+)
+STATS_COMPARED = stats_differences(ROI_STATS, ROI_STATS)[0]
+
+
+def only_run(root: Path, name: str) -> Path:
+    (run_dir,) = (root / "runs" / name).iterdir()
+    return run_dir
+
+
+def edit(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+def test_diff_of_a_reproduced_campaign(tmp_path: Path) -> None:
+    # A mesma matriz em outra pasta: as chaves são as mesmas, e as execuções, iguais.
+    root, _ = campaign(tmp_path / "a")
+    reference, _ = campaign(tmp_path / "b")
+
+    found = diff(root, reference)
+
+    assert found.ok
+    assert (found.name, found.reference, found.notes) == ("pequena", "pequena", [])
+    assert [(m.name, m.status, m.compared, m.differences) for m in found.matches] == [
+        (name, "igual", STATS_COMPARED, [])
+        for name in (REF_TIMING, REF_MINOR, CUSTOM_TIMING, CUSTOM_MINOR)
+    ]
+
+
+def test_diff_finds_differences(tmp_path: Path) -> None:
+    root, _ = campaign(tmp_path / "a", fail={CUSTOM_MINOR})
+    reference, _ = campaign(tmp_path / "b")
+    stats = only_run(reference, REF_TIMING) / "gem5" / "stats.txt"
+    edit(stats, "numCycles                            66214", "numCycles  66215")
+    edit(stats, "hostSeconds                                      0.37", "hostSeconds  9.99")
+    edit(only_run(reference, REF_MINOR) / "stdout.log", "checksum=0x00ff", "checksum=0x0100")
+    metadata_path = only_run(root, CUSTOM_TIMING) / "metadata.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["original_binary"] = "/workspace/outra/inputs/fc"
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    found = diff(root, reference)
+
+    assert not found.ok
+    assert [(m.name, m.status, m.differences) for m in found.matches] == [
+        (REF_TIMING, "diferente", ["bloco 1, system.cpu.numCycles: 66214 × 66215"]),
+        (REF_MINOR, "diferente", ["RESULT checksum: 0x00ff × 0x0100"]),
+        (CUSTOM_TIMING, "igual", []),
+        (CUSTOM_MINOR, "falhou (benchmark)", []),
+    ]
+    assert found.notes == [
+        "1 combinação(ões) com o caminho do binário de outro comprimento que o da referência: "
+        "ele entra na pilha do programa simulado e muda os ciclos (docs/reproducibility.md)"
+    ]
+
+    for run_dir in (reference / "runs" / CUSTOM_TIMING).iterdir():
+        (run_dir / "metadata.json").unlink()
+    assert diff(root, reference).matches[2].status == "sem correspondente"
+
+
+def test_cli_diff(tmp_path: Path) -> None:
+    runner = CliRunner()
+    root, _ = campaign(tmp_path / "a")
+    reference, _ = campaign(tmp_path / "b")
+
+    result = runner.invoke(app, ["campaign", "diff", str(root), str(reference)])
+    assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    assert lines[0] == f"Campanha pequena ({root}) × pequena ({reference})"
+    assert lines[1].split() == ["NOME", "SITUAÇÃO", "ESTATÍSTICAS", "DIFERENÇAS"]
+    assert lines[2].split() == [REF_TIMING, "igual", str(STATS_COMPARED), "0"]
+    assert result.output.endswith("\n4 combinação(ões): igual: 4.\n")
+
+    stats = only_run(reference, REF_TIMING) / "gem5" / "stats.txt"
+    edit(stats, "simInsts                                       115270", "simInsts  115271")
+    edit(stats, "simInsts                                       126213", "simInsts  126214")
+    edit(stats, "numCycles                            66214", "numCycles  66215")
+    edit(stats, "numCycles                            82736", "numCycles  82737")
+    result = runner.invoke(app, ["campaign", "diff", str(root), str(reference)])
+    assert result.exit_code == 1
+    assert "\n4 combinação(ões): diferente: 1, igual: 3.\n" in result.output
+    assert result.output.endswith(
+        f"\nDiferenças:\n  {REF_TIMING}:\n"
+        "    bloco 1, simInsts: 115270 × 115271\n"
+        "    bloco 1, system.cpu.numCycles: 66214 × 66215\n"
+        "    bloco 2, simInsts: 126213 × 126214\n"
+        "    ... e mais 1\n"
+    )
+
+    result = runner.invoke(app, ["campaign", "diff", str(root), str(tmp_path / "nada")])
     assert result.exit_code == 1
     assert "Erro: pasta não encontrada" in result.output

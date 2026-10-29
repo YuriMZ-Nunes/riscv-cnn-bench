@@ -1,0 +1,32 @@
+# Matriz da demonstração (RCB-29): a convolução 3x3 por im2col + GEMM no tamanho
+# S, nas três variantes, na CPU fora de ordem de borda (o3-edge), com as caches
+# L1 e L2 (l1-l2) e sem caches (sem-cache). São 6 simulações, cerca de 2 minutos
+# com 4 tarefas. Roteiro em docs/demo.md.
+#
+#   make demo                    # simula numa pasta nova de build/demo/ e gera
+#                                # as tabelas, os gráficos e o relatorio.html
+#   uv run riscvcnnbench campaign plan campaigns/demo.yaml
+#
+# As 6 combinações são as mesmas da campanha final (mesma chave no plan.json).
+# A pasta padrão, results/demo/pre-gerado, guarda os resultados pré-gerados, o
+# plano B da gravação. O caminho dela tem o mesmo comprimento que o de
+# results/campaigns/final, porque o caminho entra na pilha do programa simulado:
+# assim os ciclos saem idênticos aos publicados (docs/reproducibility.md).
+
+name: demo
+description: >-
+  conv3x3_im2col S nas três variantes, na o3-edge, com as caches L1 e L2 e sem
+  caches.
+
+set:
+  cpu.model: o3-edge
+
+groups:
+  - name: variantes
+    experiments: [conv3x3_im2col_s]
+    vary:
+      benchmark.variant: [ref, custom, rvv]
+      scenario: [l1-l2, sem-cache]
+
+output:
+  dir: results/demo/pre-gerado

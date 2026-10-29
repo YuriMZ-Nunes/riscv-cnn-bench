@@ -6,7 +6,7 @@ Como rodar de novo os experimentos do TCC e conferir o resultado com os dados pu
 | --- | --- |
 | Exemplo rápido (`campaigns/exemplo.yaml`) | Existente; 9 simulações em 17 s com 4 tarefas |
 | Matriz completa (`campaigns/final.yaml`) | Existente; rodou em 27/10/2026 (2 h 52 min com 4 tarefas, mais a validação) |
-| Comparação com os dados publicados | Conferida em 9 combinações da campanha final, sem nenhuma diferença ([abaixo](#reprodução-conferida)) |
+| Comparação com os dados publicados | Conferida em 9 combinações da campanha final e nas 6 da demonstração, sem nenhuma diferença ([abaixo](#reprodução-conferida)); `campaign diff` compara duas campanhas de uma vez |
 | gem5 recompilado ou outro host | Não testado ([limitações](#limitações)) |
 
 ## O que se reproduz
@@ -76,7 +76,17 @@ O que se espera, como na campanha publicada ([data.md](data.md#o-que-rodou)): au
    cd riscv-cnn-bench-dados-v1 && sha256sum -c SHA256SUMS
    ```
 
-2. **Comparar instruções e ciclos de todas as combinações.** Com o `runs.csv` publicado (`campanhas/final/report/runs.csv` no pacote) e o da sua reprodução, dentro do container (`make shell`, depois `uv run python`):
+2. **Comparar todas as combinações de uma vez:**
+
+   ```bash
+   make campaign-diff DIR=results/campaigns/final REF=build/riscv-cnn-bench-dados-v1/campanhas/final
+   ```
+
+   O `campaign diff` (RCB-29) procura, para cada combinação da primeira pasta, a de mesma chave na segunda e compara o binário (`binary_sha256`), o executável do gem5, a linha `RESULT` e o `stats.txt` inteiro, menos as estatísticas do host. A saída é uma tabela com `igual` ou `diferente` por combinação, as primeiras diferenças de cada uma e uma observação quando os caminhos dos binários têm comprimentos diferentes. Sai com código 1 se alguma combinação diferir, faltar na referência ou não estiver concluída. Em 29/10/2026, a [demonstração](demo.md) comparada com a campanha final deu 6 combinações iguais, com 17.943 estatísticas e nenhuma diferença.
+
+   Os passos 3 e 4 fazem o mesmo à mão, com pandas e com `stats_differences`.
+
+3. **Comparar instruções e ciclos de todas as combinações.** Com o `runs.csv` publicado (`campanhas/final/report/runs.csv` no pacote) e o da sua reprodução, dentro do container (`make shell`, depois `uv run python`):
 
    ```python
    import pandas as pd
@@ -92,7 +102,7 @@ O que se espera, como na campanha publicada ([data.md](data.md#o-que-rodou)): au
 
    O pacote precisa estar dentro da pasta do projeto, por exemplo em `build/`, para o container enxergá-lo.
 
-3. **Comparar o `stats.txt` inteiro de uma combinação:**
+4. **Comparar o `stats.txt` inteiro de uma combinação:**
 
    ```python
    from pathlib import Path
@@ -136,6 +146,8 @@ Em 27/10/2026, 9 combinações da campanha final rodaram de novo, uma de cada ve
 | `requant_relu_l__ref__o3-edge__reduzido` | o3-edge | 3.506 | 0 |
 
 Em todas, o binário (`binary_sha256`) e a linha `RESULT` foram os mesmos da campanha publicada, e o `stats.txt` foi idêntico fora das estatísticas do host: 23.466 estatísticas, nenhuma diferença. As 9 cobrem as três variantes, as três CPUs com tempo, os quatro cenários, S e L, a latência 6 e o `-O3`. Também mostram que as mudanças do código entre o `06fe772` e o `12af7d4` não mudaram os binários nem os resultados dessas combinações.
+
+Em 29/10/2026, as 6 combinações da [demonstração](demo.md) (im2col S, três variantes, `o3-edge`, `l1-l2` e `sem-cache`) rodaram duas vezes, na imagem `:dev` da campanha: em `results/demo/pre-gerado`, com o commit `63605c3` e a árvore limpa, e em `build/demo/202610292001`, durante a RCB-29, com a árvore suja (mudanças só no código que não participa da simulação: `campaign diff`, a análise e o Makefile). O `campaign diff` das duas contra `results/campaigns/final`, e o da segunda contra as mesmas 6 combinações extraídas do pacote publicado (SHA-256 igual ao da release `dados-v1`), deram 6 combinações iguais, com 17.943 estatísticas e nenhuma diferença.
 
 ## Limitações
 
