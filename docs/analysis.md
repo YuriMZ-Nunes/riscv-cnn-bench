@@ -8,7 +8,7 @@ Os números deste documento saem de `riscvcnnbench analyze results/campaigns/fin
 | --- | --- |
 | Tabelas da análise: `riscvcnnbench analyze` (`src/riscvcnnbench/analysis.py`) | Existente |
 | Análise da campanha final (este documento) | Existente, 27/10/2026 |
-| Escolha das tabelas e figuras que vão para o texto do TCC | Planejado (RCB-28) |
+| Mapa dos objetivos e das hipóteses para as evidências, e as tabelas e figuras sugeridas para o texto do TCC | Existente (RCB-28, [evidence.md](evidence.md)) |
 
 ## Resumo
 
